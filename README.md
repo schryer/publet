@@ -111,18 +111,26 @@ emulation, which is far faster than emulating the compiler.
 has declared, and whether the bytes still match their identifiers.
 
 ```sh
-pub-store --store=s.redb add < object.cbor    # store one object
+pub-store --store=s.redb add < manifest.cbor  # store the domain manifest
 pub-store --store=s.redb declare DOMAIN < cids
 pub-store --store=s.redb gc                   # discard undeclared objects
 pub-store --store=s.redb scan                 # re-hash everything
 pub-cat   --store=s.redb CID                  # read one back
 ```
 
-Two rules are enforced rather than documented. Stored bytes always match
-their identifier, verified on write and again on read. And garbage
-collection never touches a member of a declared set, because service within
-a declared set is unconditional and ceasing to serve requires a published
-tombstone.
+Three rules are enforced rather than documented:
+
+- **Stored bytes always match their identifier**, verified on write, again
+  on read, and re-hashed by `scan`.
+- **A domain's membership is fixed by its manifest, not by the node's
+  inventory.** `declare` requires the manifest to be held and checks that
+  the supplied members hash to the snapshot root it declares. Declaring
+  whatever happens to be in the store would invert the dependency, and
+  nothing downstream could detect it.
+- **Garbage collection never touches a declared set** -- neither its
+  members nor the manifests that define them. Service within a declared set
+  is unconditional, and a node that collected its own manifest would lose
+  the ability to describe what it serves.
 
 **Store-backed commands cannot be piped into one another.** The database
 takes an exclusive file lock, so `pub-store list | pub-store declare`

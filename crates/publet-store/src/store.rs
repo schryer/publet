@@ -13,7 +13,8 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use publet_core::{Cid, HashAlg};
+use publet_core::{Cid, HashAlg, Object};
+use publet_merkle::membership::Membership;
 use redb::{
     Database, ReadableDatabase as _, ReadableTable as _, ReadableTableMetadata as _,
     TableDefinition,
@@ -153,19 +154,55 @@ impl Store {
 
     /// Declare that this node serves a domain.
     ///
+    /// The domain's manifest must already be held, and `members` must hash
+    /// to the snapshot root that manifest declares. A domain's membership is
+    /// fixed by the domain, not by whatever the node happens to have: a
+    /// declaration derived from local inventory would invert that, and
+    /// nothing downstream could detect the difference.
+    ///
     /// # Errors
     ///
-    /// Returns [`StoreError::Database`] on a write failure.
-    pub fn declare(
-        &self,
-        domain: &Cid,
-        manifest: &[u8],
-        members: &[String],
-    ) -> Result<(), StoreError> {
+    /// Returns [`StoreError::ManifestNotHeld`] if the manifest is absent,
+    /// [`StoreError::MalformedManifest`] if it cannot be read, or
+    /// [`StoreError::MembershipMismatch`] if the members do not match it.
+    pub fn declare(&self, domain: &Cid, members: &[String]) -> Result<(), StoreError> {
+        let manifest_bytes = self
+            .get(domain)?
+            .ok_or_else(|| StoreError::ManifestNotHeld {
+                domain: domain.to_string(),
+            })?;
+
+        let object = Object::parse(&manifest_bytes)
+            .map_err(|e| StoreError::MalformedManifest {
+                domain: domain.to_string(),
+                reason: e.to_string(),
+            })?
+            .verify(domain)
+            .map_err(|e| StoreError::MalformedManifest {
+                domain: domain.to_string(),
+                reason: e.to_string(),
+            })?;
+
+        let manifest = publet_domain::Manifest::from_object(object.object()).map_err(|e| {
+            StoreError::MalformedManifest {
+                domain: domain.to_string(),
+                reason: e.to_string(),
+            }
+        })?;
+
+        let membership = Membership::new(members.iter().cloned());
+        let computed = Cid::from_digest(HashAlg::Sha2_256, &membership.root());
+        if computed.as_ref() != Some(&manifest.snapshot) {
+            return Err(StoreError::MembershipMismatch {
+                computed: computed.map_or_else(|| "<malformed>".to_owned(), |c| c.to_string()),
+                expected: manifest.snapshot.to_string(),
+            });
+        }
+
         let tx = self.db.begin_write()?;
         {
             let mut declared = tx.open_table(DECLARED)?;
-            declared.insert(domain.to_string().as_str(), manifest)?;
+            declared.insert(domain.to_string().as_str(), manifest_bytes.as_slice())?;
             let mut table = tx.open_table(MEMBERS)?;
             table.insert(domain.to_string().as_str(), members.join("\n").as_str())?;
         }
@@ -189,16 +226,22 @@ impl Store {
         Ok(out)
     }
 
-    /// Every member of every declared domain.
+    /// Everything a declared set commits this node to holding.
+    ///
+    /// This is the members of every declared domain *and the manifests
+    /// themselves*. A manifest is what fixes its domain's membership, so a
+    /// node that collected one would lose the ability to describe what it
+    /// serves, and its declaration would become unreadable.
     ///
     /// # Errors
     ///
     /// Returns [`StoreError::Database`] on a read failure.
     pub fn declared_members(&self) -> Result<BTreeSet<String>, StoreError> {
         let tx = self.db.begin_read()?;
-        let table = tx.open_table(MEMBERS)?;
         let mut out = BTreeSet::new();
-        for entry in table.iter()? {
+
+        let members = tx.open_table(MEMBERS)?;
+        for entry in members.iter()? {
             let (_, value) = entry?;
             out.extend(
                 value
@@ -208,6 +251,13 @@ impl Store {
                     .map(ToOwned::to_owned),
             );
         }
+
+        let declared = tx.open_table(DECLARED)?;
+        for entry in declared.iter()? {
+            let (key, _) = entry?;
+            out.insert(key.value().to_owned());
+        }
+
         Ok(out)
     }
 

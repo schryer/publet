@@ -11,7 +11,9 @@ import json
 
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from support.objects import author_key, cid_of, minimal_object, publet
+from support.objects import (
+    author_key, cbor_map, cid_of, head, minimal_object, obj, publet, text, uint,
+)
 
 scenarios("../features/scenarios/store.feature")
 scenarios("../features/plumbing/cat.feature")
@@ -37,12 +39,25 @@ def two_objects(runner, store_path):
 
 @given("the first is declared as a domain member")
 def declare_first(runner, store_path, stored):
-    domain = cid_of(b"a declared domain")
+    # A node declares a domain it holds the manifest for, and the members it
+    # supplies must hash to the snapshot root that manifest declares.
+    root = runner.run("pub-merkle", stdin=(stored["first_cid"] + "\n").encode())
+    assert root.code == 0, root.stderr
+    manifest = obj("domain", author_key("K_a"), "2026-09-12T10:00:00Z", [
+        ("label", text("a domain")),
+        ("snapshot", text(root.stdout.strip())),
+        ("bound", uint(1_000_000)),
+        ("size", uint(100)),
+        ("closed_under", head(4, 1) + text("depends")),
+    ])
+    added = runner.run("pub-store", f"--store={store_path}", "add", stdin=manifest)
+    assert added.code == 0, added.stderr
     out = runner.run(
-        "pub-store", f"--store={store_path}", "declare", domain,
+        "pub-store", f"--store={store_path}", "declare", cid_of(manifest),
         stdin=(stored["first_cid"] + "\n").encode(),
     )
     assert out.code == 0, out.stderr
+    stored["domain_cid"] = cid_of(manifest)
 
 
 @when("garbage is collected", target_fixture="result")
@@ -104,6 +119,12 @@ def first_held(runner, store_path, stored):
 @then("the second object is gone")
 def second_gone(runner, store_path, stored):
     assert stored["second_cid"] not in _held(runner, store_path)
+
+
+@then("the domain manifest is still held")
+def manifest_held(runner, store_path, stored):
+    # Collecting it would leave the node unable to describe what it serves.
+    assert stored["domain_cid"] in _held(runner, store_path)
 
 
 @then("the store is empty")

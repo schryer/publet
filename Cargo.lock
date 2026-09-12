@@ -489,6 +489,7 @@ version = "0.0.1"
 dependencies = [
  "publet-core",
  "publet-domain",
+ "publet-merkle",
  "redb",
  "tempfile",
  "thiserror",

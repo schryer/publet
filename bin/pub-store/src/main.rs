@@ -17,7 +17,10 @@ const EXIT_IO: u8 = 4;
 fn usage() -> ExitCode {
     eprintln!("usage: pub-store [--store=FILE] <add|declare|gc|scan|list>");
     eprintln!("  add              read one object on stdin and store it");
-    eprintln!("  declare DOMAIN   declare a set, members as CID lines on stdin");
+    eprintln!(
+        "  declare DOMAIN   declare a held domain; members as CID lines on stdin,
+                   checked against the manifest's snapshot root"
+    );
     eprintln!("  gc               discard objects outside every declared set");
     eprintln!("  scan             re-hash every object and report mismatches");
     eprintln!("  list             emit every stored identifier");
@@ -141,14 +144,16 @@ fn declare(store: &Store, domain: Option<&str>) -> ExitCode {
         .map(|l| l.trim().to_owned())
         .filter(|l| !l.is_empty())
         .collect();
-    match store.declare(&cid, domain.as_bytes(), &members) {
+    match store.declare(&cid, &members) {
         Ok(()) => {
             eprintln!("declared {cid} with {} member(s)", members.len());
             ExitCode::SUCCESS
         }
         Err(e) => {
             eprintln!("{e}");
-            ExitCode::from(EXIT_IO)
+            // A refused declaration is a protocol violation, not an I/O
+            // failure: the manifest is absent or the members do not match it.
+            ExitCode::from(EXIT_VIOLATION)
         }
     }
 }

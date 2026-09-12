@@ -12,6 +12,7 @@ Feature: A node keeps what it has declared
     When garbage is collected
     Then the first object is still held
     And the second object is gone
+    And the domain manifest is still held
 
   Scenario: A declared member cannot be removed silently
     Given two objects in the store

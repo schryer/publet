@@ -40,6 +40,43 @@ pub enum StoreError {
         path: String,
     },
 
+    /// A domain was declared whose manifest the node does not hold.
+    ///
+    /// A node cannot serve a domain it cannot describe: the manifest is
+    /// what fixes the membership, so declaring without it would be a claim
+    /// about nothing.
+    #[error("cannot declare {domain}: its manifest is not in the store")]
+    ManifestNotHeld {
+        /// The domain that could not be declared.
+        domain: String,
+    },
+
+    /// The declared members do not hash to the manifest's snapshot root.
+    ///
+    /// Membership is fixed by the domain, not by whatever a node happens to
+    /// hold. Accepting a mismatched list would let a node declare a set the
+    /// domain does not have, and nothing downstream could tell.
+    #[error(
+        "declared members hash to {computed}, not the {expected} the manifest \
+         declares; a domain's membership is fixed by its manifest, not by the \
+         node's inventory"
+    )]
+    MembershipMismatch {
+        /// The root the supplied members produce.
+        computed: String,
+        /// The root the manifest declares.
+        expected: String,
+    },
+
+    /// The stored manifest could not be read as one.
+    #[error("the manifest for {domain} is malformed: {reason}")]
+    MalformedManifest {
+        /// The domain in question.
+        domain: String,
+        /// Why it could not be read.
+        reason: String,
+    },
+
     /// Removal of a declared member was attempted without a tombstone.
     #[error(
         "{cid} is in a declared set; ceasing to serve it requires a published \

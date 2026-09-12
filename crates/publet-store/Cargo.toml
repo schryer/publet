@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 publet-core.workspace = true
 publet-domain.workspace = true
+publet-merkle.workspace = true
 thiserror.workspace = true
 redb = "4"
 
