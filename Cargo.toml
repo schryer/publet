@@ -15,6 +15,7 @@ publet-graph = { path = "crates/publet-graph", version = "0.0.1" }
 publet-merkle = { path = "crates/publet-merkle", version = "0.0.1" }
 publet-eval = { path = "crates/publet-eval", version = "0.0.1" }
 publet-domain = { path = "crates/publet-domain", version = "0.0.1" }
+publet-store = { path = "crates/publet-store", version = "0.0.1" }
 thiserror = "2"
 
 # Applied to every crate via `[lints] workspace = true`. Handbook chapter 2:

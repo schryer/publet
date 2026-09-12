@@ -105,6 +105,30 @@ Targets without an official Rust image are cross-compiled natively in an
 amd64 builder (`Containerfile.cross`) and only their artifacts are run under
 emulation, which is far faster than emulating the compiler.
 
+## The store
+
+`pub-store` manages a node's local objects: what it holds, which domains it
+has declared, and whether the bytes still match their identifiers.
+
+```sh
+pub-store --store=s.redb add < object.cbor    # store one object
+pub-store --store=s.redb declare DOMAIN < cids
+pub-store --store=s.redb gc                   # discard undeclared objects
+pub-store --store=s.redb scan                 # re-hash everything
+pub-cat   --store=s.redb CID                  # read one back
+```
+
+Two rules are enforced rather than documented. Stored bytes always match
+their identifier, verified on write and again on read. And garbage
+collection never touches a member of a declared set, because service within
+a declared set is unconditional and ceasing to serve requires a published
+tombstone.
+
+**Store-backed commands cannot be piped into one another.** The database
+takes an exclusive file lock, so `pub-store list | pub-store declare`
+deadlocks and says so. Redirect through a file, or produce identifiers with
+a directory-backed command such as `pub-ls`.
+
 ## Guards
 
 Three project rules are checked mechanically rather than trusted to review,

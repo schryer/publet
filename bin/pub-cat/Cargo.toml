@@ -1,20 +1,19 @@
 [package]
-name = "publet-store"
-description = "Persistence, declared sets, and garbage collection."
+name = "pub-cat"
+description = "Emit objects by identifier from a store."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "pub-cat"
+path = "src/main.rs"
+
 [dependencies]
 publet-core.workspace = true
-publet-domain.workspace = true
-thiserror.workspace = true
-redb = "4"
-
-[dev-dependencies]
-tempfile = "3"
+publet-store.workspace = true
 
 [lints]
 workspace = true
