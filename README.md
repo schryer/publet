@@ -64,6 +64,47 @@ make test          # Rust
 make functional    # Python and Gherkin
 ```
 
+## Cross-architecture determinism
+
+The protocol requires that the same policy over the same snapshot yields
+bit-identical results in every conformant implementation. A test that
+passes on one machine says nothing about that property, so it is checked
+across architectures that differ in the ways which actually break it.
+
+```sh
+make matrix            # every target
+make matrix ARGS=--quick   # native and big-endian only
+./tools/matrix.sh --list
+```
+
+| Target | Mode | Catches |
+|---|---|---|
+| `x86_64` | native | baseline |
+| `s390x` | cross-build, emulated run | **byte order** — big-endian |
+| `i686` | emulated image | 32-bit pointer and `usize` width |
+| `aarch64` | emulated image | a second 64-bit little-endian architecture |
+
+Big-endian coverage is the reason this exists rather than relying on CI
+alone: every GitHub-hosted runner is little-endian, so an integer or length
+prefix serialized with native endianness into a hash input produces
+different identifiers on different machines while every hosted job passes.
+The same four bytes read as `[01, 00, 00, 00]` on x86_64 and
+`[00, 00, 00, 01]` on s390x.
+
+Conversely the matrix cannot cover Windows or macOS, which no Linux
+container can host. Those remain CI's job, and the line-ending behaviour of
+the CID-lines protocol is the specific risk there.
+
+Requires `podman` and `qemu-user-binfmt`:
+
+```sh
+sudo apt install podman qemu-user-binfmt
+```
+
+Targets without an official Rust image are cross-compiled natively in an
+amd64 builder (`Containerfile.cross`) and only their artifacts are run under
+emulation, which is far faster than emulating the compiler.
+
 ## Guards
 
 Three project rules are checked mechanically rather than trusted to review,

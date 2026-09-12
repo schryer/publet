@@ -8,7 +8,7 @@ export PATH := $(HOME)/.cargo/bin:$(CURDIR)/.venv/bin:$(PATH)
 export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO := cargo
 
-.PHONY: help bootstrap lock fmt fmt-check lint test doc functional \
+.PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix \
         guard-deps guard-floats deny check build clean
 
 help: ## Show available targets
@@ -56,3 +56,6 @@ check: fmt-check lint guard-floats guard-deps test doc functional ## Everything 
 clean: ## Remove build artifacts
 	$(CARGO) clean
 	rm -rf .pytest_cache tests/.pytest_cache
+
+matrix: ## Cross-architecture determinism matrix (needs podman)
+	./tools/matrix.sh $(ARGS)

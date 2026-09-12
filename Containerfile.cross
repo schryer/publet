@@ -1,0 +1,19 @@
+# Cross-compilation builder for architectures with no official Rust image.
+#
+# Big-endian coverage is the point. Every GitHub-hosted runner is
+# little-endian, so s390x is the only practical way to catch an integer or
+# length prefix serialized with native endianness into a hash input -- a
+# defect that produces different CIDs on different machines while every
+# single-architecture test passes.
+#
+# Built for amd64 explicitly: compiling natively and running only the
+# resulting binary under emulation is far faster than emulating rustc.
+FROM --platform=linux/amd64 docker.io/library/rust:1.98.1-slim-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gcc-s390x-linux-gnu libc6-dev-s390x-cross \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN rustup target add s390x-unknown-linux-gnu
+
+ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc
