@@ -1,0 +1,17 @@
+[package]
+name = "publet-domain"
+description = "Domain manifests, generations, deltas, and witnesses."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+publet-core.workspace = true
+publet-merkle.workspace = true
+publet-graph.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

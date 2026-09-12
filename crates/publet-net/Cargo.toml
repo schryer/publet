@@ -1,0 +1,15 @@
+[package]
+name = "publet-net"
+description = "HTTP client and server for the retrieval interface."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+publet-core.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

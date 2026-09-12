@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Cheap, platform-independent gates. Fail fast before the matrix spends time.
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # No toolchain action: rust-toolchain.toml is the single source of the
+      # version, and rustup honours it on the first cargo invocation.
+      - run: cargo --version && rustc --version
+      - run: make fmt-check
+      - run: make guard-floats
+      - run: make guard-deps
+      - run: make lint
+      - run: make doc
+
+  # R8 requires bit-identical results everywhere, so determinism is verified
+  # across targets rather than on one machine.
+  test:
+    needs: gates
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: cargo test --workspace --all-features
+
+  functional:
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - run: sudo apt-get update && sudo apt-get install -y jq
+      - run: python -m venv .venv && .venv/bin/pip install --require-hashes -r tests/requirements.lock
+      - run: make functional
+
+  audit:
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: cargo install --locked cargo-deny --version 0.18.6
+      - run: make deny

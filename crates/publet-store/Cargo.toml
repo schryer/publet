@@ -1,0 +1,15 @@
+[package]
+name = "publet-store"
+description = "Persistence, declared sets, and garbage collection."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+publet-core.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,6 @@
+# Direct dependencies of the functional suite. Exact pins only; the
+# resolved transitive set with hashes lives in requirements.lock, which is
+# what bootstrap installs. Regenerate with: make lock
+pytest==9.0.2
+pytest-bdd==8.1.0
+pytest-xdist==3.8.0

@@ -1,0 +1,8 @@
+# Pinned so every machine and CI runner resolves the identical compiler.
+# rustup reads this automatically on any cargo/rustc invocation in the tree,
+# installing the toolchain and components on first use. Do not rely on the
+# ambient `rustc` on any developer machine.
+[toolchain]
+channel = "1.98.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

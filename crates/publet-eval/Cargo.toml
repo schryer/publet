@@ -1,0 +1,16 @@
+[package]
+name = "publet-eval"
+description = "Deterministic trust propagation and standing computation."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+publet-core.workspace = true
+publet-graph.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

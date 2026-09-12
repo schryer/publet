@@ -1,0 +1,45 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.98"
+license = "Apache-2.0"
+repository = "https://github.com/schryer/publet"
+
+[workspace.dependencies]
+publet-core = { path = "crates/publet-core", version = "0.0.1" }
+publet-graph = { path = "crates/publet-graph", version = "0.0.1" }
+publet-merkle = { path = "crates/publet-merkle", version = "0.0.1" }
+thiserror = "2"
+
+# Applied to every crate via `[lints] workspace = true`. Handbook chapter 2:
+# configure lints once, at the workspace, and fix rather than silence.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# R8: bit-identical evaluation is impossible with floating point.
+float_arithmetic = "deny"
+float_cmp = "deny"
+lossy_float_literal = "deny"
+# Handbook chapter 4: no panicking paths outside tests.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+integer_division = "warn"
+# Determinism: results must not depend on hash iteration order.
+mutable_key_type = "deny"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+[profile.release]
+overflow-checks = true
