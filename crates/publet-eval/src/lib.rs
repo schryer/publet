@@ -7,8 +7,10 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 mod fixed;
+mod gather;
 
 pub use fixed::{Fixed6, SCALE};
+pub use gather::{class_of, evidence_for, trust_edges};
 mod policy;
 mod propagate;
 

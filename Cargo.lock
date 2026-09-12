@@ -1053,6 +1053,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "publet-cli"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-domain",
+ "publet-eval",
+ "publet-graph",
+ "publet-merkle",
+ "publet-net",
+ "publet-store",
+ "tokio",
+]
+
+[[package]]
 name = "publet-core"
 version = "0.0.1"
 dependencies = [

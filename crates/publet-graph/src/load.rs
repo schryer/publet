@@ -35,6 +35,42 @@ impl std::fmt::Display for LoadError {
 
 impl std::error::Error for LoadError {}
 
+/// Build a graph from objects already in hand.
+///
+/// Each pair is verified against its identifier before it is indexed, and
+/// objects rejected on the first pass are retried once everything else is
+/// in, so arrival order does not decide validity.
+///
+/// # Errors
+///
+/// Returns [`LoadError`] if an object fails to parse or verify, or if the
+/// graph rejects it once the whole set is present.
+pub fn from_objects<I>(objects: I) -> Result<Graph, LoadError>
+where
+    I: IntoIterator<Item = (Cid, Vec<u8>)>,
+{
+    let mut graph = Graph::new();
+    let mut deferred = Vec::new();
+    for (cid, bytes) in objects {
+        let verified = Object::parse(&bytes)
+            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?
+            .verify(&cid)
+            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?;
+        if graph.insert(&cid, verified).is_err() {
+            deferred.push((cid, bytes));
+        }
+    }
+    for (cid, bytes) in deferred {
+        let verified = Object::parse(&bytes)
+            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?
+            .verify(&cid)
+            .map_err(|e| LoadError::Object(cid.to_string(), e.to_string()))?;
+        graph.insert(&cid, verified).map_err(LoadError::Graph)?;
+    }
+    graph.validate().map_err(LoadError::Graph)?;
+    Ok(graph)
+}
+
 /// Load every `*.cbor` file under `dir` into a graph.
 ///
 /// Each file's bytes are verified against their own computed identifier, so

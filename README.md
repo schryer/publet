@@ -137,6 +137,38 @@ takes an exclusive file lock, so `pub-store list | pub-store declare`
 deadlocks and says so. Redirect through a file, or produce identifiers with
 a directory-backed command such as `pub-ls`.
 
+## The `pub` command
+
+```sh
+pub init                    # create a workspace here
+pub sync --domain=CID       # fetch a domain from a peer by delta
+pub read CID                # the assertion, with the scope it was made under
+pub why CID                 # its standing, and every component of it
+pub compose --class=... --content=... --scope=...
+pub propose CID             # submit, recording what it was composed against
+pub witness DOMAIN          # the log root you observed
+```
+
+Local-first by default, and **every command says which mode it used**. The
+privacy properties of reading a replica are real, and a reader who does not
+know which mode they are in cannot know whether they have them.
+
+`pub why` never reduces a standing to a badge. It shows the weights, the
+divergence factor, the threshold, the reproduction counts against the
+replication floor, and a sentence naming which rule produced the outcome --
+because "accepted" alone does not say whether that rests on replication or
+on agreement, and those are not the same claim.
+
+`pub compose` requires `--scope`. An assertion that states its own validity
+conditions does not drift; one that does not is a different assertion every
+time it is read.
+
+`pub propose` records the generation it was composed against and reports the
+three ways that can be stale: the target already has another successor, a
+dependency has been superseded, or a dispute answers a resolved question.
+None of them is a refusal. Nothing here is overwritten, so a stale basis
+cannot clobber anything -- it is disclosed, not enforced.
+
 ## Serving and syncing
 
 ```sh

@@ -1,0 +1,25 @@
+[package]
+name = "publet-cli"
+description = "The `pub` command: local-first reading, composing, and proposing."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+publet-graph.workspace = true
+publet-eval.workspace = true
+publet-domain.workspace = true
+publet-merkle.workspace = true
+publet-store.workspace = true
+publet-net.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+
+[lints]
+workspace = true
