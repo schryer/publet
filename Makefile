@@ -54,7 +54,7 @@ guard-floats: ## Enforce the no-floating-point rule (R8, plan 4.1)
 deny: ## Licence and advisory audit
 	$(CARGO) deny check
 
-check: fmt-check lint guard-floats guard-deps test doc functional coverage ## Everything CI runs
+check: fmt-check lint guard-floats guard-deps test doc functional coverage deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean
