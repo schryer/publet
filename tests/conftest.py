@@ -131,3 +131,24 @@ def pytest_configure(config: pytest.Config) -> None:
         config.addinivalue_line(
             "markers", f"{tag}: covers a normative statement in that section"
         )
+
+
+# --- steps shared across feature files -------------------------------------
+#
+# pytest-bdd resolves step definitions per module, so anything used by more
+# than one feature lives here rather than being duplicated or imported.
+
+from pytest_bdd import parsers, then  # noqa: E402
+
+
+@then(parsers.parse("the exit code is {code:d}"))
+def exit_code_is(result: Completed, code: int) -> None:
+    assert result.code == code, (
+        f"expected exit {code}, got {result.code}\n"
+        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+    )
+
+
+@then("stdout is empty")
+def stdout_is_empty(result: Completed) -> None:
+    assert result.out == b"", f"expected no stdout, got {result.out!r}"

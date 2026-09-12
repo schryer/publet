@@ -1,0 +1,19 @@
+[package]
+name = "pub-closure"
+description = "Graph query over a store of objects."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-closure"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+publet-graph.workspace = true
+
+[lints]
+workspace = true

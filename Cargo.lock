@@ -307,6 +307,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-closure"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
+name = "pub-divergence"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
+name = "pub-edges"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
+name = "pub-lineage"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
+name = "pub-lint"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
+name = "pub-ls"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-verify"
 version = "0.0.1"
 dependencies = [

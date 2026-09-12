@@ -91,3 +91,62 @@ DEFECTS: dict[str, tuple[bytes, str]] = {
     "a CBOR tag": (bytes([0xC0, 0x01]), "supported item types"),
     "trailing data": (bytes([0x01, 0x02]), "single top-level item"),
 }
+
+
+# --- graph fixtures --------------------------------------------------------
+
+def author_key(seed: str) -> str:
+    """A stable pseudo-key identifier for a named participant."""
+    return cid_of(seed.encode())
+
+
+def obj(kind: str, author: str, created: str, body: list[tuple[str, bytes]]) -> bytes:
+    return cbor_map([
+        ("pub", text("1")),
+        ("type", text(kind)),
+        ("created", text(created)),
+        ("author", text(author)),
+        ("body", cbor_map(body)),
+    ])
+
+
+def publet(author: str, created: str, cls: str, content: str,
+           depends: list[str] | None = None) -> bytes:
+    body = [
+        ("class", text(cls)),
+        ("lang", text("en")),
+        ("content", text(content)),
+    ]
+    deps = depends or []
+    body.append(("depends", head(4, len(deps)) + b"".join(text(d) for d in deps)))
+    return obj("publet", author, created, body)
+
+
+def relation(author: str, created: str, kind: str, frm: str, to: str) -> bytes:
+    return obj("rel", author, created, [
+        ("kind", text(kind)),
+        ("from", text(frm)),
+        ("to", text(to)),
+    ])
+
+
+def annotation(author: str, created: str, kind: str, target: str,
+               aspect: str | None = None) -> bytes:
+    body = [("kind", text(kind)), ("target", text(target))]
+    if aspect is not None:
+        body.append(("aspect", text(aspect)))
+    return obj("ann", author, created, body)
+
+
+def write_store(directory, objects: list[bytes]) -> dict[str, str]:
+    """Write objects into a directory, named by their identifier.
+
+    Returns a map from CID to filename so scenarios can refer to either.
+    """
+    out = {}
+    for data in objects:
+        cid = cid_of(data)
+        name = cid.replace(":", "_") + ".cbor"
+        (directory / name).write_bytes(data)
+        out[cid] = name
+    return out
