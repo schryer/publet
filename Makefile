@@ -8,7 +8,7 @@ export PATH := $(HOME)/.cargo/bin:$(CURDIR)/.venv/bin:$(PATH)
 export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO := cargo
 
-.PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix \
+.PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix coverage \
         guard-deps guard-floats deny check build clean
 
 help: ## Show available targets
@@ -42,6 +42,9 @@ doc: ## Build documentation, warnings are errors
 functional: build ## Python/Gherkin functional suite against built binaries
 	pytest tests/ -q
 
+coverage: ## Report which normative statements have scenarios
+	./tools/must-coverage.py
+
 guard-deps: ## Enforce the dependency direction (plan section 3)
 	./tools/check-deps.py
 
@@ -51,7 +54,7 @@ guard-floats: ## Enforce the no-floating-point rule (R8, plan 4.1)
 deny: ## Licence and advisory audit
 	$(CARGO) deny check
 
-check: fmt-check lint guard-floats guard-deps test doc functional ## Everything CI runs
+check: fmt-check lint guard-floats guard-deps test doc functional coverage ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean

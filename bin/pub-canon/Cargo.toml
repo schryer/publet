@@ -1,0 +1,18 @@
+[package]
+name = "pub-canon"
+description = "Validate canonical CBOR on stdin; emit it unchanged or name the violated rule."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-canon"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+
+[lints]
+workspace = true

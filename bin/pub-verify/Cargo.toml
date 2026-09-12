@@ -1,0 +1,18 @@
+[package]
+name = "pub-verify"
+description = "Verify objects: canonical form, header, and identifier."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-verify"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+
+[lints]
+workspace = true

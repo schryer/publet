@@ -11,10 +11,15 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+
+# The suite imports its own helpers from `support/`; it never imports the
+# implementation. Adding the suite root to the path keeps that explicit.
+sys.path.insert(0, str(Path(__file__).parent))
 
 
 @pytest.fixture(scope="session")
@@ -102,3 +107,27 @@ def runner(bin_dir: Path, tmp_path: Path) -> Runner:
 @pytest.fixture(scope="session")
 def has_jq() -> bool:
     return shutil.which("jq") is not None
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the @must-N.N tags the feature files carry.
+
+    Section tags are the mechanism by which the suite claims coverage of a
+    normative statement (see tools/must-coverage.py). Registering them from
+    the feature files rather than by hand keeps --strict-markers meaningful
+    while letting a new tag arrive with the scenario that needs it.
+    """
+    features = Path(__file__).parent / "features"
+    seen: set[str] = set()
+    for path in features.rglob("*.feature"):
+        for line in path.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("@"):
+                continue
+            for tag in stripped.split():
+                if tag.startswith("@must-"):
+                    seen.add(tag[1:])
+    for tag in sorted(seen):
+        config.addinivalue_line(
+            "markers", f"{tag}: covers a normative statement in that section"
+        )

@@ -1,0 +1,18 @@
+[package]
+name = "pub-cid"
+description = "Emit the content identifier of an object read on stdin."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-cid"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+
+[lints]
+workspace = true

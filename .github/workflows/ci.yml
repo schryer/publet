@@ -46,6 +46,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y jq
       - run: python -m venv .venv && .venv/bin/pip install --require-hashes -r tests/requirements.lock
       - run: make functional
+      - run: make coverage
 
   audit:
     needs: gates
