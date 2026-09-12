@@ -1,4 +1,4 @@
-@conformance @must-14.3
+@conformance @must-14.3.2
 Feature: Synchronization discloses one integer
   A peer that learns which objects a reader holds learns what that reader
   has been working with. Section 14.3.2 therefore forbids have/want

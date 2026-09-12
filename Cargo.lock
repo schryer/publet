@@ -1027,6 +1027,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-sign"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+]
+
+[[package]]
 name = "pub-store"
 version = "0.0.1"
 dependencies = [

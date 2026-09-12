@@ -1,0 +1,6 @@
+# file	sha2-256 CID
+
+empty.bin	pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq
+one-byte.bin	pub:sha2-256:ny2axhh7wn5jrhffittlw6akfr4jahj7wm3tq5ufcgrqmf5puaoq
+minimal-object.bin	pub:sha2-256:qmwgfqy2m3b2c53xctkjxjn6dv57bre4poyoumyi527l2gdg45ga
+rfc4648-foobar.bin	pub:sha2-256:yovy74jxeduk3ech3u4um2z4rf2olewc7i4d2srzmbyuzlxqytza

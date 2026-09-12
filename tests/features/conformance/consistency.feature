@@ -1,4 +1,4 @@
-@conformance @must-14.1
+@conformance @must-14.1.1 @must-14.3.1
 Feature: A delta cannot add, omit, or substitute anything
   Deltas are self-verifying: the client recomputes the membership root and
   compares it, so the peer that served the delta need not be trusted.

@@ -58,6 +58,8 @@ def main() -> int:
     ap.add_argument("--spec", type=Path, default=DEFAULT_SPEC)
     ap.add_argument("--fail-under", type=int, default=0,
                     help="exit non-zero if coverage is below this percentage")
+    ap.add_argument("--report", type=Path,
+                    help="write the report to a file as well as stdout")
     args = ap.parse_args()
 
     covered = tagged_sections(ROOT / "tests" / "features")
@@ -94,6 +96,39 @@ def main() -> int:
         for s in stray:
             print(f"  {s}")
         print()
+
+    if args.report:
+        lines = [
+            "# Conformance coverage",
+            "",
+            "Which normative statements of the specification the functional",
+            "suite exercises. Gaps are listed rather than hidden: a report",
+            "that showed only what passes would say nothing about what is",
+            "untested.",
+            "",
+            f"- specification: `{args.spec}`",
+            f"- sections with normative language: {total}",
+            f"- sections with at least one scenario: {len(done)} ({percent}%)",
+            "",
+            "## Covered",
+            "",
+            "| Section | Statements | Scenarios |",
+            "|---|---|---|",
+        ]
+        for section in done:
+            lines.append(
+                f"| {section} | {normative[section]} | {', '.join(covered[section])} |"
+            )
+        lines += ["", "## Not yet covered", "",
+                  "| Section | Statements |", "|---|---|"]
+        for section in todo:
+            lines.append(f"| {section} | {normative[section]} |")
+        if stray:
+            lines += ["", "## Tags naming sections with no normative language", ""]
+            lines += [f"- {s}" for s in stray]
+        lines.append("")
+        args.report.write_text("\n".join(lines))
+        print(f"report written to {args.report}")
 
     if percent < args.fail_under:
         print(f"coverage {percent}% is below the required {args.fail_under}%")

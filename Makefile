@@ -9,6 +9,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO := cargo
 
 .PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix coverage \
+        conformance verify-suite \
         guard-deps guard-floats deny check build clean
 
 help: ## Show available targets
@@ -43,7 +44,13 @@ functional: build ## Python/Gherkin functional suite against built binaries
 	pytest tests/ -q
 
 coverage: ## Report which normative statements have scenarios
-	./tools/must-coverage.py
+	./tools/must-coverage.py --report=conformance/COVERAGE.md
+
+conformance: build ## Run only the scenarios exercising a normative statement
+	pytest tests/ -q -m conformance
+
+verify-suite: ## Prove the conformance suite detects a broken build
+	./conformance/verify-suite.sh
 
 guard-deps: ## Enforce the dependency direction (plan section 3)
 	./tools/check-deps.py

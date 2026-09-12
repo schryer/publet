@@ -199,3 +199,8 @@ def run_pipeline(runner, store, pipeline: str):
             stage += f" --dir={store['dir']}"
         stages.append(stage)
     return runner.pipeline(stages)
+
+
+@then(parsers.parse('stderr names the violated rule "{rule}"'))
+def stderr_names_rule(result: Completed, rule: str) -> None:
+    assert rule in result.stderr, f"{rule!r} not named in stderr: {result.stderr!r}"

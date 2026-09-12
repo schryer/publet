@@ -189,6 +189,25 @@ routes through an anonymizing transport: which domains a reader follows is
 visible to whoever serves them, and a proxy is what separates that from who
 they are.
 
+## Conformance
+
+The Gherkin suite is the conformance definition, not a description of this
+implementation. Another implementation points one environment variable at
+its own binaries and runs it unmodified:
+
+```sh
+PUBLET_BIN_DIR=/path/to/binaries pytest tests/ -m conformance
+```
+
+`conformance/COVERAGE.md` maps every section of the specification containing
+normative language to the scenarios exercising it, and lists the sections
+with none. The gaps are published rather than hidden.
+
+`conformance/verify-suite.sh` breaks one specification rule at a time,
+rebuilds, and asserts the suite notices. A suite never shown to fail is not
+evidence of anything -- and this is how three generation scenarios were
+found to be placeholders rather than tests.
+
 ## Guards
 
 Three project rules are checked mechanically rather than trusted to review,

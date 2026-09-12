@@ -124,48 +124,118 @@ def gen_accounted():
     )
 
 
+def _read_generation(runner, gen_bytes, tmp_path):
+    """Ask a tool to read the record, which is where the rules live."""
+    (tmp_path / "g1.cbor").write_bytes(gen_bytes)
+    return runner.run(
+        "pub-delta", f"--dir={tmp_path}", "--from=0",
+        f"--member={cid_of(b'anything')}",
+    )
+
+
 @then("the generation is malformed")
-def generation_malformed(runner, gen_bytes, tmp_path):
-    out = runner.run("pub-verify", stdin=gen_bytes)
-    # The object parses as an object; the domain rule is what rejects it.
-    # Exercised through the library test suite; here the object must at
-    # least be structurally valid so the rule is what fires.
-    assert out.code == 0, out.stderr
-    tmp_path.joinpath("gen.cbor").write_bytes(gen_bytes)
+def generation_malformed(runner, gen_bytes, tmp_path, request):
+    out = _read_generation(runner, gen_bytes, tmp_path)
+    assert out.code != 0, (
+        "a record with an unaccounted removal must be refused, "
+        f"got exit 0 with {out.stdout!r}"
+    )
+    request.node.stash_stderr = out.stderr
 
 
 @then("the generation is well formed")
-def generation_well_formed(runner, gen_bytes):
-    out = runner.run("pub-verify", stdin=gen_bytes)
-    assert out.code == 0, out.stderr
+def generation_well_formed(runner, gen_bytes, tmp_path):
+    out = _read_generation(runner, gen_bytes, tmp_path)
+    # The record parses; the root will not match this arbitrary membership,
+    # and that is a different failure from a malformed record.
+    assert "no `ref` accounting" not in out.stderr, out.stderr
+    assert "unknown cause" not in out.stderr, out.stderr
 
 
 @then(parsers.parse('the reason mentions "{fragment}"'))
-def reason_mentions(fragment: str):
-    # The specific wording lives in the Rust error types and is asserted
-    # there; this records which rule the scenario is about.
-    assert fragment
+def reason_mentions(runner, gen_bytes, tmp_path, fragment: str):
+    out = _read_generation(runner, gen_bytes, tmp_path)
+    assert fragment in out.stderr, f"{fragment!r} not in {out.stderr!r}"
 
 
-@given("a membership that loses a member")
-@given("a generation record declaring no removals")
-@given("a domain at generation 0 with one member")
+@given("a domain at generation 0 with one member", target_fixture="delta_store")
+def delta_store(tmp_path):
+    return {"dir": tmp_path, "member": cid_of(b"the first member")}
+
+
 @given("a generation adding one member")
+def generation_adding(runner, delta_store):
+    added = cid_of(b"the second member")
+    members = sorted([delta_store["member"], added])
+    root = runner.run("pub-merkle", stdin=("\n".join(members) + "\n").encode())
+    assert root.code == 0, root.stderr
+    (delta_store["dir"] / "g1.cbor").write_bytes(
+        generation(1, root.stdout.strip(), added=[added])
+    )
+
+
 @given("a generation whose added list contains a member the snapshot excludes")
-def noop_given():
-    """Covered by the library tests; recorded here as use-case documentation."""
+def generation_smuggling(runner, delta_store):
+    # The snapshot covers two members; the added list names three.
+    added = cid_of(b"the second member")
+    smuggled = cid_of(b"never declared")
+    members = sorted([delta_store["member"], added])
+    root = runner.run("pub-merkle", stdin=("\n".join(members) + "\n").encode())
+    (delta_store["dir"] / "g1.cbor").write_bytes(
+        generation(1, root.stdout.strip(), added=[added, smuggled])
+    )
 
 
-@when("the delta is applied")
-def noop_when():
-    """See publet-domain/tests/domain.rs for the executable assertions."""
+@given("a membership that loses a member", target_fixture="delta_store")
+def membership_losing(tmp_path):
+    return {"dir": tmp_path, "member": cid_of(b"kept"),
+            "dropped": cid_of(b"dropped")}
+
+
+@given("a generation record declaring no removals")
+def generation_silent_removal(runner, delta_store):
+    # The snapshot covers only the kept member; the record declares nothing.
+    root = runner.run(
+        "pub-merkle", stdin=(delta_store["member"] + "\n").encode()
+    )
+    (delta_store["dir"] / "g1.cbor").write_bytes(
+        generation(1, root.stdout.strip())
+    )
+
+
+@when("the delta is applied", target_fixture="result")
+def apply_delta(runner, delta_store):
+    return runner.run(
+        "pub-delta", f"--dir={delta_store['dir']}", "--from=0",
+        f"--member={delta_store['member']}",
+    )
+
+
+@then("the resulting root matches the generation's snapshot")
+def root_matches(result):
+    assert result.code == 0, result.stderr
+
+
+@then("it fails with a root mismatch")
+def root_mismatch(result):
+    assert result.code != 0, result.stdout
+    assert "membership root" in result.stderr, result.stderr
 
 
 @then("checking it against the membership fails")
-@then("the resulting root matches the generation's snapshot")
-@then("it fails with a root mismatch")
-def noop_then():
-    """See publet-domain/tests/domain.rs."""
+def check_against_fails(runner, delta_store):
+    # The membership loses a member and the record declares no removal, so
+    # applying it cannot reproduce the root the record declares. An
+    # implementation that let the removal through would compute a different
+    # root and this would pass silently -- which is why the assertion is on
+    # the mismatch being reported, not merely on a non-zero exit.
+    out = runner.run(
+        "pub-delta", f"--dir={delta_store['dir']}", "--from=0",
+        f"--member={delta_store['member']}",
+        f"--member={delta_store['dropped']}",
+    )
+    assert out.code != 0, out.stdout
+    assert "membership root" in out.stderr, out.stderr
 
 
 @given("a client 300 generations behind the head", target_fixture="distance")

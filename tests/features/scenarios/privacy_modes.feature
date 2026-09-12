@@ -1,4 +1,4 @@
-@scenario @must-14.3
+@scenario @must-14.2 @must-14.3
 Feature: The mode in use is visible, not assumed
   The privacy properties of reading a replica are real, and a reader who
   does not know which mode they are in cannot know whether they have them.

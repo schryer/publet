@@ -1,0 +1,18 @@
+[package]
+name = "pub-sign"
+description = "Create and verify detached signatures over an object."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-sign"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+
+[lints]
+workspace = true

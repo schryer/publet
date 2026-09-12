@@ -19,6 +19,9 @@ scenarios("../features/conformance/evidence_dominance.feature")
 scenarios("../features/conformance/restricted_access.feature")
 scenarios("../features/conformance/determinism.feature")
 scenarios("../features/plumbing/eval.feature")
+scenarios("../features/conformance/reproducible_evaluation.feature")
+scenarios("../features/conformance/equivalence.feature")
+scenarios("../features/conformance/viewpoint.feature")
 
 VECTORS = Path(__file__).resolve().parents[2] / "vectors" / "eval"
 
@@ -36,6 +39,27 @@ def all_vectors() -> list[Path]:
     found = sorted(VECTORS.glob("*.cbor"))
     assert found, "no vectors are committed"
     return found
+
+
+@given("the same vector evaluated under a policy with a replication floor of zero",
+       target_fixture="relaxed")
+def relaxed_vector() -> Path:
+    return VECTORS / "11-floor-zero.cbor"
+
+
+@given("an evaluation vector where one key affirms three times",
+       target_fixture="vector")
+def repeated_signer() -> Path:
+    return VECTORS / "12-repeated-signer.cbor"
+
+
+@given("an evaluation vector whose policy declares no roots",
+       target_fixture="vector")
+def rootless_policy() -> Path:
+    path = VECTORS.parent / "invalid" / "policy-without-roots.cbor"
+    if not path.exists():
+        pytest.fail(f"missing vector: {path}")
+    return path
 
 
 @when("I evaluate it", target_fixture="result")
@@ -106,3 +130,34 @@ def weights_are_six_places(result):
     parsed = _parsed(result)
     for field in ("affirm", "deny", "abstain", "active", "delta"):
         assert re.fullmatch(r"-?\d+\.\d{6}", parsed[field]), parsed[field]
+
+
+@then("the two evaluations disagree about the outcome")
+def evaluations_disagree(runner, vector: Path, relaxed: Path):
+    strict = json.loads(
+        runner.run("pub-eval", f"--vector={vector}").stdout
+    )["result"]
+    lenient = json.loads(
+        runner.run("pub-eval", f"--vector={relaxed}").stdout
+    )["result"]
+    assert strict != lenient, (
+        "identical evidence must be able to yield different outcomes under "
+        f"different policies, got {strict} both times"
+    )
+
+
+@then("the affirm weight equals that of a single affirmation")
+def one_signer_counts_once(runner, result):
+    single = runner.run("pub-eval", f"--vector={VECTORS / '13-single-signer.cbor'}")
+    assert single.code == 0, single.stderr
+    assert json.loads(result.stdout)["affirm"] == json.loads(single.stdout)["affirm"]
+
+
+@then("it fails")
+def evaluation_fails(result):
+    assert result.code != 0, result.stdout
+
+
+@then("it says a policy must declare at least one root")
+def says_roots_required(result):
+    assert "at least one root" in result.stderr, result.stderr

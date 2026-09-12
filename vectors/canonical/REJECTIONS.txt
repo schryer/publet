@@ -1,0 +1,12 @@
+Each file must be rejected, naming the rule given here.
+
+reject-a-CBOR-tag.cbor	supported item types
+reject-a-duplicate-map-key.cbor	unique map keys
+reject-a-float-value.cbor	no floating point
+reject-a-non-shortest-integer.cbor	shortest-form integers
+reject-a-non-text-map-key.cbor	text map keys
+reject-an-indefinite-length-array.cbor	no indefinite length
+reject-invalid-UTF-8.cbor	valid UTF-8
+reject-text-in-NFD.cbor	NFC normalization
+reject-trailing-data.cbor	single top-level item
+reject-unsorted-map-keys.cbor	sorted map keys

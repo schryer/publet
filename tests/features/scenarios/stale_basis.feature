@@ -1,4 +1,4 @@
-@scenario @must-14.3
+@scenario @must-14.3.3
 Feature: A stale basis is disclosed, never a refusal
   Nothing here is overwritten, so a proposal cannot clobber a concurrent
   one. What a stale basis produces is information about what moved.

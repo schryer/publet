@@ -90,11 +90,6 @@ def verify_against_other_cid(runner, payload: bytes, other_payload: bytes):
 
 # --- Then ------------------------------------------------------------------
 
-@then(parsers.parse('stderr names the violated rule "{rule}"'))
-def stderr_names_rule(result, rule: str):
-    assert rule in result.stderr, f"{rule!r} not named in stderr: {result.stderr!r}"
-
-
 @then(parsers.parse('stderr mentions "{fragment}"'))
 def stderr_mentions(result, fragment: str):
     assert fragment in result.stderr, f"{fragment!r} not in stderr: {result.stderr!r}"

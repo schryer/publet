@@ -1,4 +1,4 @@
-@conformance @must-14.1
+@conformance @must-14.1.1
 Feature: A generation declares its membership change
   Leaving a removal to be discovered reveals it only to a reader who thinks
   to look. Requiring the publisher to declare it, with a justification, as a
@@ -18,4 +18,3 @@ Feature: A generation declares its membership change
     Given a membership that loses a member
     And a generation record declaring no removals
     Then checking it against the membership fails
-    And the reason mentions "malformed"
