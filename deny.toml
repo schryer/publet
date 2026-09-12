@@ -3,7 +3,18 @@
 yanked = "deny"
 
 [licenses]
-allow = ["Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-3.0"]
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    # webpki-roots and webpki-root-certs: the Mozilla CA bundle. A permissive
+    # data licence covering a certificate data set rather than code, which is
+    # the right shape for what it licenses. Reviewed when TLS entered the tree.
+    "CDLA-Permissive-2.0",
+]
 confidence-threshold = 0.93
 
 [bans]

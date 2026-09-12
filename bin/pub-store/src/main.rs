@@ -7,7 +7,7 @@ use std::io::Read as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use publet_core::{Cid, HashAlg};
+use publet_core::{Cid, HashAlg, Object};
 use publet_store::Store;
 
 const EXIT_VIOLATION: u8 = 1;
@@ -24,6 +24,7 @@ fn usage() -> ExitCode {
     eprintln!("  gc               discard objects outside every declared set");
     eprintln!("  scan             re-hash every object and report mismatches");
     eprintln!("  list             emit every stored identifier");
+    eprintln!("  generation       read a generation record on stdin and index it");
     ExitCode::from(EXIT_USAGE)
 }
 
@@ -91,6 +92,7 @@ fn main() -> ExitCode {
                 ExitCode::from(EXIT_IO)
             }
         },
+        "generation" => generation(&store),
         "list" => match store.cids() {
             Ok(cids) => {
                 for cid in cids {
@@ -122,6 +124,46 @@ fn add(store: &Store) -> ExitCode {
         Err(e) => {
             eprintln!("{e}");
             ExitCode::from(EXIT_VIOLATION)
+        }
+    }
+}
+
+/// Index a generation record, taking its domain and index from the record
+/// itself rather than from arguments that could disagree with it.
+fn generation(store: &Store) -> ExitCode {
+    let mut bytes = Vec::new();
+    if let Err(e) = std::io::stdin().read_to_end(&mut bytes) {
+        eprintln!("cannot read stdin: {e}");
+        return ExitCode::from(EXIT_IO);
+    }
+    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let parsed = match Object::parse(&bytes).and_then(|o| o.verify(&cid)) {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(EXIT_VIOLATION);
+        }
+    };
+    let record = match publet_domain::Generation::from_object(parsed.object()) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(EXIT_VIOLATION);
+        }
+    };
+    if let Err(e) = store.put(&cid, &bytes) {
+        eprintln!("{e}");
+        return ExitCode::from(EXIT_VIOLATION);
+    }
+    match store.put_generation(&record.domain, record.index, &bytes) {
+        Ok(()) => {
+            eprintln!("indexed generation {} of {}", record.index, record.domain);
+            println!("{cid}");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(EXIT_IO)
         }
     }
 }

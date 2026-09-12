@@ -9,7 +9,21 @@ repository.workspace = true
 
 [dependencies]
 publet-core.workspace = true
+publet-domain.workspace = true
+publet-merkle.workspace = true
+publet-store.workspace = true
 thiserror.workspace = true
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
+reqwest = { version = "0.13", default-features = false, features = [
+    "rustls",
+    "webpki-roots",
+    "socks",
+] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "time"] }
 
 [lints]
 workspace = true

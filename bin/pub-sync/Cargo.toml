@@ -1,6 +1,6 @@
 [package]
-name = "pub-store"
-description = "Manage a store: declare sets, collect garbage, scan integrity."
+name = "pub-sync"
+description = "Synchronize a domain from a peer by delta."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,13 +8,14 @@ license.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "pub-store"
+name = "pub-sync"
 path = "src/main.rs"
 
 [dependencies]
 publet-core.workspace = true
 publet-store.workspace = true
-publet-domain.workspace = true
+publet-net.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 
 [lints]
 workspace = true

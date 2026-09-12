@@ -30,6 +30,9 @@ const DECLARED: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("declare
 const MEMBERS: TableDefinition<'_, &str, &str> = TableDefinition::new("members");
 /// Tombstones, keyed by the identifier they disclose the removal of.
 const TOMBSTONES: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("tombstones");
+/// Generation records, keyed by the domain identifier, a NUL, and a
+/// zero-padded index, so lexicographic order matches numeric order.
+const GENERATIONS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("generations");
 
 /// An object whose stored bytes no longer match its key.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +71,7 @@ impl Store {
             let _ = tx.open_table(DECLARED)?;
             let _ = tx.open_table(MEMBERS)?;
             let _ = tx.open_table(TOMBSTONES)?;
+            let _ = tx.open_table(GENERATIONS)?;
         }
         tx.commit()?;
         Ok(Self { db })
@@ -261,6 +265,106 @@ impl Store {
         Ok(out)
     }
 
+    /// The members of one declared domain, if it is declared.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn members_of(&self, domain: &Cid) -> Result<Option<Vec<String>>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(MEMBERS)?;
+        Ok(table.get(domain.to_string().as_str())?.map(|v| {
+            v.value()
+                .split('\n')
+                .filter(|s| !s.is_empty())
+                .map(ToOwned::to_owned)
+                .collect()
+        }))
+    }
+
+    /// Store a generation record for a domain.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a write failure.
+    pub fn put_generation(
+        &self,
+        domain: &Cid,
+        index: u64,
+        record: &[u8],
+    ) -> Result<(), StoreError> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(GENERATIONS)?;
+            table.insert(generation_key(domain, index).as_str(), record)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// One generation record.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn generation(&self, domain: &Cid, index: u64) -> Result<Option<Vec<u8>>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(GENERATIONS)?;
+        Ok(table
+            .get(generation_key(domain, index).as_str())?
+            .map(|v| v.value().to_vec()))
+    }
+
+    /// The highest generation index held for a domain.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn head_generation(&self, domain: &Cid) -> Result<Option<u64>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(GENERATIONS)?;
+        let prefix = format!("{domain}\u{0}");
+        let mut head = None;
+        for entry in table.iter()? {
+            let (key, _) = entry?;
+            let key = key.value().to_owned();
+            if let Some(rest) = key.strip_prefix(&prefix)
+                && let Ok(index) = rest.trim_start_matches('0').parse::<u64>()
+            {
+                head = Some(head.map_or(index, |h: u64| h.max(index)));
+            } else if key.starts_with(&prefix) {
+                head = Some(head.unwrap_or(0));
+            }
+        }
+        Ok(head)
+    }
+
+    /// Identifiers added by the generations in `(from, to]`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn added_between(
+        &self,
+        domain: &Cid,
+        from: u64,
+        to: u64,
+    ) -> Result<Vec<String>, StoreError> {
+        let mut out = Vec::new();
+        for index in (from + 1)..=to {
+            let Some(bytes) = self.generation(domain, index)? else {
+                continue;
+            };
+            let Ok(parsed) = Object::parse(&bytes) else {
+                continue;
+            };
+            if let Ok(record) = publet_domain::Generation::from_object(parsed.peek()) {
+                out.extend(record.added.iter().map(ToString::to_string));
+            }
+        }
+        Ok(out)
+    }
+
     /// Record a tombstone disclosing that an object is no longer served.
     ///
     /// # Errors
@@ -372,4 +476,9 @@ impl Store {
         }
         Ok(out)
     }
+}
+
+/// Key a generation so that lexicographic order matches numeric order.
+fn generation_key(domain: &Cid, index: u64) -> String {
+    format!("{domain}\u{0}{index:020}")
 }

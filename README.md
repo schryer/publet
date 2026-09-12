@@ -137,6 +137,26 @@ takes an exclusive file lock, so `pub-store list | pub-store declare`
 deadlocks and says so. Redirect through a file, or produce identifiers with
 a directory-backed command such as `pub-ls`.
 
+## Serving and syncing
+
+```sh
+pub-serve --store=s.redb --bind=127.0.0.1:8787
+pub-sync  --peer=http://host:8787 --domain=CID --store=replica.redb --from=0 --to=20
+```
+
+**A sync request carries a domain identifier and two integers.** It carries
+nothing about what the client holds, and there is no endpoint that accepts
+such a list. `have`/`want` negotiation would let a peer compute a smaller
+transfer at the cost of learning what the reader has been working with,
+which forfeits most of what local-first operation provides. The route table
+is the conformance surface, and a test asserts over it.
+
+Every object received is verified against its own identifier before it is
+stored, so a peer serving altered bytes is caught on arrival. `--proxy=URL`
+routes through an anonymizing transport: which domains a reader follows is
+visible to whoever serves them, and a proxy is what separates that from who
+they are.
+
 ## Guards
 
 Three project rules are checked mechanically rather than trusted to review,
