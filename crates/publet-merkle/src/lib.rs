@@ -1,3 +1,11 @@
-//! Append-only log and sorted membership tree, with proofs.
+//! Merkle structures for domains (Section 14.1.1).
 //!
-//! Phase 0 stub. See the implementation plan for this crate's scope.
+//! Two trees, because neither can do both jobs. The append-only [`log`]
+//! yields consistency proofs -- that one generation is a prefix of a later
+//! one -- but cannot prove absence. The sorted [`membership`] tree yields
+//! inclusion and absence proofs but cannot yield efficient consistency
+//! proofs, since inserting a member reorders interior nodes.
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
+pub mod log;
+pub mod membership;

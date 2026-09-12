@@ -28,22 +28,6 @@ KB = author_key("K_b")
 
 # --- Given -----------------------------------------------------------------
 
-@given("a store containing the Appendix A fixture", target_fixture="store")
-def appendix_a(tmp_path):
-    """P1 superseded by P4 by its own author; P2 a third-party proposal."""
-    p1 = publet(KA, "2026-09-12T10:00:00Z", "empirical", "relapse incidence fell")
-    p4 = publet(KA, "2026-09-12T11:00:00Z", "empirical", "effect holds in a subgroup")
-    p2 = publet(KB, "2026-09-12T10:30:00Z", "empirical", "the design cannot support it")
-    objects = [
-        p1, p4, p2,
-        relation(KA, "2026-09-12T11:00:01Z", "supersedes", cid_of(p4), cid_of(p1)),
-        relation(KB, "2026-09-12T10:30:01Z", "supersedes", cid_of(p2), cid_of(p1)),
-        relation(KB, "2026-09-12T10:30:02Z", "disputes", cid_of(p2), cid_of(p1)),
-    ]
-    write_store(tmp_path, objects)
-    return {"dir": tmp_path, "P1": cid_of(p1), "P4": cid_of(p4), "P2": cid_of(p2)}
-
-
 @given("a store where two claims presuppose terms differently",
        target_fixture="store")
 def divergent_store(tmp_path):
@@ -134,12 +118,6 @@ def run_divergence(runner, store):
 @when("loading the store", target_fixture="result")
 def load_store(runner, store):
     return runner.run("pub-ls", f"--dir={store['dir']}")
-
-
-@when(parsers.parse('I run the pipeline "{pipeline}"'), target_fixture="result")
-def run_pipeline(runner, store, pipeline: str):
-    stages = [s.strip() + f" --dir={store['dir']}" for s in pipeline.split("|")]
-    return runner.pipeline(stages)
 
 
 @when(parsers.parse('I pipe {name} into "{command}"'), target_fixture="result")

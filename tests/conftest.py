@@ -152,3 +152,50 @@ def exit_code_is(result: Completed, code: int) -> None:
 @then("stdout is empty")
 def stdout_is_empty(result: Completed) -> None:
     assert result.out == b"", f"expected no stdout, got {result.out!r}"
+
+
+# --- fixtures and steps shared across feature files -------------------------
+
+from pytest_bdd import given, when  # noqa: E402
+
+from support.objects import (  # noqa: E402
+    author_key, cid_of, publet, relation, write_store,
+)
+
+_KA = author_key("K_a")
+_KB = author_key("K_b")
+
+# Only these commands read a store directory; the rest are stdin filters.
+DIR_AWARE = {
+    "pub-ls", "pub-edges", "pub-lineage", "pub-closure",
+    "pub-divergence", "pub-lint", "pub-delta",
+}
+
+
+@given("a store containing the Appendix A fixture", target_fixture="store")
+def appendix_a(tmp_path):
+    """P1 superseded by P4 by its own author; P2 a third-party proposal."""
+    p1 = publet(_KA, "2026-09-12T10:00:00Z", "empirical", "relapse incidence fell")
+    p4 = publet(_KA, "2026-09-12T11:00:00Z", "empirical", "effect holds in a subgroup")
+    p2 = publet(_KB, "2026-09-12T10:30:00Z", "empirical", "the design cannot support it")
+    objects = [
+        p1, p4, p2,
+        relation(_KA, "2026-09-12T11:00:01Z", "supersedes", cid_of(p4), cid_of(p1)),
+        relation(_KB, "2026-09-12T10:30:01Z", "supersedes", cid_of(p2), cid_of(p1)),
+        relation(_KB, "2026-09-12T10:30:02Z", "disputes", cid_of(p2), cid_of(p1)),
+    ]
+    write_store(tmp_path, objects)
+    return {"dir": tmp_path, "P1": cid_of(p1), "P4": cid_of(p4), "P2": cid_of(p2)}
+
+
+
+
+@when(parsers.parse('I run the pipeline "{pipeline}"'), target_fixture="result")
+def run_pipeline(runner, store, pipeline: str):
+    stages = []
+    for stage in pipeline.split("|"):
+        stage = stage.strip()
+        if stage.split()[0] in DIR_AWARE:
+            stage += f" --dir={store['dir']}"
+        stages.append(stage)
+    return runner.pipeline(stages)

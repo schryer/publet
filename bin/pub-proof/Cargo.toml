@@ -1,16 +1,19 @@
 [package]
-name = "publet-merkle"
-description = "Append-only log and sorted membership tree, with proofs."
+name = "pub-proof"
+description = "Produce and verify inclusion, absence, and consistency proofs."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "pub-proof"
+path = "src/main.rs"
+
 [dependencies]
 publet-core.workspace = true
-thiserror.workspace = true
-sha2 = "0.10"
+publet-merkle.workspace = true
 
 [lints]
 workspace = true

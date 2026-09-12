@@ -1,0 +1,20 @@
+[package]
+name = "pub-delta"
+description = "Apply generation records to a membership and verify the result."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-delta"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+publet-merkle.workspace = true
+publet-domain = { path = "../../crates/publet-domain" }
+
+[lints]
+workspace = true

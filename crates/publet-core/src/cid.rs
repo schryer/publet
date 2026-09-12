@@ -86,6 +86,22 @@ impl Cid {
         }
     }
 
+    /// Construct from a digest computed elsewhere.
+    ///
+    /// Merkle roots are digests rather than hashes of any single byte
+    /// string, so they cannot be produced by [`Cid::of`]. Returns `None`
+    /// when the digest length does not match the algorithm.
+    #[must_use]
+    pub fn from_digest(alg: HashAlg, digest: &[u8]) -> Option<Self> {
+        if digest.len() != alg.digest(&[]).len() {
+            return None;
+        }
+        Some(Self {
+            alg,
+            digest: digest.to_vec(),
+        })
+    }
+
     /// The algorithm this identifier uses.
     #[must_use]
     pub fn alg(&self) -> HashAlg {

@@ -315,6 +315,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-delta"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-domain",
+ "publet-merkle",
+]
+
+[[package]]
 name = "pub-divergence"
 version = "0.0.1"
 dependencies = [
@@ -361,6 +370,22 @@ version = "0.0.1"
 dependencies = [
  "publet-core",
  "publet-graph",
+]
+
+[[package]]
+name = "pub-merkle"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-merkle",
+]
+
+[[package]]
+name = "pub-proof"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-merkle",
 ]
 
 [[package]]
@@ -422,6 +447,7 @@ name = "publet-merkle"
 version = "0.0.1"
 dependencies = [
  "publet-core",
+ "sha2",
  "thiserror",
 ]
 
