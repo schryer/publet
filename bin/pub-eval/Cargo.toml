@@ -1,19 +1,20 @@
 [package]
-name = "publet-eval"
-description = "Deterministic trust propagation and standing computation."
+name = "pub-eval"
+description = "Evaluate standing under a declared viewpoint."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "pub-eval"
+path = "src/main.rs"
+
 [dependencies]
 publet-core.workspace = true
 publet-graph.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
-proptest = "1"
+publet-eval.workspace = true
 
 [lints]
 workspace = true

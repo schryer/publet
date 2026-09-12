@@ -331,6 +331,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-eval"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-eval",
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-lineage"
 version = "0.0.1"
 dependencies = [
@@ -386,6 +395,7 @@ dependencies = [
 name = "publet-eval"
 version = "0.0.1"
 dependencies = [
+ "proptest",
  "publet-core",
  "publet-graph",
  "thiserror",

@@ -59,14 +59,19 @@ mkdir -p "$CACHE/registry" "$CACHE/target"
 VECTOR_DIR="${PUBLET_ROOT}/vectors/eval"
 EVAL_BIN="pub-eval"
 
-digest_for() { # target-name, runner-command-prefix...
-  local name="$1"; shift
+# Run every vector through the evaluation binary and digest the output.
+# Comparing digests rather than eyeballing values is the point: R8 is a
+# statement about bytes, and a difference of one in the sixth decimal place
+# is exactly the kind of divergence a human reading a table would miss.
+digest_for() { # binary-path
+  local bin="$1"
   if [ ! -d "$VECTOR_DIR" ] || [ -z "$(ls -A "$VECTOR_DIR" 2>/dev/null)" ]; then
     echo "SKIP"
     return 0
   fi
-  "$@" sh -c "for v in vectors/eval/*; do ./$EVAL_BIN --vector \"\$v\"; done" \
-    2>/dev/null | sha256sum | cut -c1-16
+  for v in "$VECTOR_DIR"/*.cbor; do
+    "$bin" --vector="$v" || return 1
+  done | sha256sum | cut -c1-16
 }
 
 run_native() { # rust-target
@@ -82,6 +87,19 @@ run_image() { # podman-arch, rust-target, image
     "$image" cargo test --workspace --all-features --quiet
 }
 
+run_image_digest() { # podman-arch, rust-target, image
+  local arch="$1" target="$2" image="$3"
+  podman run --rm --arch="$arch" \
+    -v "$PUBLET_ROOT:/w:Z" -w /w \
+    -v "$CACHE/registry:/usr/local/cargo/registry:Z" \
+    -e CARGO_TARGET_DIR="/w/.matrix-cache/target/$target" \
+    "$image" sh -c \
+      "cargo build --workspace --release --quiet && \
+       for v in vectors/eval/*.cbor; do \
+         .matrix-cache/target/$target/release/pub-eval --vector=\"\$v\"; \
+       done" | sha256sum | cut -c1-16
+}
+
 run_cross() { # podman-arch, rust-target, runner-image
   local arch="$1" target="$2" runner="$3"
   # Build natively for the target...
@@ -90,11 +108,13 @@ run_cross() { # podman-arch, rust-target, runner-image
     -v "$CACHE/registry:/usr/local/cargo/registry:Z" \
     -e CARGO_TARGET_DIR="/w/.matrix-cache/target/$target" \
     "$CROSS_IMAGE" cargo build --workspace --release --target "$target" --quiet
-  # ...then execute the artifacts under emulation. Tests are not run here:
-  # `cargo test` needs a toolchain on the target, and the property being
-  # checked is the output of the built binary, not the test harness.
-  podman run --rm --arch="$arch" \
-    -v "$PUBLET_ROOT:/w:Z" -w /w "$runner" true
+  # ...then run the artifact under emulation. `cargo test` is not used here:
+  # it needs a toolchain on the target, and the property under test is the
+  # output of the built binary rather than the test harness.
+  podman run --rm --arch="$arch" -v "$PUBLET_ROOT:/w:Z" -w /w "$runner" \
+    sh -c "for v in vectors/eval/*.cbor; do \
+             .matrix-cache/target/$target/$target/release/pub-eval --vector=\"\$v\"; \
+           done" | sha256sum | cut -c1-16
 }
 
 ensure_cross_image() {
@@ -119,12 +139,21 @@ for row in "${TARGETS[@]}"; do
 
   printf '\n\033[1m==> %s (%s, %s)\033[0m\n' "$name" "$mode" "$target"
   case "$mode" in
-    native) run_native "$target" ;;
-    image)  run_image "$arch" "$target" "$runner" ;;
-    cross)  ensure_cross_image; run_cross "$arch" "$target" "$runner" ;;
-  esac || { echo "  FAILED"; status=1; continue; }
-
-  DIGESTS[$name]="$(digest_for "$name" true)"
+    native)
+      run_native "$target" || { echo "  FAILED"; status=1; continue; }
+      cargo build --workspace --release --quiet
+      DIGESTS[$name]="$(digest_for "$PUBLET_ROOT/target/release/pub-eval")"
+      ;;
+    image)
+      run_image "$arch" "$target" "$runner" || { echo "  FAILED"; status=1; continue; }
+      DIGESTS[$name]="$(run_image_digest "$arch" "$target" "$runner")"
+      ;;
+    cross)
+      ensure_cross_image
+      DIGESTS[$name]="$(run_cross "$arch" "$target" "$runner")" \
+        || { echo "  FAILED"; status=1; continue; }
+      ;;
+  esac
   echo "  ok   digest=${DIGESTS[$name]}"
 done
 
