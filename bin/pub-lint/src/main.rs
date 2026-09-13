@@ -8,7 +8,7 @@ use std::io::{BufRead as _, IsTerminal as _};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use publet_graph::{check, load};
+use publet_graph::{check_in, load};
 
 const EXIT_FINDINGS: u8 = 1;
 const EXIT_USAGE: u8 = 2;
@@ -56,7 +56,7 @@ fn main() -> ExitCode {
         let Some(publet) = graph.publet(&cid) else {
             continue;
         };
-        for finding in check(publet) {
+        for finding in check_in(&graph, publet) {
             any = true;
             println!(
                 r#"{{"cid":"{cid}","test":"{}","detail":"{}"}}"#,

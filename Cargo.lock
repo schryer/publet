@@ -912,6 +912,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-ann"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-canon"
 version = "0.0.1"
 dependencies = [
@@ -1018,6 +1026,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-person"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-proof"
 version = "0.0.1"
 dependencies = [
@@ -1034,6 +1050,14 @@ dependencies = [
  "publet-net",
  "publet-store",
  "tokio",
+]
+
+[[package]]
+name = "pub-settle"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-settle",
 ]
 
 [[package]]
@@ -1119,16 +1143,13 @@ name = "publet-graph"
 version = "0.0.1"
 dependencies = [
  "publet-core",
+ "publet-lint",
  "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "publet-lint"
 version = "0.0.1"
-dependencies = [
- "publet-core",
- "thiserror 2.0.20",
-]
 
 [[package]]
 name = "publet-merkle"

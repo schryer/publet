@@ -335,6 +335,37 @@ impl Graph {
                 .contains(&a.to_string())
     }
 
+    /// Keys this key has publicly assumed accountability for (Section 10.7).
+    ///
+    /// The count is the check. A single assumption is indistinguishable
+    /// from protecting a dissident or from fronting for a PR firm, and
+    /// deliberately so; what separates them is visible only in aggregate,
+    /// which is why assumptions are published rather than hidden.
+    #[must_use]
+    pub fn assumptions_by(&self, assumer: &Cid) -> Vec<crate::Assumption> {
+        self.annotations
+            .values()
+            .filter(|a| a.kind() == "assumes-accountability")
+            .filter_map(|a| self.objects.get(&a.cid().to_string()))
+            .filter_map(crate::Assumption::from_object)
+            .filter(|a| &a.assumer == assumer)
+            .collect()
+    }
+
+    /// Every triage annotation targeting an object (Section 7.4).
+    ///
+    /// Exposed for display and for appeal, and read by nothing that
+    /// computes. Triage may order attention; it may not decide anything.
+    #[must_use]
+    pub fn triage_of(&self, target: &Cid) -> Vec<crate::Triage> {
+        self.annotations
+            .values()
+            .filter(|a| a.kind() == "triage" && a.target() == target)
+            .filter_map(|a| self.objects.get(&a.cid().to_string()))
+            .filter_map(crate::Triage::from_object)
+            .collect()
+    }
+
     /// Critique annotations targeting a document (Section 8).
     #[must_use]
     pub fn critiques_of(&self, target: &Cid) -> Vec<&Annotation> {

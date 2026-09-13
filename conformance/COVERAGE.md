@@ -7,14 +7,16 @@ untested.
 
 - specification: `/home/david/git/docs/publet-specification/index.md`
 - sections with normative language: 47
-- sections with at least one scenario: 39 (82%)
+- sections with at least one scenario: 47 (100%)
 
 ## Covered
 
 | Section | Statements | Scenarios |
 |---|---|---|
 | 10.1 | 2 | conformance/human_signatory.feature |
+| 10.3 | 9 | conformance/personhood.feature |
 | 10.5 | 1 | conformance/archive.feature |
+| 10.7 | 4 | conformance/assumption.feature |
 | 11.1 | 1 | conformance/viewpoint.feature |
 | 11.2 | 3 | conformance/determinism.feature |
 | 11.3 | 2 | porcelain/read.feature, porcelain/why.feature |
@@ -22,6 +24,10 @@ untested.
 | 11.6 | 1 | conformance/equivalence.feature |
 | 11.7 | 1 | conformance/reproducible_evaluation.feature |
 | 11.8 | 2 | conformance/viewpoint.feature |
+| 12.1 | 1 | conformance/settlement.feature |
+| 12.2 | 1 | conformance/settlement.feature |
+| 12.3 | 1 | conformance/settlement.feature |
+| 12.5 | 1 | conformance/settlement.feature |
 | 13.2 | 4 | plumbing/cat.feature, scenarios/store.feature |
 | 13.3 | 1 | conformance/index_node.feature |
 | 13.4 | 3 | conformance/archive.feature |
@@ -44,11 +50,13 @@ untested.
 | 5.2 | 2 | conformance/class_rules.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
 | 5.5 | 2 | conformance/evidence_required.feature |
+| 5.7 | 1 | conformance/atomicity.feature |
 | 6 | 6 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |
 | 7.2 | 1 | conformance/human_signatory.feature |
 | 7.3 | 2 | conformance/redundancy.feature |
+| 7.4 | 4 | conformance/assumption.feature |
 | 8 | 5 | conformance/documents.feature, conformance/forks.feature |
 | 9.2 | 3 | plumbing/divergence.feature |
 | 9.3 | 1 | conformance/anchors.feature |
@@ -57,11 +65,3 @@ untested.
 
 | Section | Statements |
 |---|---|
-| 10.3 | 9 |
-| 10.7 | 4 |
-| 12.1 | 1 |
-| 12.2 | 1 |
-| 12.3 | 1 |
-| 12.5 | 1 |
-| 5.7 | 1 |
-| 7.4 | 4 |

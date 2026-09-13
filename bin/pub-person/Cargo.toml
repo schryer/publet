@@ -1,16 +1,19 @@
 [package]
-name = "publet-graph"
-description = "Edges, lineage, dependency closures, and equivalence classes."
+name = "pub-person"
+description = "Report carried personhood schemes and check the uniqueness bound (Section 10.3)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "pub-person"
+path = "src/main.rs"
+
 [dependencies]
 publet-core.workspace = true
-publet-lint.workspace = true
-thiserror.workspace = true
+publet-graph.workspace = true
 
 [lints]
 workspace = true

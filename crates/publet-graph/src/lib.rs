@@ -9,17 +9,21 @@
 //! assumption.
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+mod assumption;
 mod divergence;
 mod document;
 mod error;
 mod graph;
 mod lint;
+pub mod personhood;
 mod view;
 
+pub use assumption::{Assumption, Basis, Triage};
 pub use divergence::{Divergence, TermConflict, compare};
+pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView};
-pub use lint::{Finding, check};
+pub use lint::{Finding, check, check_in};
 pub use view::{Annotation, Class, Key, Principal, Publet, Relation, RelationKind};
 
 pub mod load;

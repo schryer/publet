@@ -9,7 +9,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO := cargo
 
 .PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix coverage \
-        conformance verify-suite \
+        conformance verify-suite verify-optional \
         guard-deps guard-floats deny check build clean
 
 help: ## Show available targets
@@ -51,6 +51,9 @@ conformance: build ## Run only the scenarios exercising a normative statement
 
 verify-suite: ## Prove the conformance suite detects a broken build
 	./conformance/verify-suite.sh
+
+verify-optional: ## Prove the optional layers are optional
+	./conformance/verify-optional.sh
 
 guard-deps: ## Enforce the dependency direction (plan section 3)
 	./tools/check-deps.py

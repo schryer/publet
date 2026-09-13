@@ -163,3 +163,77 @@ def write_store(directory, objects: list[bytes]) -> dict[str, str]:
         (directory / name).write_bytes(data)
         out[cid] = name
     return out
+
+
+def value_annotation(author: str, created: str, kind: str, target: str,
+                     value: bytes) -> bytes:
+    """An annotation carrying a structured `value` block.
+
+    Assumed accountability, triage and personhood all take this shape: the
+    `kind` says what is being asserted and `value` carries the disclosure
+    that makes it readable at all.
+    """
+    return obj("ann", author, created, [
+        ("kind", text(kind)),
+        ("target", text(target)),
+        ("value", value),
+    ])
+
+
+def assumption(assumer: str, created: str, pseudonym: str,
+               basis: str = "work-reviewed-by-me") -> bytes:
+    return value_annotation(assumer, created, "assumes-accountability",
+                            pseudonym, cbor_map([("basis", text(basis))]))
+
+
+def triage(author: str, created: str, target: str, finding: str,
+           engine: tuple[str, str] | None = ("a-model", "2026-09")) -> bytes:
+    value = [("finding", text(finding))]
+    if engine is not None:
+        value.append(("engine", cbor_map([
+            ("model", text(engine[0])),
+            ("version", text(engine[1])),
+        ])))
+    return value_annotation(author, created, "triage", target, cbor_map(value))
+
+
+def byte_string(data: bytes) -> bytes:
+    return head(2, len(data)) + data
+
+
+def attestation(author: str, created: str, subject: str, scheme: str,
+                scope: str, nullifier: bytes, *, issuer_set: str | None = None,
+                unlinkable: bool = True, issuer_can_link: bool = False,
+                revocation_leaks: bool = False) -> bytes:
+    """A personhood attestation.
+
+    The anonymity block is part of the attestation rather than a property
+    of the verifier, because Section 10.3 requires it displayed with any
+    personhood claim: a scheme whose issuer can link presentations offers a
+    different guarantee, and the difference is invisible in the proof.
+    """
+    true_, false_ = b"\xf5", b"\xf4"
+    flag = lambda b: true_ if b else false_  # noqa: E731
+    value = cbor_map([
+        ("anonymity", cbor_map([
+            ("issuer_can_link", flag(issuer_can_link)),
+            ("revocation_leaks_linkage", flag(revocation_leaks)),
+            ("unlinkable_across_scopes", flag(unlinkable)),
+        ])),
+        ("issuer_set", text(issuer_set or cid_of(b"an issuer set"))),
+        ("nullifier", byte_string(nullifier)),
+        ("proof", byte_string(b"a demonstration proof")),
+        ("scheme", text(scheme)),
+        ("scope", text(scope)),
+    ])
+    return value_annotation(author, created, "personhood", subject, value)
+
+
+def bounty(author: str, created: str, target: str, policy: str | None,
+           base_share: int, kind: str = "review") -> bytes:
+    body = [("kind", text(kind))]
+    if policy is not None:
+        body.append(("policy", text(policy)))
+    body.append(("base_share", uint(base_share)))
+    body.append(("target", text(target)))
+    return obj("bounty", author, created, body)

@@ -1,6 +1,6 @@
 [package]
 name = "pub-lint"
-description = "Graph query over a store of objects."
+description = "Report structural authoring findings for a publet (Section 5.7)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

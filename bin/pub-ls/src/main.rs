@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use publet_core::Cid;
 use publet_graph::{Class, load};
 
 const EXIT_VIOLATION: u8 = 1;
@@ -15,6 +16,7 @@ fn main() -> ExitCode {
     let mut dir = PathBuf::from(".");
     let mut want_type: Option<String> = None;
     let mut want_class: Option<Class> = None;
+    let mut want_author: Option<Cid> = None;
     let mut forks = false;
 
     for arg in std::env::args().skip(1) {
@@ -22,6 +24,12 @@ fn main() -> ExitCode {
             dir = PathBuf::from(v);
         } else if let Some(v) = arg.strip_prefix("--type=") {
             want_type = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--author=") {
+            let Ok(cid) = v.parse() else {
+                eprintln!("not a CID: {v}");
+                return ExitCode::from(EXIT_USAGE);
+            };
+            want_author = Some(cid);
         } else if arg == "--forks" {
             forks = true;
         } else if let Some(v) = arg.strip_prefix("--class=") {
@@ -33,7 +41,10 @@ fn main() -> ExitCode {
             }
         } else {
             eprintln!("unknown argument: {arg}");
-            eprintln!("usage: pub-ls [--dir=DIR] [--type=KIND] [--class=CLASS] [--forks]");
+            eprintln!(
+                "usage: pub-ls [--dir=DIR] [--type=KIND] [--class=CLASS] \
+                 [--author=CID] [--forks]"
+            );
             return ExitCode::from(EXIT_USAGE);
         }
     }
@@ -60,6 +71,11 @@ fn main() -> ExitCode {
         let Ok(cid) = cid_text.parse() else { continue };
         if let Some(kind) = &want_type
             && graph.object(&cid).is_none_or(|o| o.kind() != kind)
+        {
+            continue;
+        }
+        if let Some(author) = &want_author
+            && graph.object(&cid).is_none_or(|o| o.author() != author)
         {
             continue;
         }

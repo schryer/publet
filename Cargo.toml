@@ -12,11 +12,13 @@ repository = "https://github.com/schryer/publet"
 [workspace.dependencies]
 publet-core = { path = "crates/publet-core", version = "0.0.1" }
 publet-graph = { path = "crates/publet-graph", version = "0.0.1" }
+publet-lint = { path = "crates/publet-lint", version = "0.0.1" }
 publet-merkle = { path = "crates/publet-merkle", version = "0.0.1" }
 publet-eval = { path = "crates/publet-eval", version = "0.0.1" }
 publet-domain = { path = "crates/publet-domain", version = "0.0.1" }
 publet-store = { path = "crates/publet-store", version = "0.0.1" }
 publet-net = { path = "crates/publet-net", version = "0.0.1" }
+publet-settle = { path = "crates/publet-settle", version = "0.0.1" }
 thiserror = "2"
 
 # Applied to every crate via `[lints] workspace = true`. Handbook chapter 2:

@@ -14,11 +14,11 @@ import sys
 # crate -> crates it may depend on, within this workspace.
 ALLOWED = {
     "publet-core": set(),
-    "publet-graph": {"publet-core"},
+    "publet-graph": {"publet-core", "publet-lint"},
     "publet-eval": {"publet-core", "publet-graph"},
     "publet-merkle": {"publet-core"},
     "publet-domain": {"publet-core", "publet-merkle", "publet-graph"},
-    "publet-lint": {"publet-core"},
+    "publet-lint": set(),
     "publet-store": {"publet-core", "publet-domain", "publet-merkle", "publet-graph"},
     "publet-settle": {"publet-core"},
     "publet-net": {"publet-core", "publet-domain", "publet-merkle",

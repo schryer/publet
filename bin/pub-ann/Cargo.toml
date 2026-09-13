@@ -1,16 +1,19 @@
 [package]
-name = "publet-graph"
-description = "Edges, lineage, dependency closures, and equivalence classes."
+name = "pub-ann"
+description = "Read the annotations that bear on the graph without authority in it."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "pub-ann"
+path = "src/main.rs"
+
 [dependencies]
 publet-core.workspace = true
-publet-lint.workspace = true
-thiserror.workspace = true
+publet-graph.workspace = true
 
 [lints]
 workspace = true
