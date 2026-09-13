@@ -18,7 +18,8 @@ const EXIT_LOAD: u8 = 4;
 fn usage() -> ExitCode {
     eprintln!(
         "usage: pub-ann [--dir=DIR] --assumptions-by=CID\n\
-         \x20      pub-ann [--dir=DIR] --triage-of=CID"
+         \x20      pub-ann [--dir=DIR] --triage-of=CID\n\
+         \x20      pub-ann [--dir=DIR] --usage-of=CID"
     );
     ExitCode::from(EXIT_USAGE)
 }
@@ -27,6 +28,7 @@ fn main() -> ExitCode {
     let mut dir = PathBuf::from(".");
     let mut assumptions_by: Option<Cid> = None;
     let mut triage_of: Option<Cid> = None;
+    let mut usage_of: Option<Cid> = None;
 
     for arg in std::env::args().skip(1) {
         let parse = |v: &str| -> Option<Cid> { v.parse().ok() };
@@ -38,6 +40,12 @@ fn main() -> ExitCode {
                 return ExitCode::from(EXIT_USAGE);
             };
             assumptions_by = Some(cid);
+        } else if let Some(v) = arg.strip_prefix("--usage-of=") {
+            let Some(cid) = parse(v) else {
+                eprintln!("not a CID: {v}");
+                return ExitCode::from(EXIT_USAGE);
+            };
+            usage_of = Some(cid);
         } else if let Some(v) = arg.strip_prefix("--triage-of=") {
             let Some(cid) = parse(v) else {
                 eprintln!("not a CID: {v}");
@@ -50,7 +58,7 @@ fn main() -> ExitCode {
         }
     }
 
-    if assumptions_by.is_none() && triage_of.is_none() {
+    if assumptions_by.is_none() && triage_of.is_none() && usage_of.is_none() {
         return usage();
     }
 
@@ -72,6 +80,16 @@ fn main() -> ExitCode {
                 assumption.assumer,
                 assumption.assumed,
                 assumption.basis.id()
+            );
+        }
+    }
+
+    if let Some(target) = usage_of {
+        for (source, locator) in graph.usage_of(&target) {
+            println!(
+                r#"{{"source":"{}","locator":"{}"}}"#,
+                source.replace('"', "\\\""),
+                locator.replace('"', "\\\"")
             );
         }
     }

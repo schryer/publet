@@ -11,25 +11,50 @@ use crate::workspace::Workspace;
 
 /// Show one object.
 ///
+/// Reads from the workspace by default, or from a directory of objects
+/// given `--dir`. The second matters for a corpus kept as files: someone
+/// who clones one should be able to read it without first building a
+/// store, and every other directory-reading command already works that
+/// way.
+///
 /// # Errors
 ///
 /// Returns a message if the workspace, store, or object is unavailable.
 pub(crate) fn run(args: &[String]) -> Result<(), String> {
-    let here = std::env::current_dir().map_err(|e| e.to_string())?;
-    let ws = Workspace::open(&here)?;
-    let store = ws.store()?;
+    let mut dir: Option<std::path::PathBuf> = None;
+    let mut wanted: Option<&String> = None;
+    for arg in args {
+        if let Some(v) = arg.strip_prefix("--dir=") {
+            dir = Some(std::path::PathBuf::from(v));
+        } else if arg.starts_with("--") {
+            return Err(format!("unknown argument: {arg}"));
+        } else {
+            wanted = Some(arg);
+        }
+    }
 
-    let target: Cid = args
-        .first()
+    let target: Cid = wanted
         .ok_or("a CID is required")?
         .parse()
         .map_err(|_| "the argument must be a CID".to_owned())?;
 
-    let mode = Workspace::mode_for(&store, &target);
-    let bytes = store
-        .get(&target)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("not in your replica: {target}"))?;
+    let (bytes, mode) = if let Some(path) = &dir {
+        let graph = publet_graph::load::from_dir(path).map_err(|e| e.to_string())?;
+        let object = graph
+            .object(&target)
+            .ok_or_else(|| format!("not in {}: {target}", path.display()))?;
+        (object.bytes().to_vec(), None)
+    } else {
+        let here = std::env::current_dir().map_err(|e| e.to_string())?;
+        let ws = Workspace::open(&here)?;
+        let store = ws.store()?;
+        let mode = Workspace::mode_for(&store, &target);
+        let bytes = store
+            .get(&target)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("not in your replica: {target}"))?;
+        (bytes, Some(mode))
+    };
 
     let object = publet_core::Object::parse(&bytes)
         .map_err(|e| e.to_string())?
@@ -88,7 +113,11 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
-    println!();
-    println!("[{}] {}", mode.label(), mode.note());
+    // Reading from a directory of files is neither local nor remote
+    // retrieval, so there is no mode to disclose and none is invented.
+    if let Some(mode) = mode {
+        println!();
+        println!("[{}] {}", mode.label(), mode.note());
+    }
     Ok(())
 }

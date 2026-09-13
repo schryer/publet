@@ -399,6 +399,48 @@ impl Graph {
         out
     }
 
+    /// Usage citations filed against a definitional publet (Section 5.2).
+    ///
+    /// Each is a source and a locator naming where the sense was found. The
+    /// citation is a pointer rather than a quotation, which is what lets a
+    /// reader check it without the corpus reproducing what it cites.
+    #[must_use]
+    pub fn usage_of(&self, target: &Cid) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        for cid_text in self.cids() {
+            let Ok(cid) = cid_text.parse::<Cid>() else {
+                continue;
+            };
+            let Some(object) = self.object(&cid) else {
+                continue;
+            };
+            if object.kind() != "ann" {
+                continue;
+            }
+            let body = object.body();
+            if body.get("kind").and_then(Value::as_text) != Some("usage")
+                || body.get("target").and_then(Value::as_text) != Some(&target.to_string())
+            {
+                continue;
+            }
+            let Some(value) = body.get("value") else {
+                continue;
+            };
+            let Some(source) = value.get("source").and_then(Value::as_text) else {
+                continue;
+            };
+            let locator = value
+                .get("locator")
+                .and_then(Value::as_text)
+                .unwrap_or("")
+                .to_owned();
+            out.push((source.to_owned(), locator));
+        }
+        out.sort();
+        out.dedup();
+        out
+    }
+
     /// Subjects this object is classified under (Section 9.1).
     ///
     /// Membership is an annotation, never a property of the object (R6), so
