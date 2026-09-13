@@ -49,6 +49,24 @@ fn a_coordinating_conjunction_is_flagged() {
 }
 
 #[test]
+fn a_temporal_while_is_not_a_coordinator() {
+    // Found by writing the corpus: "tracking nesting depth while scanning"
+    // has one subject, so there is no second assertion to separate. The
+    // contrastive use still fires.
+    assert!(tests_that_fired("tracking nesting depth while scanning the input").is_empty());
+    // The first version of this test chose content with no punctuation and
+    // so passed against a fix that did not work on the sentence that
+    // prompted it. A clause boundary is exactly where a comma falls.
+    assert!(
+        tests_that_fired("tracking nesting depth while scanning, so that marks pair").is_empty()
+    );
+    assert_eq!(
+        tests_that_fired("the rate fell while the cohort grew"),
+        ["single-assertion"]
+    );
+}
+
+#[test]
 fn a_second_sentence_is_flagged() {
     assert_eq!(
         tests_that_fired("the rate fell. the cohort grew"),

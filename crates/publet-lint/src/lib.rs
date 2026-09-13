@@ -50,6 +50,25 @@ pub struct Term<'a> {
 /// Conjunctions that typically join two independently assertable claims.
 const COORDINATORS: [&str; 4] = [" and ", " but ", " whereas ", " while "];
 
+/// Whether a coordinator occurrence actually joins two clauses.
+///
+/// "while" is the awkward one: contrastive in "the rate fell while the
+/// cohort grew", and merely temporal in "tracking depth while scanning".
+/// The second has no second subject, so there is no second assertion to
+/// separate. A following gerund is the cheap signal for that, and it is
+/// the case that arises constantly when describing what code does.
+fn joins_two_clauses(lowered: &str, coordinator: &str) -> bool {
+    lowered.match_indices(coordinator).any(|(at, _)| {
+        let rest = lowered.get(at + coordinator.len()..).unwrap_or("");
+        let next = rest
+            .split_whitespace()
+            .next()
+            .unwrap_or("")
+            .trim_end_matches(|c: char| !c.is_alphanumeric());
+        !(coordinator == " while " && next.ends_with("ing"))
+    })
+}
+
 /// Openers whose referent cannot be inside a publet that starts with them.
 ///
 /// A publet is quoted on its own, so an opening "it" or "this" resolves to
@@ -136,7 +155,7 @@ pub fn check(content: &str, terms: &[Term<'_>], atomic: bool) -> Vec<Finding> {
 fn atomicity(content: &str, lowered: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
     for coordinator in COORDINATORS {
-        if lowered.contains(coordinator) {
+        if lowered.contains(coordinator) && joins_two_clauses(lowered, coordinator) {
             findings.push(Finding {
                 test: "single-assertion",
                 detail: format!(
