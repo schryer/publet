@@ -294,6 +294,40 @@ def do_archive(runner, archive_store):
     assert out.code == 0, out.stderr
 
 
+@when("an independent service timestamps both")
+def service_timestamps(runner, archive_store):
+    _file_timestamps(runner, archive_store, service="an independent service")
+
+
+@when("a timestamp naming no service is filed for both")
+def timestamps_without_service(runner, archive_store):
+    _file_timestamps(runner, archive_store, service=None)
+
+
+def _file_timestamps(runner, archive_store, service):
+    """File a `timestamped` annotation per held object (Section 10.5).
+
+    The annotation is the artifact rather than a row in the node's own
+    database: a timestamp that does not travel with the object cannot be
+    checked by anyone who receives it.
+    """
+    from support.objects import author_key, cbor_map, text, value_annotation
+    for cid in archive_store["held"]:
+        value = [("at", text("2026-09-13T00:00:00Z"))]
+        if service is not None:
+            value.append(("service", text(service)))
+        data = value_annotation(author_key("K_service"), "2026-09-13T00:00:00Z",
+                                "timestamped", cid, cbor_map(value))
+        out = runner.run("pub-store", f"--store={archive_store['path']}",
+                         "add", stdin=data)
+        assert out.code == 0, out.stderr
+
+
+@then("the audit names nothing")
+def audit_names_nothing(result):
+    assert result.stdout.strip() == "", result.stdout
+
+
 @then("it names both objects")
 def names_both(result, archive_store):
     for cid in archive_store["held"]:

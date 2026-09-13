@@ -278,6 +278,8 @@ struct Filed {
     outcome: String,
     /// Whether the filer declared materials shared with another attempt.
     shares_materials: bool,
+    /// The funding source declared, if any (Section 11.4).
+    funding: Option<String>,
     human: bool,
 }
 
@@ -295,10 +297,17 @@ fn read_reproduction(
         .get("value")
         .and_then(|v| v.get("independence"))
         .is_some_and(|i| i.get("shared_materials").is_some());
+    let funding = body
+        .get("value")
+        .and_then(|v| v.get("independence"))
+        .and_then(|i| i.get("funding"))
+        .and_then(Value::as_text)
+        .map(ToOwned::to_owned);
     Some(Filed {
         author: author.clone(),
         outcome: outcome.to_owned(),
         shares_materials,
+        funding,
         human,
     })
 }
@@ -351,11 +360,31 @@ fn independent_groups(graph: &Graph, filed: &[&Filed]) -> usize {
         .map(|f| affiliations_of(graph, &f.author))
         .collect();
 
+    let same_person = same_person_links(graph);
+
     let related = |i: usize, j: usize| -> bool {
         let (Some(left), Some(right)) = (filed.get(i), filed.get(j)) else {
             return false;
         };
         if left.author == right.author {
+            return true;
+        }
+        // Section 10.2: an `attests` annotation may claim two keys are held
+        // by one person. Two keys are cheap and a second person is not, so
+        // a declared link merges them -- conservatively, in the direction
+        // that counts fewer independent parties rather than more.
+        let pair = (left.author.to_string(), right.author.to_string());
+        let reversed = (pair.1.clone(), pair.0.clone());
+        if same_person.contains(&pair) || same_person.contains(&reversed) {
+            return true;
+        }
+        // Section 11.4 condition 3: a shared funder is a shared interest,
+        // whatever the institutions say. Only a declared one counts -- an
+        // absent declaration is not evidence of separate funding, but
+        // inferring one would be inventing a fact.
+        if let (Some(left_fund), Some(right_fund)) = (&left.funding, &right.funding)
+            && left_fund == right_fund
+        {
             return true;
         }
         match (affiliations.get(i), affiliations.get(j)) {
@@ -384,6 +413,46 @@ fn independent_groups(graph: &Graph, filed: &[&Filed]) -> usize {
         parties += 1;
     }
     parties
+}
+
+/// Key pairs some signer attests are held by one person (Section 10.2).
+///
+/// Read without weighting, deliberately. A viewpoint could discount an
+/// attestation it distrusts, but the failure modes are not symmetric:
+/// wrongly merging two parties understates replication and is visible,
+/// while wrongly splitting one understates nothing and is invisible. The
+/// conservative reading is the one that cannot silently inflate a floor.
+fn same_person_links(graph: &Graph) -> BTreeSet<(String, String)> {
+    let mut out = BTreeSet::new();
+    for cid_text in graph.cids() {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(object) = graph.object(&cid) else {
+            continue;
+        };
+        if object.kind() != "ann" {
+            continue;
+        }
+        let body = object.body();
+        if body.get("kind").and_then(Value::as_text) != Some("attests") {
+            continue;
+        }
+        let Some(value) = body.get("value") else {
+            continue;
+        };
+        if value.get("claim").and_then(Value::as_text) != Some("same-person-as") {
+            continue;
+        }
+        let (Some(target), Some(about)) = (
+            body.get("target").and_then(Value::as_text),
+            value.get("about").and_then(Value::as_text),
+        ) else {
+            continue;
+        };
+        out.insert((target.to_owned(), about.to_owned()));
+    }
+    out
 }
 
 /// A declared affiliation (Section 10.4).

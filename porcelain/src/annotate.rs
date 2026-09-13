@@ -22,6 +22,18 @@ use publet_graph::load;
 
 use crate::workspace::Workspace;
 
+/// Section 10.2. Each is a claim by one key about another, carrying
+/// evidence and method. `same-person-as` and `distinct-from` bear on
+/// independence: two keys held by one person are not two reproductions.
+const CLAIMS: [&str; 6] = [
+    "same-person-as",
+    "affiliated-with",
+    "credentialed-in",
+    "distinct-from",
+    "is-organization",
+    "is-automated",
+];
+
 /// Section 5.2. `sound-in-scope` is the one that carries partial
 /// correctness: a claim that holds where its scope says and misleads
 /// outside it. There is no number for that, and there should not be --
@@ -181,6 +193,39 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             value.insert("verdict".to_owned(), Value::Text(verdict));
             value.insert("basis".to_owned(), Value::Text(basis));
         }
+        "attests" => {
+            let claim = need("claim", &format!("one of {}", CLAIMS.join(", ")))?;
+            if !CLAIMS.contains(&claim.as_str()) {
+                return Err(format!("unknown attestation claim: {claim}"));
+            }
+            let about = need("about", "the CID of the other key")?;
+            about
+                .parse::<Cid>()
+                .map_err(|_| format!("--about is not a CID: {about}"))?;
+            value.insert("claim".to_owned(), Value::Text(claim));
+            value.insert("about".to_owned(), Value::Text(about));
+            // Section 10.2 asks for evidence and method. An attestation
+            // without them is a rumour, and a rumour about who someone is
+            // is the kind this design exists to avoid recording.
+            for field in ["evidence", "method"] {
+                if let Some(v) = flags.get(field) {
+                    value.insert(field.to_owned(), Value::Text(v.clone()));
+                }
+            }
+        }
+        "timestamped" => {
+            // Section 10.5. The annotation is the artifact: a timestamp
+            // held only in a node's own database does not travel with the
+            // object, cannot be checked by anyone else, and is gone when a
+            // replica is rebuilt from a sync.
+            let at = need("at", "when the service observed the object")?;
+            let service = need("service", "the independent service asserting it")?;
+            value.insert("at".to_owned(), Value::Text(at));
+            value.insert("service".to_owned(), Value::Text(service));
+            if let Some(proof) = flags.get("proof") {
+                value.insert("proof".to_owned(), Value::Text(proof.clone()));
+            }
+        }
         "verdict" => {
             let finding = need("finding", "affirm, deny, or abstain")?;
             if !["affirm", "deny", "abstain"].contains(&finding.as_str()) {
@@ -195,7 +240,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             return Err(format!(
                 "unknown or unsupported annotation kind: {other}\n\
                  supported: usage, classifies, trusts, affiliated, \
-                 assessment, verdict"
+                 assessment, attests, timestamped, verdict"
             ));
         }
     }

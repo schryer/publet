@@ -7,7 +7,7 @@ use std::io::Read as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use publet_core::{Cid, HashAlg, Object};
+use publet_core::{Cid, HashAlg, Object, cbor::Value};
 use publet_store::Store;
 
 const EXIT_VIOLATION: u8 = 1;
@@ -98,7 +98,7 @@ fn main() -> ExitCode {
         "generation" => generation(&store),
         "undeclare" => undeclare(&store, rest.get(1).map(String::as_str)),
         "archive" => archive(&store, rest.get(1).map(String::as_str)),
-        "audit" => match store.untimestamped() {
+        "audit" => match untimestamped(&store) {
             Ok(missing) => {
                 for cid in &missing {
                     println!("{cid}");
@@ -177,6 +177,64 @@ fn undeclare(store: &Store, domain: Option<&str>) -> ExitCode {
     }
 }
 
+/// Objects held with no timestamp from either source.
+///
+/// Two things can cover an object. The store's own table records that this
+/// node stamped it, and a held `timestamped` annotation records that a
+/// service asserted it existed at a time (Section 10.5). Only the second
+/// travels: a timestamp in a node's database does not sync, cannot be
+/// checked by anyone else, and is gone when a replica is rebuilt. So the
+/// annotation counts wherever it is present, and the table is the weaker
+/// fallback rather than the definition.
+fn untimestamped(store: &Store) -> Result<Vec<String>, publet_store::StoreError> {
+    let mut covered = std::collections::BTreeSet::new();
+    for cid_text in store.cids()? {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        let Ok(Some(bytes)) = store.get(&cid) else {
+            continue;
+        };
+        let Ok(parsed) = Object::parse(&bytes) else {
+            continue;
+        };
+        let object = parsed.peek();
+        if object.kind() != "ann" {
+            continue;
+        }
+        let body = object.body();
+        if body.get("kind").and_then(Value::as_text) != Some("timestamped") {
+            continue;
+        }
+        // A timestamp naming no service establishes nothing: what makes it
+        // evidence is that an independent party asserted it.
+        if body
+            .get("value")
+            .and_then(|v| v.get("service"))
+            .and_then(Value::as_text)
+            .is_none()
+        {
+            continue;
+        }
+        if let Some(target) = body.get("target").and_then(Value::as_text) {
+            covered.insert(target.to_owned());
+        }
+        // A timestamp annotation needs no timestamp of its own. Requiring
+        // one would demand a second annotation to cover it, and a third to
+        // cover that: the regress has no fixpoint. It is also unnecessary,
+        // because the annotation already carries the service and instant
+        // that make it evidence -- it is the attestation, not a thing
+        // awaiting one.
+        covered.insert(cid_text.clone());
+    }
+
+    Ok(store
+        .untimestamped()?
+        .into_iter()
+        .filter(|cid| !covered.contains(cid))
+        .collect())
+}
+
 /// Timestamp everything held, as an archive must.
 ///
 /// The attestation is supplied by the caller, because a timestamp an
@@ -189,7 +247,7 @@ fn archive(store: &Store, service: Option<&str>) -> ExitCode {
         eprintln!("  an archive issues to itself establishes nothing");
         return ExitCode::from(EXIT_USAGE);
     };
-    let missing = match store.untimestamped() {
+    let missing = match untimestamped(store) {
         Ok(m) => m,
         Err(e) => {
             eprintln!("{e}");

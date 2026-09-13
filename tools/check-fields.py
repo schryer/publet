@@ -39,12 +39,14 @@ FIELDS = {
     "usage": ["source", "locator", "sense"],
     "resolution": ["thread_root", "outcome", "policy", "snapshot"],
     "trusts": ["weight", "subjects"],
-    "attests": ["identity"],
+    # Section 10.2 gives the claim vocabulary but the annotation table says
+    # only "identity claims", so the field names are a design decision.
+    "attests": ["claim", "about", "evidence", "method"],
     "affiliated": ["organization", "role", "period"],
     "personhood": ["scheme", "issuer_set", "scope", "nullifier", "proof",
                    "anonymity"],
     "assumes-accountability": ["basis"],
-    "timestamped": ["at", "service", "proof"],
+    "timestamped": ["at", "service", "proof"],  # Section 10.5
     "triage": ["finding", "engine"],
     "well-formed": ["test"],
     "witnessed": ["root", "size"],

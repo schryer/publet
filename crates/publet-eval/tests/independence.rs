@@ -43,6 +43,24 @@ fn human_key(seed: &str) -> (Cid, Vec<u8>) {
 }
 
 fn reproduction(author: &Cid, at: &str, target: &Cid) -> (Cid, Vec<u8>) {
+    funded_reproduction(author, at, target, None)
+}
+
+/// A reproduction declaring a funding source, per Section 11.4's
+/// `independence` block.
+fn funded_reproduction(
+    author: &Cid,
+    at: &str,
+    target: &Cid,
+    funder: Option<&str>,
+) -> (Cid, Vec<u8>) {
+    let mut value = vec![("outcome", Value::Text("consistent".into()))];
+    if let Some(funder) = funder {
+        value.push((
+            "independence",
+            map(&[("funding", Value::Text(funder.to_owned()))]),
+        ));
+    }
     object(
         "ann",
         &author.to_string(),
@@ -50,10 +68,7 @@ fn reproduction(author: &Cid, at: &str, target: &Cid) -> (Cid, Vec<u8>) {
         &[
             ("kind", Value::Text("reproduction".into())),
             ("target", Value::Text(target.to_string())),
-            (
-                "value",
-                map(&[("outcome", Value::Text("consistent".into()))]),
-            ),
+            ("value", map(&value)),
         ],
     )
 }
@@ -162,6 +177,116 @@ fn two_reproducers_at_one_organization_are_one() {
     assert_eq!(
         evidence.reproductions.independent_consistent, 1,
         "one consortium is one party"
+    );
+}
+
+fn attests_same_person(author: &Cid, at: &str, subject: &Cid, about: &Cid) -> (Cid, Vec<u8>) {
+    object(
+        "ann",
+        &author.to_string(),
+        at,
+        &[
+            ("kind", Value::Text("attests".into())),
+            ("target", Value::Text(subject.to_string())),
+            (
+                "value",
+                map(&[
+                    ("claim", Value::Text("same-person-as".into())),
+                    ("about", Value::Text(about.to_string())),
+                    ("evidence", Value::Text("met them".into())),
+                ]),
+            ),
+        ],
+    )
+}
+
+#[test]
+fn two_keys_attested_to_one_person_are_one() {
+    // Section 10.2. Two keys are cheap and a second person is not, so a
+    // declared link between them collapses the pair.
+    let (one, two) = keys();
+    let (graph, claim) = graph_with(vec![attests_same_person(
+        &one,
+        "2026-01-05T00:00:00Z",
+        &one,
+        &two,
+    )]);
+    let evidence = evidence_for(&graph, &claim);
+    assert_eq!(evidence.reproductions.consistent, 2);
+    assert_eq!(evidence.reproductions.independent_consistent, 1);
+}
+
+#[test]
+fn an_unrelated_attestation_does_not_merge_keys() {
+    // Only `same-person-as` collapses. Attesting that two keys are
+    // *distinct* must not.
+    let (one, two) = keys();
+    let (graph, claim) = graph_with(vec![object(
+        "ann",
+        &one.to_string(),
+        "2026-01-05T00:00:00Z",
+        &[
+            ("kind", Value::Text("attests".into())),
+            ("target", Value::Text(one.to_string())),
+            (
+                "value",
+                map(&[
+                    ("claim", Value::Text("distinct-from".into())),
+                    ("about", Value::Text(two.to_string())),
+                ]),
+            ),
+        ],
+    )]);
+    assert_eq!(
+        evidence_for(&graph, &claim)
+            .reproductions
+            .independent_consistent,
+        2
+    );
+}
+
+#[test]
+fn one_funder_is_one_party() {
+    // Section 11.4 condition 3. Two unaffiliated labs on one grant share an
+    // interest whatever their letterheads say.
+    let (one, two) = keys();
+    let (one_key, one_bytes) = human_key("K_a");
+    let (two_key, two_bytes) = human_key("K_b");
+    let (claim, claim_bytes) = object(
+        "publet",
+        &one_key.to_string(),
+        "2026-02-01T00:00:00Z",
+        &[
+            ("class", Value::Text("empirical".into())),
+            ("lang", Value::Text("en".into())),
+            ("content", Value::Text("the rate fell".into())),
+            ("depends", Value::Array(Vec::new())),
+            (
+                "evidence",
+                Value::Array(vec![map(&[
+                    ("kind", Value::Text("publet".into())),
+                    ("role", Value::Text("method".into())),
+                    (
+                        "ref",
+                        Value::Text(Cid::of(b"a method", HashAlg::Sha2_256).to_string()),
+                    ),
+                ])]),
+            ),
+        ],
+    );
+    let graph = load::from_objects(vec![
+        (one_key, one_bytes),
+        (two_key, two_bytes),
+        (claim.clone(), claim_bytes),
+        funded_reproduction(&one, "2026-03-01T00:00:00Z", &claim, Some("grant-7")),
+        funded_reproduction(&two, "2026-03-02T00:00:00Z", &claim, Some("grant-7")),
+    ])
+    .unwrap();
+    assert_eq!(
+        evidence_for(&graph, &claim)
+            .reproductions
+            .independent_consistent,
+        1
     );
 }
 
