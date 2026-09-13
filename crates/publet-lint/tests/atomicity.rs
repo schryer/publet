@@ -51,6 +51,35 @@ fn a_decimal_is_not_a_second_sentence() {
 }
 
 #[test]
+fn an_identifier_is_not_a_pile_of_quantities() {
+    // The case that found this: a digest is one token naming one thing,
+    // and each run of digits in it was read as a separate measurement.
+    assert!(tests_that_fired("the vectors digest to 014f9e6a936bf4bf on every target").is_empty());
+    assert!(
+        tests_that_fired(
+            "the identifier is pub:sha2-256:f3rbmpe6i67p465n5mba3sh43e63wbkgweeyqk3wtisy6exzc7xq"
+        )
+        .is_empty()
+    );
+    assert!(tests_that_fired("the digest uses sha2-256 throughout").is_empty());
+}
+
+#[test]
+fn real_quantities_still_count() {
+    // The fix must not buy quiet by going blind. A letter that does not
+    // touch the digits leaves them a measurement.
+    assert_eq!(
+        tests_that_fired("the 2031 cohort had n=4,182 members"),
+        ["single-quantity"]
+    );
+    assert_eq!(
+        tests_that_fired("the rate fell from 18.4% to 11.9%"),
+        ["single-quantity"]
+    );
+    assert!(tests_that_fired("the cohort had 4,182 members").is_empty());
+}
+
+#[test]
 fn an_opening_pronoun_is_flagged() {
     // A publet travels alone, so an opening "it" resolves to whatever
     // preceded it in the work it was cut from -- the context that does not

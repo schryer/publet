@@ -106,6 +106,66 @@ pub fn compare(
 }
 
 /// Terms defined by the definitional publets in a publet's closure.
+/// How a set of publets divides on one term.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TermPartition {
+    /// The term they divide on.
+    pub term: String,
+    /// One entry per definition in play: the definition, and the publets
+    /// presupposing it. Ordered largest group first, so the minority
+    /// readings -- the ones worth looking at -- sort to the end.
+    pub groups: Vec<(Cid, Vec<Cid>)>,
+}
+
+/// Partition publets by which definition of each shared term they use.
+///
+/// `compare` answers whether two publets differ. That is not the question a
+/// corpus drawn from several sources asks: with four sources and one term,
+/// what is wanted is how all four divide and which one stands alone.
+/// Pairwise comparison answers it in six runs and no aggregate.
+///
+/// Only terms with more than one definition in play are returned. Agreement
+/// is the ordinary case and reporting it would bury the disagreements.
+///
+/// # Errors
+///
+/// Returns [`GraphError`] if a dependency closure cannot be resolved.
+pub fn partition(graph: &Graph, publets: &[Cid]) -> Result<Vec<TermPartition>, GraphError> {
+    // term -> definition -> the publets presupposing that definition
+    let mut seen: BTreeMap<String, BTreeMap<String, Vec<Cid>>> = BTreeMap::new();
+    for cid in publets {
+        for (term, definition) in definitional_terms(graph, cid)? {
+            seen.entry(term)
+                .or_default()
+                .entry(definition.to_string())
+                .or_default()
+                .push(cid.clone());
+        }
+    }
+
+    let mut out = Vec::new();
+    for (term, by_definition) in seen {
+        if by_definition.len() < 2 {
+            continue;
+        }
+        let mut groups: Vec<(Cid, Vec<Cid>)> = by_definition
+            .into_iter()
+            .filter_map(|(definition, mut members)| {
+                members.sort_by_key(ToString::to_string);
+                definition.parse::<Cid>().ok().map(|d| (d, members))
+            })
+            .collect();
+        // Largest first, then by identifier so the order is stable.
+        groups.sort_by(|a, b| {
+            b.1.len()
+                .cmp(&a.1.len())
+                .then_with(|| a.0.to_string().cmp(&b.0.to_string()))
+        });
+        out.push(TermPartition { term, groups });
+    }
+    Ok(out)
+}
+
 fn definitional_terms(graph: &Graph, cid: &Cid) -> Result<BTreeMap<String, Cid>, GraphError> {
     let mut out = BTreeMap::new();
     for dep in graph.depends_closure(cid)? {

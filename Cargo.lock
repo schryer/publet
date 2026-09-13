@@ -1087,6 +1087,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-term"
+version = "0.0.1"
+dependencies = [
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-verify"
 version = "0.0.1"
 dependencies = [

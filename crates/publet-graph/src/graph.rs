@@ -366,6 +366,39 @@ impl Graph {
             .collect()
     }
 
+    /// Every term a `definitional` publet in this graph fixes.
+    ///
+    /// Returns *all* definitions of each term, and deliberately does not
+    /// collapse them. Competing definitions for one string are the normal
+    /// case rather than a conflict to resolve (Section 9.1), and returning
+    /// a single winner would be this layer making a choice that belongs to
+    /// a viewpoint.
+    ///
+    /// Sorted by term, then by identifier, so the output is stable.
+    #[must_use]
+    pub fn terms(&self) -> Vec<(String, Cid)> {
+        let mut out = Vec::new();
+        for cid_text in self.cids() {
+            let Ok(cid) = cid_text.parse::<Cid>() else {
+                continue;
+            };
+            let Some(publet) = self.publet(&cid) else {
+                continue;
+            };
+            let Some(object) = self.object(&cid) else {
+                continue;
+            };
+            if let Some(term) = publet.term(object) {
+                out.push((term, cid));
+            }
+        }
+        out.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then_with(|| a.1.to_string().cmp(&b.1.to_string()))
+        });
+        out
+    }
+
     /// Subjects this object is classified under (Section 9.1).
     ///
     /// Membership is an annotation, never a property of the object (R6), so

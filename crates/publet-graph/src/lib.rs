@@ -19,7 +19,7 @@ pub mod personhood;
 mod view;
 
 pub use assumption::{Assumption, Basis, Triage};
-pub use divergence::{Divergence, TermConflict, compare};
+pub use divergence::{Divergence, TermConflict, TermPartition, compare, partition};
 pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView};

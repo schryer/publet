@@ -1,0 +1,18 @@
+[package]
+name = "pub-term"
+description = "Resolve a term to the publets defining it (Section 9.1)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-term"
+path = "src/main.rs"
+
+[dependencies]
+publet-graph.workspace = true
+
+[lints]
+workspace = true

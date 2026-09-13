@@ -216,10 +216,46 @@ fn count_sentences(content: &str) -> usize {
 }
 
 /// Count distinct numeric literals, so that "18.4% to 11.9%" reads as two.
+///
+/// Digits inside an identifier are not quantities. A content address, a
+/// hash algorithm name, or a digest is one token naming one thing, and
+/// reading each run of digits in it as a separate measurement reported
+/// `014f9e6a936bf4bf` as five quantitative claims. A corpus about this
+/// protocol is mostly content addresses, so that warning would have fired
+/// on nearly every publet and been trained away within a day -- which is
+/// how an advisory tool stops protecting anything.
 fn count_quantities(content: &str) -> usize {
+    content
+        .split_whitespace()
+        .filter(|token| !is_identifier(token))
+        .map(numbers_in)
+        .sum()
+}
+
+/// Whether a token is a name rather than a measurement.
+///
+/// The test is adjacency: a digit touching a letter is part of a word.
+/// `sha2-256` and `f3rbmpe6` are names; `4,182` and `11.9%` are not, and
+/// `n=4182` is not either, because the letter does not touch the digits.
+fn is_identifier(token: &str) -> bool {
+    let chars: Vec<char> = token.chars().collect();
+    chars.iter().enumerate().any(|(at, ch)| {
+        if !ch.is_ascii_digit() {
+            return false;
+        }
+        let before = at.checked_sub(1).and_then(|i| chars.get(i));
+        let after = chars.get(at + 1);
+        before.is_some_and(char::is_ascii_alphabetic)
+            || after.is_some_and(char::is_ascii_alphabetic)
+    })
+}
+
+/// Count digit runs in one token, treating a separator between digits as
+/// part of the number so that "18.4" and "4,182" each read as one.
+fn numbers_in(token: &str) -> usize {
     let mut count = 0;
     let mut in_number = false;
-    for ch in content.chars() {
+    for ch in token.chars() {
         if ch.is_ascii_digit() {
             if !in_number {
                 count += 1;
