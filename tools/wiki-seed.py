@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch lead sentences for named Wikipedia articles by HTTP range request.
+"""Fetch lead sentences for Wikipedia or Wiktionary entries by range request.
 
 Seed tooling for the self-hosting corpus. Not protocol code: nothing in the
 Rust workspace depends on it, and the conformance suite never invokes it.
@@ -21,9 +21,16 @@ lead sentence. Revision id is the whole point of recording it: it is what
 makes the resulting `attributive` publet verifiable by a third party, who
 can re-fetch exactly the revision quoted.
 
+Serves both English Wikipedia (26.8 GB dump, 285 MB index) and English
+Wiktionary (1.9 GB dump, 77 MB index), which publish the same layout. Each
+emitted record carries its project and its affiliation: the two are
+different sources, but they are not independent of one another, and
+Section 11.4 bars reproductions sharing an affiliation from counting
+separately toward a replication floor.
+
 Usage:
-    wiki-seed.py --index=PATH --titles=FILE [--out=FILE]
-    wiki-seed.py --fetch-index=PATH        # one-time, 285 MB
+    wiki-seed.py [--project=enwiki|enwiktionary] --index=PATH --titles=FILE
+    wiki-seed.py --project=enwiktionary --fetch-index=PATH
 """
 
 from __future__ import annotations
@@ -36,9 +43,25 @@ import re
 import sys
 import urllib.request
 
-BASE = "https://dumps.wikimedia.org/enwiki/latest"
-DUMP = f"{BASE}/enwiki-latest-pages-articles-multistream.xml.bz2"
-INDEX = f"{BASE}/enwiki-latest-pages-articles-multistream-index.txt.bz2"
+ROOT = "https://dumps.wikimedia.org"
+
+# Both projects publish the same multistream layout, so one code path
+# serves both. They are separate *sources* -- an encyclopedia describes
+# things, a dictionary describes words -- but they are not independent of
+# each other: both are Wikimedia Foundation projects, and Section 11.4
+# makes shared affiliation a bar to independence.
+PROJECTS = {
+    "enwiki": "enwiki-latest-pages-articles-multistream",
+    "enwiktionary": "enwiktionary-latest-pages-articles-multistream",
+}
+AFFILIATION = "Wikimedia Foundation"
+
+
+def urls(project: str) -> tuple[str, str]:
+    """(dump url, index url) for a project."""
+    stem = PROJECTS[project]
+    base = f"{ROOT}/{project}/latest"
+    return f"{base}/{stem}.xml.bz2", f"{base}/{stem}-index.txt.bz2"
 
 MEDIA = ("file:", "image:", "category:")
 BOLD = "'" * 3
@@ -158,9 +181,9 @@ def load_index(path: str, wanted: set[str]) -> dict[str, tuple[int, int, int]]:
     }
 
 
-def articles_in_stream(start: int, end: int) -> dict[str, tuple[str, str]]:
+def articles_in_stream(dump: str, start: int, end: int) -> dict[str, tuple[str, str]]:
     """Every page in one stream, as title -> (revision id, wikitext)."""
-    raw = fetch_range(DUMP, start, end)
+    raw = fetch_range(dump, start, end)
     xml = bz2.BZ2Decompressor().decompress(raw).decode("utf-8", "replace")
     found = {}
     for page in re.findall(r"<page>.*?</page>", xml, re.S):
@@ -174,15 +197,19 @@ def articles_in_stream(start: int, end: int) -> dict[str, tuple[str, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--project", default="enwiki", choices=sorted(PROJECTS),
+                        help="which dump to read (default: enwiki)")
     parser.add_argument("--index", help="local path to the multistream index")
     parser.add_argument("--titles", help="file of article titles, one per line")
     parser.add_argument("--out", help="output path (default: stdout)")
-    parser.add_argument("--fetch-index", help="download the 285 MB index here")
+    parser.add_argument("--fetch-index", help="download the index to this path")
     args = parser.parse_args()
 
+    dump, index = urls(args.project)
+
     if args.fetch_index:
-        print(f"fetching {INDEX}\n  -> {args.fetch_index} (285 MB)", file=sys.stderr)
-        urllib.request.urlretrieve(INDEX, args.fetch_index)
+        print(f"fetching {index}\n  -> {args.fetch_index}", file=sys.stderr)
+        urllib.request.urlretrieve(index, args.fetch_index)
         return 0
 
     if not args.index or not args.titles:
@@ -206,7 +233,7 @@ def main() -> int:
     written = skipped = 0
     try:
         for (start, end), titles in sorted(by_stream.items()):
-            pages = articles_in_stream(start, end)
+            pages = articles_in_stream(dump, start, end)
             for title in titles:
                 if title not in pages:
                     print(f"absent from its stream: {title}", file=sys.stderr)
@@ -222,7 +249,10 @@ def main() -> int:
                     "page_id": located[title][2],
                     "revision": revision,
                     "lead": sentence,
-                    "source": "en.wikipedia.org",
+                    "project": args.project,
+                    # Recorded so that two seeded sources are never mistaken
+                    # for independent ones (Section 11.4).
+                    "affiliation": AFFILIATION,
                     "license": "CC BY-SA 4.0",
                 }, out, ensure_ascii=False)
                 out.write("\n")
