@@ -41,6 +41,10 @@ mv crates/publet-settle "$STASH/publet-settle"
 # Its command-line surface goes with it. A deployment that omits settlement
 # ships no settlement binary, which is what the suite must cope with.
 mv bin/pub-settle "$STASH/pub-settle"
+# Removing the source leaves the previously built binary sitting in the
+# target directory, where the suite would happily keep running it and
+# report a pass that means nothing.
+rm -f target/debug/pub-settle target/release/pub-settle
 # The workspace dependency table still names it; drop that line too.
 sed -i '/^publet-settle = /d' Cargo.toml
 
