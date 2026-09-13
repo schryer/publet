@@ -8,8 +8,21 @@
 
 use publet_lint::{Term, check};
 
+/// The findings for content whose class makes it an assertion.
 fn tests_that_fired(content: &str) -> Vec<&'static str> {
-    let mut out: Vec<&'static str> = check(content, &[]).into_iter().map(|f| f.test).collect();
+    fired(content, true)
+}
+
+/// The findings for content that instructs, quotes, records, or expresses.
+fn fired_non_atomic(content: &str) -> Vec<&'static str> {
+    fired(content, false)
+}
+
+fn fired(content: &str, atomic: bool) -> Vec<&'static str> {
+    let mut out: Vec<&'static str> = check(content, &[], atomic)
+        .into_iter()
+        .map(|f| f.test)
+        .collect();
     out.sort_unstable();
     out.dedup();
     out
@@ -104,7 +117,8 @@ fn a_contested_term_must_be_declared() {
             &[Term {
                 word: "quantum",
                 declared: true
-            }]
+            }],
+            true
         )
         .is_empty()
     );
@@ -115,6 +129,7 @@ fn a_contested_term_must_be_declared() {
             word: "quantum",
             declared: false,
         }],
+        true,
     );
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].test, "undeclared-term");
@@ -126,10 +141,53 @@ fn a_contested_term_must_be_declared() {
             &[Term {
                 word: "quantum",
                 declared: false
-            }]
+            }],
+            true
         )
         .is_empty()
     );
+}
+
+#[test]
+fn a_method_is_steps_not_assertions() {
+    // Section 5.7 confines the atomicity tests to the classes whose content
+    // is the assertion. A procedure joins steps, and Section 5.5 requires
+    // the whole method to be one publet, so flagging it would be telling an
+    // author to break a rule the specification imposes elsewhere.
+    let method = "to verify an object: recompute its content address from \
+                  its bytes and compare it to the identifier it was \
+                  retrieved under";
+    assert_eq!(tests_that_fired(method), ["single-assertion"]);
+    assert!(fired_non_atomic(method).is_empty());
+}
+
+#[test]
+fn a_quotation_of_two_sentences_is_one_attribution() {
+    // Negating an attribution denies that the source said it, which says
+    // nothing about how many sentences the quotation contains.
+    let quoted = "The instrument failed. Nobody could say why.";
+    assert_eq!(tests_that_fired(quoted), ["single-assertion"]);
+    assert!(fired_non_atomic(quoted).is_empty());
+}
+
+#[test]
+fn self_containment_holds_for_every_class() {
+    // Atomicity varies by class; self-containment does not. A method
+    // directing the reader to "then add it" with no antecedent is defective
+    // whatever it is called.
+    let dangling = "it is added to the buffer at this point";
+    assert_eq!(fired_non_atomic(dangling), ["dangling-anaphora"]);
+
+    let undeclared = check(
+        "the cohort is measured twice",
+        &[Term {
+            word: "cohort",
+            declared: false,
+        }],
+        false,
+    );
+    assert_eq!(undeclared.len(), 1);
+    assert_eq!(undeclared[0].test, "undeclared-term");
 }
 
 #[test]

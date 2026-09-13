@@ -31,6 +31,31 @@ def compound(tmp_path):
     return {"dir": tmp_path}
 
 
+@given(parsers.parse('a "{cls}" publet joining two clauses'),
+       target_fixture="store")
+def compound_of_class(tmp_path, cls: str):
+    # One sentence, two clauses joined by "and". Read as an assertion it is
+    # two claims; read as a method it is two steps, and Section 5.5 obliges
+    # the whole method to be one publet.
+    content = ("the buffer is prepared and the sample is added"
+               if cls != "definitional"
+               else "buffer: a solution prepared and then added to")
+    write_store(tmp_path, [
+        publet(KA, "2026-09-12T10:00:00Z", cls, content)
+    ])
+    return {"dir": tmp_path}
+
+
+@given(parsers.parse('a "{cls}" publet opening with a pronoun'),
+       target_fixture="store")
+def pronoun_of_class(tmp_path, cls: str):
+    write_store(tmp_path, [
+        publet(KA, "2026-09-12T10:00:00Z", cls,
+               "it is then added to the buffer at this point")
+    ])
+    return {"dir": tmp_path}
+
+
 @given("a publet opening with a pronoun", target_fixture="store")
 def pronoun(tmp_path):
     write_store(tmp_path, [
@@ -93,6 +118,47 @@ def identical_wording(tmp_path):
         publet(KB, "2026-09-12T10:00:00Z", "empirical", content),
     ])
     return {"dir": tmp_path}
+
+
+@given("a method naming sub-procedures that name further ones",
+       target_fixture="store")
+def decomposed_method(tmp_path):
+    # `depends` is acyclic, so a decomposition necessarily bottoms out at
+    # base steps. Section 5.5 asks for exactly one identifier naming the
+    # method; that is a requirement on the citation, not on the method
+    # being a leaf.
+    base = publet(KA, "2026-09-12T09:00:00Z", "procedural",
+                  "prepare the buffer and bring it to pH 7.4")
+    warm = publet(KA, "2026-09-12T09:01:00Z", "procedural",
+                  "warm the sample to 37C and hold it there")
+    mid = publet(KA, "2026-09-12T09:02:00Z", "procedural",
+                 "condition the sample", [cid_of(base), cid_of(warm)])
+    top = publet(KA, "2026-09-12T09:03:00Z", "procedural",
+                 "run the assay: condition the sample and read absorbance",
+                 [cid_of(mid)])
+    write_store(tmp_path, [base, warm, mid, top])
+    return {"dir": tmp_path, "method": cid_of(top),
+            "steps": {cid_of(base), cid_of(warm), cid_of(mid)}}
+
+
+@when("I ask for the dependency closure of the method", target_fixture="result")
+def method_closure(runner, store):
+    return runner.run("pub-closure", f"--dir={store['dir']}", store["method"])
+
+
+@then("every sub-procedure is reached")
+def every_step_reached(result, store):
+    assert result.code == 0, result.stderr
+    assert set(result.stdout.split()) == store["steps"], result.stdout
+
+
+@then("no finding is reported for any of them")
+def no_finding_for_steps(runner, store):
+    listed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet")
+    assert listed.code == 0, listed.stderr
+    out = runner.run("pub-lint", f"--dir={store['dir']}", *listed.stdout.split())
+    assert out.stdout.strip() == "", out.stdout
+    assert out.code == 0, out.stderr
 
 
 @when("I lint the store", target_fixture="result")

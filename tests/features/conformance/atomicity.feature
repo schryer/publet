@@ -21,6 +21,40 @@ Feature: A publet asserts one thing, and no two publets are merged for me
     When I load the store
     Then it succeeds
 
+  Scenario Outline: Atomicity is not applied where content is not an assertion
+    Given a "<class>" publet joining two clauses
+    When I lint the store
+    Then no finding is reported
+
+    Examples:
+      | class       |
+      | procedural  |
+      | attributive |
+      | archival    |
+      | expressive  |
+
+  Scenario Outline: Atomicity still applies where content is the assertion
+    Given a "<class>" publet joining two clauses
+    When I lint the store
+    Then a "single-assertion" finding is reported
+
+    Examples:
+      | class        |
+      | formal       |
+      | definitional |
+      | normative    |
+
+  Scenario: A method may decompose into sub-procedures
+    Given a method naming sub-procedures that name further ones
+    When I ask for the dependency closure of the method
+    Then every sub-procedure is reached
+    And no finding is reported for any of them
+
+  Scenario: Self-containment applies whatever the class
+    Given a "procedural" publet opening with a pronoun
+    When I lint the store
+    Then a "dangling-anaphora" finding is reported
+
   Scenario: A contested term used without being declared is flagged
     Given a publet using a disputed term it does not declare
     When I lint the store

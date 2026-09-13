@@ -76,6 +76,21 @@ impl Class {
         )
     }
 
+    /// Whether this class's content is itself the assertion (Section 5.7).
+    ///
+    /// The atomicity tests apply only here. The other four classes
+    /// instruct, quote, record, or express, and "negating it yields exactly
+    /// one coherent counter-claim" has no reading for any of them: a
+    /// procedure does not negate, and negating an attribution denies that
+    /// *X* said it, which says nothing about how many sentences *Y* has.
+    #[must_use]
+    pub fn content_is_assertion(self) -> bool {
+        matches!(
+            self,
+            Self::Formal | Self::Empirical | Self::Definitional | Self::Normative
+        )
+    }
+
     /// Whether a verdict on this class is confined to provenance.
     ///
     /// Section 5.2: for `attributive` and `archival`, a verdict speaks to

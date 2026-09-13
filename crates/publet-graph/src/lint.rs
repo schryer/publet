@@ -18,7 +18,7 @@ pub use publet_lint::Finding;
 /// contested terms the publet uses without declaring.
 #[must_use]
 pub fn check(publet: &Publet) -> Vec<Finding> {
-    publet_lint::check(publet.content(), &[])
+    publet_lint::check(publet.content(), &[], publet.class().content_is_assertion())
 }
 
 /// Run the structural tests with the graph's view of which terms are
@@ -41,7 +41,11 @@ pub fn check_in(graph: &Graph, publet: &Publet) -> Vec<Finding> {
             declared: declared.contains(defining),
         })
         .collect();
-    publet_lint::check(publet.content(), &terms)
+    publet_lint::check(
+        publet.content(),
+        &terms,
+        publet.class().content_is_assertion(),
+    )
 }
 
 /// Terms whose defining publet something disputes, paired with that publet.

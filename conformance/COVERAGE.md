@@ -50,7 +50,7 @@ untested.
 | 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/usage.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
 | 5.5 | 2 | conformance/evidence_required.feature |
-| 5.7 | 1 | conformance/atomicity.feature |
+| 5.7 | 2 | conformance/atomicity.feature |
 | 6 | 6 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |

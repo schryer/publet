@@ -69,16 +69,30 @@ const CONTENT_CEILING: usize = 4096;
 ///
 /// Pass an empty slice for `terms` to run the text-only tests.
 ///
+/// `atomic` says whether the *atomicity* tests apply -- independent
+/// clauses, coordinating conjunctions, and quantitative claims. Section 5.7
+/// confines those to the classes whose content is the assertion, and
+/// forbids them on `procedural`, `attributive`, `archival` and
+/// `expressive`. The caller decides, because the caller knows the class and
+/// this crate deliberately knows nothing but text.
+///
+/// The self-containment tests -- dangling anaphora and undeclared contested
+/// terms -- run either way. A method directing the reader to "then add it"
+/// with no antecedent is defective whatever its class.
+///
 /// ```
 /// # use publet_lint::{check, Term};
-/// let findings = check("the rate fell to 11.9%", &[]);
+/// let findings = check("the rate fell to 11.9%", &[], true);
 /// assert!(findings.is_empty());
 ///
-/// let findings = check("the rate fell and the cohort grew", &[]);
+/// let findings = check("the rate fell and the cohort grew", &[], true);
 /// assert_eq!(findings.first().map(|f| f.test), Some("single-assertion"));
+///
+/// // The same content as a method is not two assertions; it is two steps.
+/// assert!(check("the rate fell and the cohort grew", &[], false).is_empty());
 /// ```
 #[must_use]
-pub fn check(content: &str, terms: &[Term<'_>]) -> Vec<Finding> {
+pub fn check(content: &str, terms: &[Term<'_>], atomic: bool) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     if content.trim().is_empty() {
@@ -100,6 +114,27 @@ pub fn check(content: &str, terms: &[Term<'_>]) -> Vec<Finding> {
     }
 
     let lowered = content.to_lowercase();
+    if atomic {
+        findings.extend(atomicity(content, &lowered));
+    }
+
+    findings.extend(anaphora(&lowered));
+
+    for term in terms {
+        if !term.declared && mentions(&lowered, term.word) {
+            findings.push(Finding {
+                test: "undeclared-term",
+                detail: format!("{:?} is contested and is not named in depends", term.word),
+            });
+        }
+    }
+
+    findings
+}
+
+/// The tests that ask whether the content is one assertion (Section 5.7).
+fn atomicity(content: &str, lowered: &str) -> Vec<Finding> {
+    let mut findings = Vec::new();
     for coordinator in COORDINATORS {
         if lowered.contains(coordinator) {
             findings.push(Finding {
@@ -127,17 +162,6 @@ pub fn check(content: &str, terms: &[Term<'_>]) -> Vec<Finding> {
             test: "single-quantity",
             detail: format!("{quantities} quantitative claims; consider separate publets"),
         });
-    }
-
-    findings.extend(anaphora(&lowered));
-
-    for term in terms {
-        if !term.declared && mentions(&lowered, term.word) {
-            findings.push(Finding {
-                test: "undeclared-term",
-                detail: format!("{:?} is contested and is not named in depends", term.word),
-            });
-        }
     }
 
     findings
