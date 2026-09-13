@@ -52,9 +52,16 @@ FIELDS = {
 
 
 def sources() -> str:
+    """Every Rust source in the workspace.
+
+    Reading a field is not confined to the library crates -- a porcelain
+    command that renders one reads it too -- so scanning only `crates/`
+    reports fields as unread that are merely read elsewhere.
+    """
     out = []
-    for path in sorted((ROOT / "crates").glob("*/src/**/*.rs")):
-        out.append(path.read_text(encoding="utf-8", errors="replace"))
+    for tree in ("crates", "bin", "porcelain"):
+        for path in sorted((ROOT / tree).glob("**/*.rs")):
+            out.append(path.read_text(encoding="utf-8", errors="replace"))
     return "\n".join(out)
 
 
