@@ -41,6 +41,20 @@ pub enum GraphError {
         found: String,
     },
 
+    /// The principal is not one the specification defines.
+    #[error("unknown principal `{found}`; a key declares human, organization, or automated")]
+    UnknownPrincipal {
+        /// The unrecognized identifier.
+        found: String,
+    },
+
+    /// An empirical publet named no method.
+    #[error(
+        "an `empirical` publet must carry an evidence entry with role `method`; \
+         a measurement without a reproducible method is a report of an experience"
+    )]
+    EmpiricalWithoutMethod,
+
     /// The relation kind is not one the specification defines.
     #[error("unknown relation kind `{found}`")]
     UnknownKind {

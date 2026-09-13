@@ -111,7 +111,13 @@ def obj(kind: str, author: str, created: str, body: list[tuple[str, bytes]]) -> 
 
 
 def publet(author: str, created: str, cls: str, content: str,
-           depends: list[str] | None = None) -> bytes:
+           depends: list[str] | None = None, method: str | None = None) -> bytes:
+    """Build a publet.
+
+    Section 5.5 requires an empirical claim to name a method others can
+    execute, so one is supplied unless the caller overrides it. A measurement
+    without a reproducible method is a report of an experience.
+    """
     body = [
         ("class", text(cls)),
         ("lang", text("en")),
@@ -119,6 +125,13 @@ def publet(author: str, created: str, cls: str, content: str,
     ]
     deps = depends or []
     body.append(("depends", head(4, len(deps)) + b"".join(text(d) for d in deps)))
+    if cls == "empirical":
+        entry = cbor_map([
+            ("kind", text("publet")),
+            ("role", text("method")),
+            ("ref", text(method or cid_of(b"a method publet"))),
+        ])
+        body.append(("evidence", head(4, 1) + entry))
     return obj("publet", author, created, body)
 
 

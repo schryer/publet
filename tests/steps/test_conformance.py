@@ -17,6 +17,7 @@ from support.objects import cid_of, head, minimal_object, publet, author_key, re
 scenarios("../features/conformance/signatures.feature")
 scenarios("../features/conformance/object_size.feature")
 scenarios("../features/conformance/immutability.feature")
+scenarios("../features/conformance/versioning.feature")
 
 DOMAIN = b"pub/v1/sig"
 
@@ -60,6 +61,35 @@ def revised_store(tmp_path):
     for name, data in [("a", original), ("b", revision), ("c", rel)]:
         (tmp_path / f"{name}.cbor").write_bytes(data)
     return {"dir": tmp_path, "original": original, "revision": revision}
+
+
+@given(parsers.parse('an object declaring protocol version "{version}"'),
+       target_fixture="payload")
+def versioned_object(version: str) -> bytes:
+    from support.objects import cbor_map, text
+    return cbor_map([
+        ("pub", text(version)),
+        ("type", text("publet")),
+        ("created", text("2026-09-12T10:00:00Z")),
+        ("author", text(cid_of(b"a key"))),
+        ("body", cbor_map([])),
+    ])
+
+
+@given("an object carrying an unrecognized ext field", target_fixture="payload")
+def object_with_ext() -> bytes:
+    # Section 15: an unrecognized ext key is ignored, never a reason to
+    # reject. Extensions are part of what was signed, but not part of what
+    # this version interprets.
+    from support.objects import cbor_map, text, uint
+    return cbor_map([
+        ("pub", text("1")),
+        ("type", text("publet")),
+        ("created", text("2026-09-12T10:00:00Z")),
+        ("author", text(cid_of(b"a key"))),
+        ("body", cbor_map([])),
+        ("ext", cbor_map([("com.example.invented", uint(1))])),
+    ])
 
 
 @when(parsers.parse('I ask for the message a signature would cover with purpose "{purpose}"'),

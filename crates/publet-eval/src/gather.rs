@@ -63,18 +63,32 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
                     evidence.proof_checked = true;
                 }
             }
-            "reproduction" => count_reproduction(body, &mut evidence.reproductions),
+            "reproduction" => count_reproduction(
+                body,
+                &mut evidence.reproductions,
+                authored_by_human(graph, object.author()),
+            ),
             _ => {}
         }
     }
 
     // A dispute counts only when it names a publet stating grounds, which
-    // is what separates an argument from an objection (Section 6.4).
+    // separates an argument from an objection (Section 6.4), and only when
+    // it is not redundant under R10.
+    let settled = settled_grounds(graph, target);
     for from in graph.incoming(RelationKind::Disputes, target) {
         let Ok(cid) = from.parse::<Cid>() else {
             continue;
         };
         if graph.publet(&cid).is_none() {
+            continue;
+        }
+        // R10: a dispute contributing no grounds beyond those already
+        // covered by a resolution carries no weight. Computed as set
+        // containment over identifiers, so it needs no judgement and no
+        // authority -- and a disputant who does produce new grounds is
+        // never redundant, however unpopular their position.
+        if settled.contains(&cid.to_string()) {
             continue;
         }
         if let Some(object) = graph.object(&cid) {
@@ -101,6 +115,48 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
     evidence
 }
 
+/// Grounds already covered by a resolution of `target`.
+///
+/// Only resolutions whose outcome is `sustained` settle anything:
+/// `no-consensus` records that weighted participants examined the question
+/// and did not converge, which is exactly the controversy the divergence
+/// factor exists to express, so its grounds remain live.
+fn settled_grounds(graph: &Graph, target: &Cid) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for cid_text in graph.cids() {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(object) = graph.object(&cid) else {
+            continue;
+        };
+        if object.kind() != "ann" {
+            continue;
+        }
+        let body = object.body();
+        if body.get("kind").and_then(Value::as_text) != Some("resolution") {
+            continue;
+        }
+        if body.get("target").and_then(Value::as_text) != Some(&target.to_string()) {
+            continue;
+        }
+        let Some(value) = body.get("value") else {
+            continue;
+        };
+        if value.get("outcome").and_then(Value::as_text) != Some("sustained") {
+            continue;
+        }
+        if let Some(Value::Array(grounds)) = value.get("grounds") {
+            out.extend(
+                grounds
+                    .iter()
+                    .filter_map(|g| g.as_text().map(ToOwned::to_owned)),
+            );
+        }
+    }
+    out
+}
+
 /// The claim class of a target, if it is a publet.
 #[must_use]
 pub fn class_of(graph: &Graph, target: &Cid) -> Option<Class> {
@@ -125,9 +181,26 @@ fn result_of(body: &std::collections::BTreeMap<String, Value>) -> Option<&str> {
     body.get("value")?.get("result")?.as_text()
 }
 
+/// Whether a key declares a human principal (R11).
+///
+/// A key whose object is absent is treated as non-human: a reproduction
+/// counted toward a floor must be attributable to a person, and an
+/// unresolvable key is not.
+fn authored_by_human(graph: &Graph, author: &Cid) -> bool {
+    graph
+        .object(author)
+        .and_then(|o| {
+            publet_graph::Key::from_object(author.clone(), o)
+                .ok()
+                .map(|k| k.principal().is_human())
+        })
+        .unwrap_or(false)
+}
+
 fn count_reproduction(
     body: &std::collections::BTreeMap<String, Value>,
     counts: &mut Reproductions,
+    human: bool,
 ) {
     let Some(outcome) = body
         .get("value")
@@ -144,16 +217,22 @@ fn count_reproduction(
         .and_then(|v| v.get("independence"))
         .is_none_or(|i| i.get("shared_materials").is_none());
 
+    // Section 7.2: reproductions counted toward a replication floor must be
+    // signed by human principals. Institutional resources are fine; the
+    // person who ran the instrument signs, with the institution recorded as
+    // an affiliation.
+    let counts_toward_floor = independent && human;
+
     match outcome {
         "consistent" => {
             counts.consistent += 1;
-            if independent {
+            if counts_toward_floor {
                 counts.independent_consistent += 1;
             }
         }
         "inconsistent" => {
             counts.inconsistent += 1;
-            if independent {
+            if counts_toward_floor {
                 counts.independent_inconsistent += 1;
             }
         }

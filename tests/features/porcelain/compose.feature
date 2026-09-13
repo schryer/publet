@@ -1,4 +1,4 @@
-@porcelain @must-5.3
+@porcelain @must-5.1
 Feature: Composing requires stating what you are asserting under
 
   Background:

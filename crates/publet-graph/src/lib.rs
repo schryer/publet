@@ -19,6 +19,6 @@ pub use divergence::{Divergence, TermConflict, compare};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView};
 pub use lint::{Finding, check};
-pub use view::{Annotation, Class, Publet, Relation, RelationKind};
+pub use view::{Annotation, Class, Key, Principal, Publet, Relation, RelationKind};
 
 pub mod load;

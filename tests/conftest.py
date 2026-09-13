@@ -204,3 +204,45 @@ def run_pipeline(runner, store, pipeline: str):
 @then(parsers.parse('stderr names the violated rule "{rule}"'))
 def stderr_names_rule(result: Completed, rule: str) -> None:
     assert rule in result.stderr, f"{rule!r} not named in stderr: {result.stderr!r}"
+
+
+@when("I load the store", target_fixture="result")
+@when("loading the store", target_fixture="result")
+def load_store(runner, store):
+    return runner.run("pub-ls", f"--dir={store['dir']}")
+
+
+@then("loading the store fails")
+def load_fails(runner, store):
+    out = runner.run("pub-ls", f"--dir={store['dir']}")
+    assert out.code != 0, f"expected failure, got {out.stdout!r}"
+    store["last"] = out
+
+
+@then("loading the store succeeds")
+def load_succeeds(runner, store):
+    out = runner.run("pub-ls", f"--dir={store['dir']}")
+    assert out.code == 0, f"expected success, stderr: {out.stderr!r}"
+
+
+@then(parsers.parse('stderr mentions "{fragment}"'))
+def stderr_mentions(request, fragment: str) -> None:
+    """Assert on stderr from whichever the scenario produced.
+
+    Some scenarios run a command directly and have a `result`; others build
+    a store and assert on loading it. Resolving the fixture lazily lets one
+    step phrase serve both rather than forcing two near-identical wordings
+    into the feature files.
+    """
+    try:
+        result = request.getfixturevalue("result")
+    except pytest.FixtureLookupError:
+        result = None
+    if result is not None:
+        assert fragment in result.stderr, result.stderr
+        return
+
+    store = request.getfixturevalue("store")
+    runner = request.getfixturevalue("runner")
+    out = store.get("last") or runner.run("pub-ls", f"--dir={store['dir']}")
+    assert fragment in out.stderr, out.stderr

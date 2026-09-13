@@ -26,6 +26,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut scope = None;
     let mut lang = "en".to_owned();
     let mut depends: Vec<String> = Vec::new();
+    let mut method: Option<String> = None;
     let mut created = "2026-09-12T00:00:00Z".to_owned();
 
     for arg in args {
@@ -37,6 +38,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             scope = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--lang=") {
             v.clone_into(&mut lang);
+        } else if let Some(v) = arg.strip_prefix("--method=") {
+            method = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--depends=") {
             depends.push(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
@@ -58,6 +61,17 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
          \"unconditional\" if you really mean that (Section 5.3)",
     )?;
 
+    // Section 5.5: an empirical claim must name a method others can
+    // execute. Supplying a placeholder would assert a reproducibility the
+    // author never offered, so the command refuses instead.
+    if parsed_class == Class::Empirical && method.is_none() {
+        return Err("--method is required for an empirical claim: the CID of a \
+             `procedural` publet describing how the observation may be \
+             repeated. A measurement without one is a report of an \
+             experience (Section 5.5)"
+            .to_owned());
+    }
+
     let author = ws
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
@@ -76,6 +90,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             "depends",
             Value::Array(depends.iter().map(|d| Value::Text(d.clone())).collect()),
         )
+        .field("evidence", evidence_for(method.as_deref()))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -108,6 +123,18 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         eprintln!("independent reproductions of it (Section 11.4.1).");
     }
     Ok(())
+}
+
+/// The evidence list, carrying the method entry when one was named.
+fn evidence_for(method: Option<&str>) -> Value {
+    let Some(method) = method else {
+        return Value::Array(Vec::new());
+    };
+    let mut entry = std::collections::BTreeMap::new();
+    entry.insert("kind".to_owned(), Value::Text("publet".into()));
+    entry.insert("role".to_owned(), Value::Text("method".into()));
+    entry.insert("ref".to_owned(), Value::Text(method.to_owned()));
+    Value::Array(vec![Value::Map(entry)])
 }
 
 /// A starting policy trusting only the workspace's own key.

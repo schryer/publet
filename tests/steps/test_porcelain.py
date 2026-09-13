@@ -74,6 +74,7 @@ def workspace_with_claim(bin_dir: Path, tmp_path: Path):
     out = p.run(
         "compose", "--class=empirical", f"--content={COHORT}",
         "--scope=adults 40-65, single-centre, unblinded",
+        f"--method={cid_of(b'the trial protocol')}",
     )
     assert out.returncode == 0, text_of(out)
     p.claim = out.stdout.decode().strip()
@@ -109,13 +110,21 @@ def _arr(items):
 
 
 def _publet(author, created, cls, content, depends=()):
-    return obj("publet", author, created, [
+    body = [
         ("class", text(cls)),
         ("lang", text("en")),
         ("content", text(content)),
         ("scope", cbor_map([("domain", text("unconditional"))])),
         ("depends", _arr([text(d) for d in depends])),
-    ])
+    ]
+    # Section 5.5: an empirical claim must name a method others can execute.
+    if cls == "empirical":
+        body.append(("evidence", _arr([cbor_map([
+            ("kind", text("publet")),
+            ("role", text("method")),
+            ("ref", text(cid_of(b"a protocol"))),
+        ])])))
+    return obj("publet", author, created, body)
 
 
 def _relation(author, created, kind, frm, to):
@@ -234,7 +243,8 @@ def ask_why(pub):
 
 @when("I compose a claim with no scope", target_fixture="result")
 def compose_no_scope(pub):
-    return pub.run("compose", "--class=empirical", "--content=a claim")
+    return pub.run("compose", "--class=empirical", "--content=a claim",
+                   f"--method={cid_of(b'a protocol')}")
 
 
 @when("I compose a claim with no class", target_fixture="result")
@@ -246,7 +256,7 @@ def compose_no_class(pub):
 def compose_empirical(pub):
     return pub.run(
         "compose", "--class=empirical", "--content=the rate fell",
-        "--scope=unconditional",
+        "--scope=unconditional", f"--method={cid_of(b'a protocol')}",
     )
 
 
@@ -255,7 +265,7 @@ def compose_compound(pub):
     return pub.run(
         "compose", "--class=empirical",
         "--content=the rate fell and the cohort was unblinded",
-        "--scope=unconditional",
+        "--scope=unconditional", f"--method={cid_of(b'a protocol')}",
     )
 
 

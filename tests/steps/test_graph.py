@@ -114,12 +114,6 @@ def run_divergence(runner, store):
                       store["left"], store["right"])
 
 
-@when("I load the store", target_fixture="result")
-@when("loading the store", target_fixture="result")
-def load_store(runner, store):
-    return runner.run("pub-ls", f"--dir={store['dir']}")
-
-
 @when(parsers.parse('I pipe {name} into "{command}"'), target_fixture="result")
 def pipe_cid(runner, store, name: str, command: str):
     parts = command.split()
@@ -153,25 +147,6 @@ def does_not_list(result, store, name: str):
 @then(parsers.re(r"^stdout is exactly (?P<name>\S+)$"))
 def stdout_exactly(result, store, name: str):
     assert result.lines == [store[name]], result.lines
-
-
-@then("loading the store fails")
-def load_fails(runner, store):
-    out = runner.run("pub-ls", f"--dir={store['dir']}")
-    assert out.code != 0, f"expected failure, got {out.stdout!r}"
-    store["last"] = out
-
-
-@then("loading the store succeeds")
-def load_succeeds(runner, store):
-    out = runner.run("pub-ls", f"--dir={store['dir']}")
-    assert out.code == 0, f"expected success, stderr: {out.stderr!r}"
-
-
-@then(parsers.parse('stderr mentions "{fragment}"'))
-def stderr_mentions_graph(runner, store, fragment: str):
-    out = store.get("last") or runner.run("pub-ls", f"--dir={store['dir']}")
-    assert fragment in out.stderr, out.stderr
 
 
 @then(parsers.parse('a finding of "{finding}" names the term "{term}"'))

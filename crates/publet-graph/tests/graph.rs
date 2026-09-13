@@ -32,17 +32,24 @@ fn publet(
     depends: &[&Cid],
 ) -> (Cid, Vec<u8>) {
     let deps = Value::Array(depends.iter().map(|c| Value::Text(c.to_string())).collect());
-    build(
-        "publet",
-        author_key,
-        created,
-        &[
-            ("class", Value::Text(class.into())),
-            ("lang", Value::Text("en".into())),
-            ("content", Value::Text(content.into())),
-            ("depends", deps),
-        ],
-    )
+    let mut fields = vec![
+        ("class", Value::Text(class.into())),
+        ("lang", Value::Text("en".into())),
+        ("content", Value::Text(content.into())),
+        ("depends", deps),
+    ];
+    // Section 5.5: an empirical claim must name a method others can execute.
+    if class == "empirical" {
+        let mut entry = std::collections::BTreeMap::new();
+        entry.insert("kind".to_owned(), Value::Text("publet".into()));
+        entry.insert("role".to_owned(), Value::Text("method".into()));
+        entry.insert(
+            "ref".to_owned(),
+            Value::Text(Cid::of(b"a method publet", HashAlg::Sha2_256).to_string()),
+        );
+        fields.push(("evidence", Value::Array(vec![Value::Map(entry)])));
+    }
+    build("publet", author_key, created, &fields)
 }
 
 fn relation(author_key: &str, created: &str, kind: &str, from: &Cid, to: &Cid) -> (Cid, Vec<u8>) {

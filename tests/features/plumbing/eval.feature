@@ -1,4 +1,4 @@
-@plumbing @must-11.5
+@plumbing @must-11.4
 Feature: The acceptance predicate reaches every outcome
 
   Scenario Outline: Each vector evaluates to its specified outcome

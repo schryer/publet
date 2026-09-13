@@ -142,6 +142,13 @@ impl Publet {
             }
             None => Vec::new(),
         };
+        // Section 5.5: a measurement without a reproducible method is a
+        // report of an experience. Requiring the method object makes its
+        // absence visible rather than assumed.
+        if class == Class::Empirical && !names_a_method(body.get("evidence")) {
+            return Err(GraphError::EmpiricalWithoutMethod);
+        }
+
         Ok(Self {
             cid,
             class,
@@ -217,6 +224,16 @@ impl Publet {
     }
 }
 
+/// Whether an evidence list carries an entry with `role: "method"`.
+fn names_a_method(evidence: Option<&Value>) -> bool {
+    let Some(Value::Array(entries)) = evidence else {
+        return false;
+    };
+    entries
+        .iter()
+        .any(|entry| entry.get("role").and_then(Value::as_text) == Some("method"))
+}
+
 fn text(value: Option<&Value>, field: &'static str) -> Result<String, GraphError> {
     match value {
         Some(Value::Text(s)) => Ok(s.clone()),
@@ -225,6 +242,97 @@ fn text(value: Option<&Value>, field: &'static str) -> Result<String, GraphError
             expected: "a text string",
         }),
         None => Err(GraphError::MissingField { field }),
+    }
+}
+
+/// What a key declares itself to be (Section 10.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Principal {
+    /// A person. Only human principals may author, be counted toward a
+    /// replication floor, or hold stewardship (R11).
+    Human,
+    /// An organization. It may sign, fund, and operate infrastructure.
+    Organization,
+    /// An automated system.
+    Automated,
+}
+
+impl Principal {
+    /// Resolve the identifier used in a key object.
+    #[must_use]
+    pub fn from_id(id: &str) -> Option<Self> {
+        Some(match id {
+            "human" => Self::Human,
+            "organization" => Self::Organization,
+            "automated" => Self::Automated,
+            _ => return None,
+        })
+    }
+
+    /// The identifier used in a key object.
+    #[must_use]
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Human => "human",
+            Self::Organization => "organization",
+            Self::Automated => "automated",
+        }
+    }
+
+    /// Whether this principal may author and be counted.
+    ///
+    /// Institutions are immortal and humans are not. An organizational key
+    /// accrues merit indefinitely and compounds authority across
+    /// generations of staff who bear none of the consequences, so only
+    /// human principals carry authorship weight (R11).
+    #[must_use]
+    pub fn is_human(self) -> bool {
+        matches!(self, Self::Human)
+    }
+}
+
+/// A key object (Section 10.1).
+#[derive(Debug, Clone)]
+pub struct Key {
+    cid: Cid,
+    principal: Principal,
+}
+
+impl Key {
+    /// Read a key from a verified object.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GraphError`] if the object is not a key, or if `principal`
+    /// is absent or unrecognized. The field is required because every rule
+    /// that turns on who may author depends on it, and a key that declines
+    /// to say is a key no rule can be applied to.
+    pub fn from_object(cid: Cid, object: &Object) -> Result<Self, GraphError> {
+        if object.kind() != "key" {
+            return Err(GraphError::WrongKind {
+                expected: "key",
+                found: object.kind().to_owned(),
+            });
+        }
+        let declared = text(object.body().get("principal"), "principal")?;
+        let principal =
+            Principal::from_id(&declared).ok_or_else(|| GraphError::UnknownPrincipal {
+                found: declared.clone(),
+            })?;
+        Ok(Self { cid, principal })
+    }
+
+    /// This key's identifier.
+    #[must_use]
+    pub fn cid(&self) -> &Cid {
+        &self.cid
+    }
+
+    /// What the key declares itself to be.
+    #[must_use]
+    pub fn principal(&self) -> Principal {
+        self.principal
     }
 }
 

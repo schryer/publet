@@ -20,7 +20,11 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SPEC = ROOT.parent / "docs" / "publet-specification" / "index.md"
 
 NORMATIVE = re.compile(r"\b(MUST NOT|MUST|SHALL NOT|SHALL|REQUIRED)\b")
-HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\s")
+# Top-level headings are written "## 6. Relations" -- number, period, space --
+# while subsections are "### 6.1 Lineage". Without the optional period the
+# top-level ones never match, and their normative statements are silently
+# attributed to whichever section came before.
+HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s")
 
 
 def tagged_sections(features: Path) -> dict[str, list[str]]:
@@ -39,6 +43,11 @@ def tagged_sections(features: Path) -> dict[str, list[str]]:
     return out
 
 
+# The section defining the requirement keywords quotes them all; it states
+# no requirement of its own and counting it would be a permanent false gap.
+KEYWORD_SECTIONS = {"1.3"}
+
+
 def normative_sections(spec: Path) -> dict[str, int]:
     """Map section number -> count of normative statements in it."""
     counts: dict[str, int] = {}
@@ -47,6 +56,8 @@ def normative_sections(spec: Path) -> dict[str, int]:
         heading = HEADING.match(line)
         if heading:
             current = heading.group(1)
+            continue
+        if current in KEYWORD_SECTIONS:
             continue
         if current and NORMATIVE.search(line):
             counts[current] = counts.get(current, 0) + 1

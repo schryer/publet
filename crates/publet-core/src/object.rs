@@ -64,6 +64,20 @@ pub enum ObjectError {
         expected: &'static str,
     },
 
+    /// The object declares a protocol version this build does not implement.
+    ///
+    /// Section 15 requires rejecting rather than attempting partial
+    /// interpretation: a later version may give an existing field a
+    /// different meaning, and reading it under this version's rules would
+    /// produce a confident wrong answer rather than an error.
+    #[error("unsupported protocol version {found}; this build implements {expected}")]
+    UnsupportedVersion {
+        /// The version the object declares.
+        found: String,
+        /// The version this build implements.
+        expected: &'static str,
+    },
+
     /// An unrecognized field appeared at the top level.
     #[error("unknown top-level field `{field}`; extensions belong in `ext`")]
     UnknownField {
@@ -90,6 +104,9 @@ pub enum ObjectError {
         actual: String,
     },
 }
+
+/// The protocol major version this build implements.
+pub const PROTOCOL_VERSION: &str = "1";
 
 /// A parsed object: its header, its body, and the bytes it came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,8 +145,16 @@ impl Object {
             }
         }
 
+        let protocol = text_field(&map, "pub")?;
+        if protocol != PROTOCOL_VERSION {
+            return Err(ObjectError::UnsupportedVersion {
+                found: protocol,
+                expected: PROTOCOL_VERSION,
+            });
+        }
+
         let object = Self {
-            protocol: text_field(&map, "pub")?,
+            protocol,
             kind: text_field(&map, "type")?,
             created: text_field(&map, "created")?,
             author: cid_field(&map, "author")?,
