@@ -19,7 +19,9 @@ fn usage() -> ExitCode {
     eprintln!(
         "usage: pub-ann [--dir=DIR] --assumptions-by=CID\n\
          \x20      pub-ann [--dir=DIR] --triage-of=CID\n\
-         \x20      pub-ann [--dir=DIR] --usage-of=CID"
+         \x20      pub-ann [--dir=DIR] --usage-of=CID\n\
+         \x20      pub-ann [--dir=DIR] --subjects-of=CID\n\
+         \x20      pub-ann [--dir=DIR] --classified-under=CID"
     );
     ExitCode::from(EXIT_USAGE)
 }
@@ -29,6 +31,8 @@ fn main() -> ExitCode {
     let mut assumptions_by: Option<Cid> = None;
     let mut triage_of: Option<Cid> = None;
     let mut usage_of: Option<Cid> = None;
+    let mut subjects_of: Option<Cid> = None;
+    let mut classified_under: Option<Cid> = None;
 
     for arg in std::env::args().skip(1) {
         let parse = |v: &str| -> Option<Cid> { v.parse().ok() };
@@ -40,6 +44,18 @@ fn main() -> ExitCode {
                 return ExitCode::from(EXIT_USAGE);
             };
             assumptions_by = Some(cid);
+        } else if let Some(v) = arg.strip_prefix("--subjects-of=") {
+            let Some(cid) = parse(v) else {
+                eprintln!("not a CID: {v}");
+                return ExitCode::from(EXIT_USAGE);
+            };
+            subjects_of = Some(cid);
+        } else if let Some(v) = arg.strip_prefix("--classified-under=") {
+            let Some(cid) = parse(v) else {
+                eprintln!("not a CID: {v}");
+                return ExitCode::from(EXIT_USAGE);
+            };
+            classified_under = Some(cid);
         } else if let Some(v) = arg.strip_prefix("--usage-of=") {
             let Some(cid) = parse(v) else {
                 eprintln!("not a CID: {v}");
@@ -58,7 +74,12 @@ fn main() -> ExitCode {
         }
     }
 
-    if assumptions_by.is_none() && triage_of.is_none() && usage_of.is_none() {
+    if assumptions_by.is_none()
+        && triage_of.is_none()
+        && usage_of.is_none()
+        && subjects_of.is_none()
+        && classified_under.is_none()
+    {
         return usage();
     }
 
@@ -81,6 +102,21 @@ fn main() -> ExitCode {
                 assumption.assumed,
                 assumption.basis.id()
             );
+        }
+    }
+
+    // Subject membership is an annotation rather than a property of the
+    // object (R6), so it is read here rather than from the object itself,
+    // and competing taxonomies coexist as sets of these by different keys.
+    if let Some(target) = subjects_of {
+        for subject in graph.subjects_of(&target) {
+            println!("{subject}");
+        }
+    }
+
+    if let Some(subject) = classified_under {
+        for member in graph.classified_under(&subject) {
+            println!("{member}");
         }
     }
 
