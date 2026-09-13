@@ -1,5 +1,7 @@
 //! Object persistence, declared sets, and garbage collection
-//! (Sections 13.1, 13.2, 14.6).
+//! (R12, Sections 13.1, 13.2, 14.6).
+//!
+//! R12 is the rule this crate keeps.
 //!
 //! A node's declared set is the commitment it has made: within it, service
 //! is unconditional and content-blind, and ceasing to serve requires a

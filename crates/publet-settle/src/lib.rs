@@ -29,7 +29,11 @@ pub use bounty::{Bounty, BountyError, BountyKind, MINIMUM_REVIEW_SHARE};
 pub use ledger::{Ledger, LedgerError, LedgerProperties, LedgerProperty, Settlement};
 pub use null::NullLedger;
 
-/// Something a conformant implementation may never do (Section 12.5).
+/// Something a conformant implementation may never do (R13, Section 12.5).
+///
+/// R13 is what these enumerate: funds settle against predicates declared in
+/// advance over reproducible evaluations, payment never gates access, and
+/// settlement never confers standing.
 ///
 /// Enumerated as a type so the prohibitions can be reviewed together. Each
 /// is a rule about what settlement must not reach, and every one of them

@@ -13,7 +13,12 @@ use crate::GraphError;
 use crate::document::{Anchor, Document};
 use crate::view::{Annotation, Class, Publet, Relation, RelationKind};
 
-/// Which `supersedes` edges a lineage query should follow (Section 6.1).
+/// Which `supersedes` edges a lineage query should follow (R15, Section 6.1).
+///
+/// R15 splits the two levels apart: assertion, evidence and signature
+/// operate on objects, whereas curation, stewardship and definitional drift
+/// operate on lineages. This type is the lineage side of that split, and
+/// the reason a query has to say which edges it means.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lineage {
     /// Only edges signed by a key that also signed the target: an author's

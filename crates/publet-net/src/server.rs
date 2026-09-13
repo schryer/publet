@@ -63,7 +63,7 @@ async fn declared_set(State(node): State<Node>) -> Result<String, StatusCode> {
 
 /// Query mode: one object by identifier.
 ///
-/// Section 13.2 makes service within a declared set unconditional, so a
+/// R12 and Section 13.2 make service within a declared set unconditional, so a
 /// held object is always returned. Not-found means not held, never a
 /// judgement about the object.
 async fn object(State(node): State<Node>, Path(cid): Path<String>) -> Result<Vec<u8>, StatusCode> {

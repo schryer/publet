@@ -1,4 +1,10 @@
-//! Content identifiers (Section 4.2).
+//! Content identifiers (R2, Section 4.2).
+//!
+//! R2 requires every object to be named by the hash of its canonical
+//! serialization, and retrieved bytes to be verified against the name they
+//! were asked for. [`Cid::of`] does the naming; [`Cid::verifies`] and
+//! `Object::verify` do the checking, and nothing downstream accepts bytes
+//! that have not been through one of them.
 //!
 //! A CID names an object by the hash of its canonical serialization:
 //!
