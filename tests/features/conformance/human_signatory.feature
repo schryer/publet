@@ -9,6 +9,11 @@ Feature: Only a human principal counts toward a replication floor
     When I ask why
     Then the independent consistent count is 2
 
+  Scenario: One person reproducing twice is one reproduction
+    Given a claim reproduced twice by one person
+    When I ask why
+    Then the independent consistent count is 1
+
   Scenario: Reproductions from an organization do not count toward the floor
     Given a claim with two reproductions from an organization
     When I ask why

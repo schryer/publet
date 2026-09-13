@@ -35,6 +35,14 @@ pub struct TrustEdge {
     pub weight: Fixed6,
     /// Age in days, for decay. Zero when the policy sets no half-life.
     pub age_days: u64,
+    /// Subjects this edge is confined to (Section 18.5).
+    ///
+    /// Empty means unconfined: the edge trusts the key on everything. A
+    /// non-empty list is the difference between trusting a language
+    /// reference on that language and trusting it on the world, and it is
+    /// what makes a per-source trust root worth having rather than one
+    /// more undifferentiated scalar.
+    pub subjects: Vec<String>,
 }
 
 /// Weight per key under a viewpoint.
@@ -45,6 +53,31 @@ pub type Weights = BTreeMap<String, Fixed6>;
 /// `edges` need not be sorted; they are grouped deterministically here.
 #[must_use]
 pub fn propagate(policy: &Policy, edges: &[TrustEdge]) -> Weights {
+    propagate_within(policy, edges, &[])
+}
+
+/// Propagate trust for a target belonging to the given subjects.
+///
+/// An edge confined to subjects applies only when the thing being evaluated
+/// is in one of them. Evaluating with no subject context therefore uses the
+/// unconfined edges alone: someone who said "I trust this reference on Rust
+/// terminology" has not said anything about a claim that is not one.
+///
+/// # Panics
+///
+/// Never; the iteration count is bounded by the policy.
+#[must_use]
+pub fn propagate_within(policy: &Policy, edges: &[TrustEdge], subjects: &[String]) -> Weights {
+    let edges: Vec<TrustEdge> = edges
+        .iter()
+        .filter(|e| e.subjects.is_empty() || e.subjects.iter().any(|s| subjects.contains(s)))
+        .cloned()
+        .collect();
+    let edges = &edges[..];
+    propagate_all(policy, edges)
+}
+
+fn propagate_all(policy: &Policy, edges: &[TrustEdge]) -> Weights {
     // Seed vector, normalized to 10^6 in total.
     let seed_total: Fixed6 = policy.roots.iter().map(|r| r.weight).sum();
     let mut seed: Weights = BTreeMap::new();

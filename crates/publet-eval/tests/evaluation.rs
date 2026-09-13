@@ -36,6 +36,7 @@ fn policy(roots: &[&str]) -> Policy {
 
 fn edge(from: &str, to: &str, weight: i64) -> TrustEdge {
     TrustEdge {
+        subjects: Vec::new(),
         from: key(from),
         to: key(to),
         weight: Fixed6::from_integer(weight),

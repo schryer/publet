@@ -120,6 +120,14 @@ pub struct Evidence {
     pub reproducibility: Reproducibility,
     /// Whether the claim has been retracted by its author.
     pub retracted: bool,
+    /// Distinct corpora cited as evidence of usage (Section 5.2).
+    ///
+    /// The evidence a `definitional` publet is settled by. Verdicts are not
+    /// permitted on that class, so without this a definition has no
+    /// evidence channel at all -- which is what it had until this existed.
+    /// Held as the set of sources rather than a count, because two
+    /// citations of one dictionary are one dictionary agreeing with itself.
+    pub usage: BTreeSet<String>,
 }
 
 /// The result of evaluating one claim.

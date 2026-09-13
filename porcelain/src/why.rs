@@ -5,7 +5,10 @@
 //! on replication or on agreement, and those are not the same claim.
 
 use publet_core::Cid;
-use publet_eval::{Outcome, Policy, class_of, evaluate, evidence_for, propagate, trust_edges};
+use publet_eval::{
+    Outcome, Policy, class_of, evaluate, evidence_for, propagate_within, trust_edges,
+};
+use publet_graph::Class;
 use publet_graph::load;
 
 use crate::workspace::Workspace;
@@ -53,7 +56,11 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let class = class_of(&graph, &target)
         .ok_or_else(|| format!("{target} is not a publet in your replica"))?;
     let evidence = evidence_for(&graph, &target);
-    let weights = propagate(&policy, &trust_edges(&graph));
+    // Trust confined to subjects applies only to something in one of them
+    // (Section 18.5), so the target's own memberships are the context the
+    // propagation runs in.
+    let subjects = graph.subjects_of(&target);
+    let weights = propagate_within(&policy, &trust_edges(&graph), &subjects);
     let standing = evaluate(&policy, class, &evidence, &weights);
 
     println!("{target}");
@@ -91,6 +98,31 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     );
     if standing.retracted {
         println!("  retracted                  yes");
+    }
+
+    // Section 5.2: a definitional publet is settled by usage evidence and
+    // accepts no verdict, so the weight block above is all zeroes for one
+    // by construction. Showing the citations is the only way this reader
+    // sees anything at all about why a definition stands.
+    if class == Class::Definitional {
+        println!();
+        println!("usage");
+        if evidence.usage.is_empty() {
+            println!("  no corpus citations");
+            println!();
+            println!("  A definition is described by usage, not voted true.");
+            println!("  With nothing citing it, nothing supports this one.");
+        } else {
+            for source in &evidence.usage {
+                println!("  {source}");
+            }
+            println!();
+            println!(
+                "  {} distinct source(s). Two citations of one work are one",
+                evidence.usage.len()
+            );
+            println!("  work agreeing with itself, so sources are counted, not citations.");
+        }
     }
 
     println!();

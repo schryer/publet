@@ -5,7 +5,7 @@
 //! signed and makes no judgements, because whose signatures count is a
 //! viewpoint question that belongs to the evaluation itself.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use publet_core::{Cid, cbor::Value};
 use publet_graph::{Class, Graph, RelationKind};
@@ -22,6 +22,8 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         reproducibility: reproducibility_of(graph, target),
         ..Evidence::default()
     };
+
+    let mut filed_reproductions: Vec<Filed> = Vec::new();
 
     for cid_text in graph.cids() {
         let Ok(cid) = cid_text.parse::<Cid>() else {
@@ -63,14 +65,34 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
                     evidence.proof_checked = true;
                 }
             }
-            "reproduction" => count_reproduction(
-                body,
-                &mut evidence.reproductions,
-                authored_by_human(graph, object.author()),
-            ),
+            // Section 5.2: a definitional publet is settled by usage
+            // evidence and accepts no verdict. A citation names where a
+            // term is used, and deliberately need not reproduce the text:
+            // recording a location is what keeps a corpus of definitions
+            // from becoming a corpus of restatements.
+            "usage" => {
+                if let Some(source) = body
+                    .get("value")
+                    .and_then(|v| v.get("source"))
+                    .and_then(Value::as_text)
+                {
+                    evidence.usage.insert(source.to_owned());
+                }
+            }
+            "reproduction" => {
+                if let Some(filed) = read_reproduction(
+                    body,
+                    object.author(),
+                    authored_by_human(graph, object.author()),
+                ) {
+                    filed_reproductions.push(filed);
+                }
+            }
             _ => {}
         }
     }
+
+    tally(graph, &filed_reproductions, &mut evidence.reproductions);
 
     // A dispute counts only when it names a publet stating grounds, which
     // separates an argument from an objection (Section 6.4), and only when
@@ -123,6 +145,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
 /// factor exists to express, so its grounds remain live.
 fn settled_grounds(graph: &Graph, target: &Cid) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
+
     for cid_text in graph.cids() {
         let Ok(cid) = cid_text.parse::<Cid>() else {
             continue;
@@ -197,48 +220,194 @@ fn authored_by_human(graph: &Graph, author: &Cid) -> bool {
         .unwrap_or(false)
 }
 
-fn count_reproduction(
-    body: &std::collections::BTreeMap<String, Value>,
-    counts: &mut Reproductions,
+/// One filed reproduction, before independence has been decided.
+///
+/// Independence cannot be decided while reading: Section 11.4 defines it
+/// *between* two reproductions, so nothing about a single annotation
+/// settles it. Reading and deciding are therefore separate passes.
+struct Filed {
+    author: Cid,
+    outcome: String,
+    /// Whether the filer declared materials shared with another attempt.
+    shares_materials: bool,
     human: bool,
-) {
-    let Some(outcome) = body
+}
+
+/// Read one reproduction annotation.
+fn read_reproduction(
+    body: &std::collections::BTreeMap<String, Value>,
+    author: &Cid,
+    human: bool,
+) -> Option<Filed> {
+    let outcome = body
         .get("value")
         .and_then(|v| v.get("outcome"))
-        .and_then(Value::as_text)
-    else {
-        return;
-    };
-    // Independence is a viewpoint computation over trust paths and shared
-    // affiliation; a reproduction that declares none is counted as
-    // independent, and a viewpoint may reduce that.
-    let independent = body
+        .and_then(Value::as_text)?;
+    let shares_materials = body
         .get("value")
         .and_then(|v| v.get("independence"))
-        .is_none_or(|i| i.get("shared_materials").is_none());
+        .is_some_and(|i| i.get("shared_materials").is_some());
+    Some(Filed {
+        author: author.clone(),
+        outcome: outcome.to_owned(),
+        shares_materials,
+        human,
+    })
+}
 
-    // Section 7.2: reproductions counted toward a replication floor must be
-    // signed by human principals. Institutional resources are fine; the
-    // person who ran the instrument signs, with the institution recorded as
-    // an affiliation.
-    let counts_toward_floor = independent && human;
-
-    match outcome {
-        "consistent" => {
-            counts.consistent += 1;
-            if counts_toward_floor {
-                counts.independent_consistent += 1;
-            }
+/// Count reproductions, deciding independence between them (Section 11.4).
+///
+/// Two reproductions are independent under a viewpoint when they share no
+/// `affiliated` annotation naming the same organization over an overlapping
+/// period, they declare no shared materials, and -- counted toward a floor
+/// -- both are signed by human principals (R11).
+///
+/// The affiliation rule is what distinguishes four replications by one
+/// consortium from four independent ones, and it is a statement about
+/// *pairs*: a set of colleagues contributes one, not one each.
+fn tally(graph: &Graph, filed: &[Filed], counts: &mut Reproductions) {
+    for one in filed {
+        match one.outcome.as_str() {
+            "consistent" => counts.consistent += 1,
+            "inconsistent" => counts.inconsistent += 1,
+            "inconclusive" | "method-underspecified" => counts.inconclusive += 1,
+            _ => {}
         }
-        "inconsistent" => {
-            counts.inconsistent += 1;
-            if counts_toward_floor {
-                counts.independent_inconsistent += 1;
-            }
-        }
-        "inconclusive" | "method-underspecified" => counts.inconclusive += 1,
-        _ => {}
     }
+
+    for outcome in ["consistent", "inconsistent"] {
+        let eligible: Vec<&Filed> = filed
+            .iter()
+            .filter(|f| f.outcome == outcome && f.human && !f.shares_materials)
+            .collect();
+        let groups = independent_groups(graph, &eligible);
+        let n = u32::try_from(groups).unwrap_or(u32::MAX);
+        if outcome == "consistent" {
+            counts.independent_consistent = n;
+        } else {
+            counts.independent_inconsistent = n;
+        }
+    }
+}
+
+/// How many mutually independent parties these reproductions represent.
+///
+/// Colleagues are merged: sharing an organization over an overlapping
+/// period makes two filers one party for this purpose. The merge is
+/// transitive -- if A and B share a laboratory and B and C share a grant,
+/// all three are one party -- so this is connected components over the
+/// "not independent of" relation, not a pairwise count.
+fn independent_groups(graph: &Graph, filed: &[&Filed]) -> usize {
+    let affiliations: Vec<Vec<Affiliation>> = filed
+        .iter()
+        .map(|f| affiliations_of(graph, &f.author))
+        .collect();
+
+    let related = |i: usize, j: usize| -> bool {
+        let (Some(left), Some(right)) = (filed.get(i), filed.get(j)) else {
+            return false;
+        };
+        if left.author == right.author {
+            return true;
+        }
+        match (affiliations.get(i), affiliations.get(j)) {
+            (Some(a), Some(b)) => shares_affiliation(a, b),
+            _ => false,
+        }
+    };
+
+    let mut group: BTreeMap<usize, usize> = BTreeMap::new();
+    let mut parties = 0;
+    for start in 0..filed.len() {
+        if group.contains_key(&start) {
+            continue;
+        }
+        let mut stack = vec![start];
+        while let Some(current) = stack.pop() {
+            if group.insert(current, parties).is_some() {
+                continue;
+            }
+            for other in 0..filed.len() {
+                if !group.contains_key(&other) && related(current, other) {
+                    stack.push(other);
+                }
+            }
+        }
+        parties += 1;
+    }
+    parties
+}
+
+/// A declared affiliation (Section 10.4).
+struct Affiliation {
+    org: String,
+    from: Option<String>,
+    to: Option<String>,
+}
+
+/// Affiliations declared for a key by `affiliated` annotations.
+fn affiliations_of(graph: &Graph, key: &Cid) -> Vec<Affiliation> {
+    let mut out = Vec::new();
+    for cid_text in graph.cids() {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        let Some(object) = graph.object(&cid) else {
+            continue;
+        };
+        if object.kind() != "ann" {
+            continue;
+        }
+        let body = object.body();
+        if body.get("kind").and_then(Value::as_text) != Some("affiliated") {
+            continue;
+        }
+        if body.get("target").and_then(Value::as_text) != Some(&key.to_string()) {
+            continue;
+        }
+        let Some(value) = body.get("value") else {
+            continue;
+        };
+        let Some(org) = value.get("org").and_then(Value::as_text) else {
+            continue;
+        };
+        let bound = |name: &str| {
+            value
+                .get("period")
+                .and_then(|p| p.get(name))
+                .and_then(Value::as_text)
+                .map(ToOwned::to_owned)
+        };
+        out.push(Affiliation {
+            org: org.to_owned(),
+            from: bound("from"),
+            to: bound("to"),
+        });
+    }
+    out
+}
+
+/// Whether two keys share an organization over an overlapping period.
+///
+/// An absent bound is open: someone who has not said when they left is
+/// still there. Treating a missing date as "no overlap" would let an
+/// undisclosed end date manufacture independence.
+fn shares_affiliation(left: &[Affiliation], right: &[Affiliation]) -> bool {
+    for a in left {
+        for b in right {
+            if a.org != b.org {
+                continue;
+            }
+            let a_from = a.from.as_deref().unwrap_or("");
+            let b_from = b.from.as_deref().unwrap_or("");
+            let a_to = a.to.as_deref().unwrap_or("~");
+            let b_to = b.to.as_deref().unwrap_or("~");
+            if a_from <= b_to && b_from <= a_to {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Trust edges declared by `trusts` annotations in the graph.
@@ -246,6 +415,7 @@ fn count_reproduction(
 pub fn trust_edges(graph: &Graph) -> Vec<crate::TrustEdge> {
     let mut out = Vec::new();
     let mut seen = BTreeSet::new();
+
     for cid_text in graph.cids() {
         let Ok(cid) = cid_text.parse::<Cid>() else {
             continue;
@@ -270,7 +440,21 @@ pub fn trust_edges(graph: &Graph) -> Vec<crate::TrustEdge> {
             .unwrap_or(1);
         let from = object.author().to_string();
         if seen.insert((from.clone(), to.clone())) {
+            let subjects = body
+                .get("value")
+                .and_then(|v| v.get("subjects"))
+                .and_then(|v| match v {
+                    Value::Array(items) => Some(
+                        items
+                            .iter()
+                            .filter_map(|i| i.as_text().map(ToOwned::to_owned))
+                            .collect::<Vec<String>>(),
+                    ),
+                    _ => None,
+                })
+                .unwrap_or_default();
             out.push(crate::TrustEdge {
+                subjects,
                 from,
                 to: to.clone(),
                 weight: crate::Fixed6::from_scaled(i128::from(weight) * crate::SCALE),

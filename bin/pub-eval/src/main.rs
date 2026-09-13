@@ -122,6 +122,9 @@ fn read_edges(value: &Value) -> Result<Vec<TrustEdge>, String> {
         .iter()
         .map(|item| {
             Ok(TrustEdge {
+                // A vector states a trust graph directly; confining an edge
+                // to subjects is a graph-level fact with no meaning here.
+                subjects: Vec::new(),
                 from: item
                     .get("from")
                     .and_then(Value::as_text)
@@ -179,5 +182,6 @@ fn read_evidence(value: &Value) -> Evidence {
             .and_then(Reproducibility::from_id)
             .unwrap_or(Reproducibility::Open),
         retracted: matches!(value.get("retracted"), Some(Value::Bool(true))),
+        usage: set("usage"),
     }
 }

@@ -32,7 +32,11 @@ FIELDS = {
                      "result", "data"],
     "classifies": ["subject"],
     "critique": ["defect", "omitted"],
-    "usage": ["corpus"],
+    # The specification says only "corpus evidence" and never gives a
+    # shape, so this one is a design decision rather than a reading: a
+    # citation names where a sense is used. That gap should be closed in
+    # the specification rather than left implied by an implementation.
+    "usage": ["source", "locator", "sense"],
     "resolution": ["thread_root", "outcome", "policy", "snapshot"],
     "trusts": ["weight", "subjects"],
     "attests": ["identity"],

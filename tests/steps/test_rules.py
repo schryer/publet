@@ -165,12 +165,38 @@ def _reproduced_workspace(bin_dir, tmp_path, principal: str):
         subprocess.run([str(store_bin), "--store=.publet/objects.redb", "add"],
                        input=data, capture_output=True, cwd=tmp_path, check=False)
 
-    # A reproducer whose key declares the principal under test.
-    reproducer_key = key_object(f"reproducer-{principal}", principal)
+    # Two reproducers, each with their own key declaring the principal
+    # under test. Section 11.4 defines independence between signers, so a
+    # single key filing twice would be one party, not two -- which is what
+    # this fixture used to do, and why it agreed with an implementation
+    # that counted the same person twice.
+    for i in range(2):
+        reproducer_key = key_object(f"reproducer-{principal}-{i}", principal)
+        reproducer = cid_of(reproducer_key)
+        add(reproducer_key)
+        add(obj("ann", reproducer, f"2026-09-12T13:0{i}:00Z", [
+            ("kind", text("reproduction")),
+            ("target", text(ws["claim"])),
+            ("value", cbor_map([("outcome", text("consistent"))])),
+        ]))
+    return ws
+
+
+def _one_signer_twice(bin_dir, tmp_path):
+    """One human filing the same reproduction twice."""
+    ws = _disputed_workspace(bin_dir, tmp_path,
+                             resolution_outcome=None, cover_grounds=False)
+    store_bin = bin_dir / "pub-store"
+
+    def add(data: bytes):
+        subprocess.run([str(store_bin), "--store=.publet/objects.redb", "add"],
+                       input=data, capture_output=True, cwd=tmp_path, check=False)
+
+    reproducer_key = key_object("lone-reproducer", "human")
     reproducer = cid_of(reproducer_key)
     add(reproducer_key)
     for i in range(2):
-        add(obj("ann", reproducer, f"2026-09-12T13:0{i}:00Z", [
+        add(obj("ann", reproducer, f"2026-09-12T14:0{i}:00Z", [
             ("kind", text("reproduction")),
             ("target", text(ws["claim"])),
             ("value", cbor_map([("outcome", text("consistent"))])),
@@ -182,6 +208,11 @@ def _reproduced_workspace(bin_dir, tmp_path, principal: str):
        target_fixture="ws")
 def reproductions_human(bin_dir, tmp_path):
     return _reproduced_workspace(bin_dir, tmp_path, "human")
+
+
+@given("a claim reproduced twice by one person", target_fixture="ws")
+def reproduced_twice_by_one(bin_dir, tmp_path):
+    return _one_signer_twice(bin_dir, tmp_path)
 
 
 @given("a claim with two reproductions from an organization",

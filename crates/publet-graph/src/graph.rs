@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use publet_core::{Cid, Object, Verified};
+use publet_core::{Cid, Object, Verified, cbor::Value};
 
 use crate::GraphError;
 use crate::document::{Anchor, Document};
@@ -364,6 +364,69 @@ impl Graph {
             .filter_map(|a| self.objects.get(&a.cid().to_string()))
             .filter_map(crate::Triage::from_object)
             .collect()
+    }
+
+    /// Subjects this object is classified under (Section 9.1).
+    ///
+    /// Membership is an annotation, never a property of the object (R6), so
+    /// competing taxonomies coexist as sets of `classifies` annotations by
+    /// different keys and a viewpoint selects among them. Returned sorted
+    /// and deduplicated: two keys classifying one object under one subject
+    /// is agreement, not two memberships.
+    #[must_use]
+    pub fn subjects_of(&self, target: &Cid) -> Vec<String> {
+        let mut out = self.classification(|t, _| t == &target.to_string(), |_, s| s.to_owned());
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    /// Objects classified under a subject.
+    #[must_use]
+    pub fn classified_under(&self, subject: &Cid) -> Vec<String> {
+        let mut out = self.classification(|_, s| s == &subject.to_string(), |t, _| t.to_owned());
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    /// Walk `classifies` annotations, selecting and projecting.
+    fn classification(
+        &self,
+        keep: impl Fn(&String, &String) -> bool,
+        project: impl Fn(&str, &str) -> String,
+    ) -> Vec<String> {
+        let mut out = Vec::new();
+        for cid_text in self.cids() {
+            let Ok(cid) = cid_text.parse::<Cid>() else {
+                continue;
+            };
+            let Some(object) = self.object(&cid) else {
+                continue;
+            };
+            if object.kind() != "ann" {
+                continue;
+            }
+            let body = object.body();
+            if body.get("kind").and_then(Value::as_text) != Some("classifies") {
+                continue;
+            }
+            let Some(target) = body.get("target").and_then(Value::as_text) else {
+                continue;
+            };
+            let Some(subject) = body
+                .get("value")
+                .and_then(|v| v.get("subject"))
+                .and_then(Value::as_text)
+            else {
+                continue;
+            };
+            let (target, subject) = (target.to_owned(), subject.to_owned());
+            if keep(&target, &subject) {
+                out.push(project(&target, &subject));
+            }
+        }
+        out
     }
 
     /// Critique annotations targeting a document (Section 8).
