@@ -120,6 +120,15 @@ pub struct Evidence {
     pub reproducibility: Reproducibility,
     /// Whether the claim has been retracted by its author.
     pub retracted: bool,
+    /// Judgements filed about this claim (Section 5.2).
+    ///
+    /// An assessment is *not* a verdict. A verdict is input to an
+    /// evaluation policy; an assessment is a signer saying what they think,
+    /// and an author's assessment of their own work is one annotation among
+    /// many rather than a privileged field (R3). Nothing here reaches the
+    /// outcome -- which is what makes `sound-in-scope` sayable about a
+    /// definitional publet, where no verdict may be cast at all.
+    pub assessments: Vec<Assessment>,
     /// Distinct corpora cited as evidence of usage (Section 5.2).
     ///
     /// The evidence a `definitional` publet is settled by. Verdicts are not
@@ -128,6 +137,19 @@ pub struct Evidence {
     /// Held as the set of sources rather than a count, because two
     /// citations of one dictionary are one dictionary agreeing with itself.
     pub usage: BTreeSet<String>,
+}
+
+/// A signer's judgement about a claim (Section 5.2).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Assessment {
+    /// The key that filed it.
+    pub author: String,
+    /// One of `sound`, `sound-in-scope`, `superseded`, `unsupported`,
+    /// `refuted`, `undetermined`.
+    pub verdict: String,
+    /// What the judgement rests on. Required: a judgement without one is a
+    /// preference, and the reader cannot weigh a preference.
+    pub basis: String,
 }
 
 /// The result of evaluating one claim.

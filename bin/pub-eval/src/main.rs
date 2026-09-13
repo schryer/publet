@@ -183,5 +183,8 @@ fn read_evidence(value: &Value) -> Evidence {
             .unwrap_or(Reproducibility::Open),
         retracted: matches!(value.get("retracted"), Some(Value::Bool(true))),
         usage: set("usage"),
+        // A vector states evidence directly. Assessments are judgements
+        // rather than inputs, so nothing here reads one.
+        assessments: Vec::new(),
     }
 }

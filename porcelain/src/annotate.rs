@@ -22,6 +22,19 @@ use publet_graph::load;
 
 use crate::workspace::Workspace;
 
+/// Section 5.2. `sound-in-scope` is the one that carries partial
+/// correctness: a claim that holds where its scope says and misleads
+/// outside it. There is no number for that, and there should not be --
+/// naming the conditions says strictly more than a percentage does.
+const ASSESSMENTS: [&str; 6] = [
+    "sound",
+    "sound-in-scope",
+    "superseded",
+    "unsupported",
+    "refuted",
+    "undetermined",
+];
+
 const ROLES: [&str; 5] = [
     "employer",
     "funder",
@@ -156,6 +169,18 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
                 Value::Text(flags.get("disclosed_by").cloned().unwrap_or("self".into())),
             );
         }
+        "assessment" => {
+            let verdict = need("verdict", &format!("one of {}", ASSESSMENTS.join(", ")))?;
+            if !ASSESSMENTS.contains(&verdict.as_str()) {
+                return Err(format!("unknown assessment: {verdict}"));
+            }
+            // A judgement with no stated basis is a preference. The reader
+            // cannot weigh a preference, so it is required rather than
+            // stored and ignored.
+            let basis = need("basis", "what this judgement rests on")?;
+            value.insert("verdict".to_owned(), Value::Text(verdict));
+            value.insert("basis".to_owned(), Value::Text(basis));
+        }
         "verdict" => {
             let finding = need("finding", "affirm, deny, or abstain")?;
             if !["affirm", "deny", "abstain"].contains(&finding.as_str()) {
@@ -169,7 +194,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         other => {
             return Err(format!(
                 "unknown or unsupported annotation kind: {other}\n\
-                 supported: usage, classifies, trusts, affiliated, verdict"
+                 supported: usage, classifies, trusts, affiliated, \
+                 assessment, verdict"
             ));
         }
     }

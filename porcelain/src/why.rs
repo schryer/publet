@@ -106,6 +106,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     if class == Class::Definitional {
         print_usage(&graph, &target, &evidence.usage);
     }
+    print_assessments(&evidence.assessments);
 
     println!();
     println!("{}", explain(standing.result));
@@ -113,6 +114,36 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     println!("Computed under policy {policy_cid}, locally. Your trust roots");
     println!("decide this; another reader's roots may decide otherwise.");
     Ok(())
+}
+
+/// Show the judgements filed about a claim.
+///
+/// Separated from the weight block on purpose. An assessment is not input
+/// to the outcome: `sound-in-scope` is a remark about where a claim holds,
+/// and presenting it next to a computed weight would invite reading it as
+/// one. That is also why it is sayable about a definitional publet, which
+/// accepts no verdict at all.
+fn print_assessments(assessments: &[publet_eval::Assessment]) {
+    if assessments.is_empty() {
+        return;
+    }
+    println!();
+    println!("assessments (judgements, not inputs to the outcome)");
+    for assessment in assessments {
+        println!("  {:<16} {}", assessment.verdict, assessment.basis);
+    }
+    let in_scope = assessments
+        .iter()
+        .filter(|a| a.verdict == "sound-in-scope")
+        .count();
+    if in_scope > 0 {
+        println!();
+        println!(
+            "  {in_scope} judge(s) hold this sound within its scope and not \
+             beyond it."
+        );
+        println!("  Read the scope above before carrying it elsewhere.");
+    }
 }
 
 /// Show the citations supporting a definition.

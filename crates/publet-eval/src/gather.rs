@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use publet_core::{Cid, cbor::Value};
+use publet_core::{Cid, Object, cbor::Value};
 use publet_graph::{Class, Graph, RelationKind};
 
 use crate::{Evidence, Reproducibility, Reproductions};
@@ -47,52 +47,18 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         }
         let author = object.author().to_string();
 
-        match kind.as_str() {
-            "verdict" => match finding_of(body) {
-                Some("affirm") => {
-                    evidence.affirm.insert(author);
-                }
-                Some("deny") => {
-                    evidence.deny.insert(author);
-                }
-                Some("abstain") => {
-                    evidence.abstain.insert(author);
-                }
-                _ => {}
-            },
-            "proof-checked" => {
-                if result_of(body) == Some("accepted") {
-                    evidence.proof_checked = true;
-                }
-            }
-            // Section 5.2: a definitional publet is settled by usage
-            // evidence and accepts no verdict. A citation names where a
-            // term is used, and deliberately need not reproduce the text:
-            // recording a location is what keeps a corpus of definitions
-            // from becoming a corpus of restatements.
-            "usage" => {
-                if let Some(source) = body
-                    .get("value")
-                    .and_then(|v| v.get("source"))
-                    .and_then(Value::as_text)
-                {
-                    evidence.usage.insert(source.to_owned());
-                }
-            }
-            "reproduction" => {
-                if let Some(filed) = read_reproduction(
-                    body,
-                    object.author(),
-                    authored_by_human(graph, object.author()),
-                ) {
-                    filed_reproductions.push(filed);
-                }
-            }
-            _ => {}
-        }
+        absorb(
+            graph,
+            object,
+            kind,
+            &author,
+            &mut evidence,
+            &mut filed_reproductions,
+        );
     }
 
     tally(graph, &filed_reproductions, &mut evidence.reproductions);
+    evidence.assessments.sort();
 
     // A dispute counts only when it names a publet stating grounds, which
     // separates an argument from an objection (Section 6.4), and only when
@@ -135,6 +101,88 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
     }
 
     evidence
+}
+
+/// Absorb one annotation that targets the claim being evaluated.
+///
+/// Split out from `evidence_for` because the dispatch is the part that
+/// grows: every annotation kind the specification names is a case here,
+/// and the surrounding walk over the graph is not.
+fn absorb(
+    graph: &Graph,
+    object: &Object,
+    kind: &str,
+    author: &str,
+    evidence: &mut Evidence,
+    filed_reproductions: &mut Vec<Filed>,
+) {
+    let body = object.body();
+    let author = author.to_owned();
+    match kind {
+        "verdict" => match finding_of(body) {
+            Some("affirm") => {
+                evidence.affirm.insert(author);
+            }
+            Some("deny") => {
+                evidence.deny.insert(author);
+            }
+            Some("abstain") => {
+                evidence.abstain.insert(author);
+            }
+            _ => {}
+        },
+        "proof-checked" => {
+            if result_of(body) == Some("accepted") {
+                evidence.proof_checked = true;
+            }
+        }
+        // A judgement, not an input. Permitted on every class --
+        // including the ones that accept no verdict -- because saying
+        // "sound within its scope" about a definition is a remark about
+        // where it holds, not a vote on whether it is true.
+        "assessment" => {
+            let value = body.get("value");
+            let field = |name: &str| {
+                value
+                    .and_then(|v| v.get(name))
+                    .and_then(Value::as_text)
+                    .map(ToOwned::to_owned)
+            };
+            // A judgement with no stated basis is a preference, and the
+            // reader has no way to weigh one. It is not read.
+            if let (Some(verdict), Some(basis)) = (field("verdict"), field("basis")) {
+                evidence.assessments.push(crate::Assessment {
+                    author: author.clone(),
+                    verdict,
+                    basis,
+                });
+            }
+        }
+        // Section 5.2: a definitional publet is settled by usage
+        // evidence and accepts no verdict. A citation names where a
+        // term is used, and deliberately need not reproduce the text:
+        // recording a location is what keeps a corpus of definitions
+        // from becoming a corpus of restatements.
+        "usage" => {
+            if let Some(source) = body
+                .get("value")
+                .and_then(|v| v.get("source"))
+                .and_then(Value::as_text)
+            {
+                evidence.usage.insert(source.to_owned());
+            }
+        }
+        "reproduction" => {
+            if let Some(filed) = read_reproduction(
+                body,
+                object.author(),
+                authored_by_human(graph, object.author()),
+            ) {
+                filed_reproductions.push(filed);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Grounds already covered by a resolution of `target`.

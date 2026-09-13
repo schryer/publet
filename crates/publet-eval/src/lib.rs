@@ -18,4 +18,6 @@ pub use policy::{MAX_ITERATIONS, Policy, PolicyError, Root};
 pub use propagate::{TrustEdge, Weights, propagate, propagate_within, reachable_within};
 mod standing;
 
-pub use standing::{Evidence, Outcome, Reproducibility, Reproductions, Standing, evaluate};
+pub use standing::{
+    Assessment, Evidence, Outcome, Reproducibility, Reproductions, Standing, evaluate,
+};

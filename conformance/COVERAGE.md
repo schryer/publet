@@ -47,7 +47,7 @@ untested.
 | 4.4 | 2 | conformance/signatures.feature |
 | 4.5 | 1 | conformance/object_size.feature |
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |
-| 5.2 | 2 | conformance/class_rules.feature, conformance/usage.feature |
+| 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/usage.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
 | 5.5 | 2 | conformance/evidence_required.feature |
 | 5.7 | 1 | conformance/atomicity.feature |
