@@ -46,6 +46,10 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y jq
       - run: python -m venv .venv && .venv/bin/pip install --require-hashes -r tests/requirements.lock
       - run: make functional
+      # Needs a built pub-eval, so it runs here rather than in the cheap
+      # gates job. The matrix workflow checks the same digest on the other
+      # three architectures.
+      - run: make guard-eval
       - run: make conformance
       - run: make coverage
       - name: Fail if the conformance report drifted

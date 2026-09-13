@@ -10,7 +10,7 @@ CARGO := cargo
 
 .PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix coverage \
         conformance verify-suite verify-optional \
-        guard-deps guard-floats deny check build clean
+        guard-deps guard-floats guard-eval deny check build clean
 
 help: ## Show available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -61,10 +61,13 @@ guard-deps: ## Enforce the dependency direction (plan section 3)
 guard-floats: ## Enforce the no-floating-point rule (R8, plan 4.1)
 	./tools/check-floats.sh
 
+guard-eval: ## Enforce that evaluation output has not changed (R8)
+	./tools/check-eval-digest.sh
+
 deny: ## Licence and advisory audit
 	$(CARGO) deny check
 
-check: fmt-check lint guard-floats guard-deps test doc functional coverage deny ## Everything CI runs
+check: fmt-check lint guard-floats guard-deps guard-eval test doc functional coverage deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean

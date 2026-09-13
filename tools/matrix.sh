@@ -164,12 +164,20 @@ for name in "${!DIGESTS[@]}"; do
   printf '%-10s %s\n' "$name" "${DIGESTS[$name]}"
 done | sort
 
+# The recorded digest is the reference when there is one. Comparing the
+# architectures only to each other would pass a run in which all four had
+# drifted together, which is the likelier failure: they share the source.
+RECORD="${PUBLET_ROOT}/vectors/eval/DIGEST"
+if [ -f "$RECORD" ]; then
+  reference="$(tr -d '[:space:]' < "$RECORD")"
+fi
+
 for name in "${!DIGESTS[@]}"; do
   d="${DIGESTS[$name]}"
   [ "$d" = "SKIP" ] && continue
   if [ -z "$reference" ]; then reference="$d"; continue; fi
   if [ "$d" != "$reference" ]; then
-    echo "error: evaluation output differs across architectures (R8)" >&2
+    echo "error: $name evaluation output is $d, expected $reference (R8)" >&2
     status=1
   fi
 done
@@ -183,5 +191,8 @@ elif [ "${DIGESTS[amd64]:-SKIP}" = "SKIP" ]; then
   echo "        Populate vectors/eval/ in Phase 3."
 else
   echo "matrix: clean, evaluation output identical across all targets"
+  if [ -f "$RECORD" ]; then
+    echo "        and equal to the recorded digest $reference"
+  fi
 fi
 exit "$status"

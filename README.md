@@ -255,7 +255,7 @@ Section 12.1 a fact about the code rather than a sentence about it.
 
 ## Guards
 
-Three project rules are checked mechanically rather than trusted to review,
+Four project rules are checked mechanically rather than trusted to review,
 because each fails silently in production:
 
 - **`make guard-floats`** — floating point is forbidden in the crates that
@@ -266,6 +266,14 @@ because each fails silently in production:
 - **`make guard-deps`** — the evaluation crate may not reach a store, a
   socket, a clock, or a random source, at any depth. Evaluation must be a
   pure function of its inputs.
+- **`make guard-eval`** — the evaluation vectors' output is recorded in
+  `vectors/eval/DIGEST`. Two implementations must return the same standing
+  for the same inputs, so a change to what this one returns is a change to
+  the protocol, not a refactor. A deliberate change re-records the digest
+  in the same commit as the rule that caused it. The cross-architecture
+  matrix compares against this value too: four architectures agreeing with
+  each other would not notice all four drifting together, and they share
+  the source.
 - **`make lint`** — clippy with warnings as errors, including denied
   `unwrap`, `expect`, and `panic` outside tests.
 
