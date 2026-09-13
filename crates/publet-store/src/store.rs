@@ -30,6 +30,8 @@ const DECLARED: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("declare
 const MEMBERS: TableDefinition<'_, &str, &str> = TableDefinition::new("members");
 /// Tombstones, keyed by the identifier they disclose the removal of.
 const TOMBSTONES: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("tombstones");
+/// Timestamp attestations, keyed by the identifier they cover.
+const TIMESTAMPS: TableDefinition<'_, &str, &str> = TableDefinition::new("timestamps");
 /// Generation records, keyed by the domain identifier, a NUL, and a
 /// zero-padded index, so lexicographic order matches numeric order.
 const GENERATIONS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("generations");
@@ -72,6 +74,7 @@ impl Store {
             let _ = tx.open_table(MEMBERS)?;
             let _ = tx.open_table(TOMBSTONES)?;
             let _ = tx.open_table(GENERATIONS)?;
+            let _ = tx.open_table(TIMESTAMPS)?;
         }
         tx.commit()?;
         Ok(Self { db })
@@ -360,6 +363,87 @@ impl Store {
             };
             if let Ok(record) = publet_domain::Generation::from_object(parsed.peek()) {
                 out.extend(record.added.iter().map(ToString::to_string));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Stop serving a declared domain (Section 14.6).
+    ///
+    /// A node reducing its declared set must publish the new set before
+    /// ceasing service, so that other mirrors can acquire the difference
+    /// rather than discovering the gap when a request fails. The
+    /// declaration is therefore withdrawn first and the objects only become
+    /// collectable afterwards.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a write failure.
+    pub fn undeclare(&self, domain: &Cid) -> Result<bool, StoreError> {
+        let tx = self.db.begin_write()?;
+        let removed;
+        {
+            let mut declared = tx.open_table(DECLARED)?;
+            removed = declared.remove(domain.to_string().as_str())?.is_some();
+            let mut members = tx.open_table(MEMBERS)?;
+            members.remove(domain.to_string().as_str())?;
+        }
+        tx.commit()?;
+        Ok(removed)
+    }
+
+    /// Record that an object existed at a time (Sections 10.5, 13.4).
+    ///
+    /// An archive must timestamp everything it accepts. Without one, a key
+    /// compromised in 2040 invalidates its 2028 work and a signature
+    /// algorithm broken in 2045 invalidates everything signed before the
+    /// break; with one, neither follows. It cannot be applied
+    /// retroactively, which is why an archive does it on acceptance rather
+    /// than when someone asks.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a write failure.
+    pub fn timestamp(&self, target: &Cid, attestation: &str) -> Result<(), StoreError> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(TIMESTAMPS)?;
+            table.insert(target.to_string().as_str(), attestation)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// The timestamp attestation covering an object, if any.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn timestamp_of(&self, target: &Cid) -> Result<Option<String>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(TIMESTAMPS)?;
+        Ok(table
+            .get(target.to_string().as_str())?
+            .map(|v| v.value().to_owned()))
+    }
+
+    /// Objects held with no timestamp attestation.
+    ///
+    /// An archive with entries here has not met Section 13.4.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn untimestamped(&self) -> Result<Vec<String>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let objects = tx.open_table(OBJECTS)?;
+        let stamps = tx.open_table(TIMESTAMPS)?;
+        let mut out = Vec::new();
+        for entry in objects.iter()? {
+            let (key, _) = entry?;
+            let cid = key.value();
+            if stamps.get(cid)?.is_none() {
+                out.push(cid.to_owned());
             }
         }
         Ok(out)

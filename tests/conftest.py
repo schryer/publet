@@ -246,3 +246,38 @@ def stderr_mentions(request, fragment: str) -> None:
     runner = request.getfixturevalue("runner")
     out = store.get("last") or runner.run("pub-ls", f"--dir={store['dir']}")
     assert fragment in out.stderr, out.stderr
+
+
+def _code(result) -> int:
+    """Exit status from either result shape.
+
+    Scenarios that run a plumbing command get a `Completed`; those that run
+    `pub` in a working directory get a `subprocess.CompletedProcess`. One
+    step phrase should serve both rather than forcing the feature files to
+    know which.
+    """
+    return getattr(result, "returncode", None) or getattr(result, "code", 0)
+
+
+def _text(result) -> str:
+    out, err = result.stdout, result.stderr
+    if isinstance(out, bytes):
+        return (out + err).decode("utf-8", "replace")
+    return out + err
+
+
+@then("it fails")
+def it_fails(result) -> None:
+    assert _code(result) != 0, _text(result)
+
+
+@then("it succeeds")
+def it_succeeds(result) -> None:
+    assert _code(result) == 0, _text(result)
+
+
+@then("both runs produce identical output")
+def runs_identical(two_results) -> None:
+    first, second = two_results
+    assert _code(first) == _code(second) == 0
+    assert first.stdout == second.stdout

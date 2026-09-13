@@ -48,6 +48,30 @@ pub enum GraphError {
         found: String,
     },
 
+    /// A lineage-bound citation omitted the head its author read.
+    #[error(
+        "a lineage-bound citation of {reference} must record `at`, the head \
+         its author actually read; without it a reader sees only what is \
+         current and loses what was cited"
+    )]
+    LineageBindWithoutHead {
+        /// The lineage genesis cited.
+        reference: String,
+    },
+
+    /// An anchor recommends an object outside the lineage it names.
+    #[error(
+        "anchor points at {current}, which is not in the lineage {lineage} \
+         it names; an anchor is a shortcut to the computation, not a \
+         different claim wearing its shape"
+    )]
+    AnchorOutsideLineage {
+        /// What the anchor recommends.
+        current: String,
+        /// The lineage it claims to anchor.
+        lineage: String,
+    },
+
     /// An empirical publet named no method.
     #[error(
         "an `empirical` publet must carry an evidence entry with role `method`; \

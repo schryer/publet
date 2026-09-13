@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use publet_core::{Cid, Object, Verified};
 
 use crate::GraphError;
+use crate::document::{Anchor, Document};
 use crate::view::{Annotation, Class, Publet, Relation, RelationKind};
 
 /// Which `supersedes` edges a lineage query should follow (Section 6.1).
@@ -53,6 +54,8 @@ pub struct Graph {
     publets: BTreeMap<String, Publet>,
     relations: BTreeMap<String, Relation>,
     annotations: BTreeMap<String, Annotation>,
+    documents: BTreeMap<String, Document>,
+    anchors: BTreeMap<String, Anchor>,
     /// kind -> from -> to
     out_edges: BTreeMap<RelationKind, BTreeMap<String, BTreeSet<String>>>,
     /// kind -> to -> from
@@ -97,6 +100,14 @@ impl Graph {
                 let annotation = Annotation::from_object(cid.clone(), &object)?;
                 self.check_annotation(&annotation)?;
                 self.annotations.insert(key.clone(), annotation);
+            }
+            "doc" => {
+                let document = Document::from_object(cid.clone(), &object)?;
+                self.documents.insert(key.clone(), document);
+            }
+            "anchor" => {
+                let anchor = Anchor::from_object(cid.clone(), &object)?;
+                self.anchors.insert(key.clone(), anchor);
             }
             _ => {}
         }
@@ -230,6 +241,9 @@ impl Graph {
                 Self::check_verdict(target.class(), annotation.aspect())?;
             }
         }
+        for anchor in self.anchors.values() {
+            anchor.check_against(self)?;
+        }
         for relation in self.relations.values() {
             if relation.kind() == RelationKind::Disputes
                 && !self.publets.contains_key(&relation.from().to_string())
@@ -251,6 +265,83 @@ impl Graph {
     #[must_use]
     pub fn object(&self, cid: &Cid) -> Option<&Object> {
         self.objects.get(&cid.to_string())
+    }
+
+    /// Borrow a typed document.
+    #[must_use]
+    pub fn document(&self, cid: &Cid) -> Option<&Document> {
+        self.documents.get(&cid.to_string())
+    }
+
+    /// Every document, in identifier order.
+    pub fn documents(&self) -> impl Iterator<Item = &Document> {
+        self.documents.values()
+    }
+
+    /// Borrow a typed anchor.
+    #[must_use]
+    pub fn anchor(&self, cid: &Cid) -> Option<&Anchor> {
+        self.anchors.get(&cid.to_string())
+    }
+
+    /// Documents whose citations substantially overlap another's without
+    /// declaring `derived-from` (Section 8).
+    ///
+    /// Forking is permitted and cannot be prevented; what the protocol can
+    /// do is make an undeclared one conspicuous. Overlap is a signal, not a
+    /// verdict: two documents on one subject will cite the same publets,
+    /// which is why the threshold is high and the result is reported rather
+    /// than enforced.
+    #[must_use]
+    pub fn undeclared_forks(&self, threshold_percent: u32) -> Vec<(String, String, u32)> {
+        let mut out = Vec::new();
+        let docs: Vec<&Document> = self.documents.values().collect();
+        for (i, left) in docs.iter().enumerate() {
+            let left_refs: BTreeSet<String> =
+                left.references().iter().map(ToString::to_string).collect();
+            if left_refs.is_empty() {
+                continue;
+            }
+            for right in docs.iter().skip(i + 1) {
+                let right_refs: BTreeSet<String> =
+                    right.references().iter().map(ToString::to_string).collect();
+                if right_refs.is_empty() {
+                    continue;
+                }
+                let shared = left_refs.intersection(&right_refs).count();
+                let smaller = left_refs.len().min(right_refs.len());
+                // Integer division is intended: a percentage of citations
+                // shared, truncated, is the signal. Precision beyond that
+                // would imply the threshold means more than it does.
+                #[allow(clippy::integer_division)]
+                let percent = u32::try_from(shared * 100 / smaller).unwrap_or(0);
+                if percent < threshold_percent {
+                    continue;
+                }
+                if self.declares_derivation(left.cid(), right.cid()) {
+                    continue;
+                }
+                out.push((left.cid().to_string(), right.cid().to_string(), percent));
+            }
+        }
+        out
+    }
+
+    fn declares_derivation(&self, a: &Cid, b: &Cid) -> bool {
+        self.out(RelationKind::DerivedFrom, a)
+            .contains(&b.to_string())
+            || self
+                .out(RelationKind::DerivedFrom, b)
+                .contains(&a.to_string())
+    }
+
+    /// Critique annotations targeting a document (Section 8).
+    #[must_use]
+    pub fn critiques_of(&self, target: &Cid) -> Vec<&Annotation> {
+        self.annotations
+            .values()
+            .filter(|a| a.kind() == "critique" && a.target() == target)
+            .collect()
     }
 
     /// Borrow a typed publet.

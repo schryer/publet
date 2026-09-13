@@ -13,3 +13,10 @@ Feature: Standing is relative to a declared viewpoint
     When I evaluate it
     Then it fails
     And it says a policy must declare at least one root
+
+  @must-16
+  Scenario: An unbounded iteration count is refused
+    Given an evaluation vector whose policy asks for 5000 iterations
+    When I evaluate it
+    Then it fails
+    And it says iterations exceed the limit

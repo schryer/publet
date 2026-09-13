@@ -25,6 +25,9 @@ fn usage() -> ExitCode {
     eprintln!("  scan             re-hash every object and report mismatches");
     eprintln!("  list             emit every stored identifier");
     eprintln!("  generation       read a generation record on stdin and index it");
+    eprintln!("  undeclare DOMAIN withdraw a declared set, publishing the reduction");
+    eprintln!("  archive          timestamp every object held, as an archive must");
+    eprintln!("  audit            list objects an archive holds without a timestamp");
     ExitCode::from(EXIT_USAGE)
 }
 
@@ -93,6 +96,29 @@ fn main() -> ExitCode {
             }
         },
         "generation" => generation(&store),
+        "undeclare" => undeclare(&store, rest.get(1).map(String::as_str)),
+        "archive" => archive(&store, rest.get(1).map(String::as_str)),
+        "audit" => match store.untimestamped() {
+            Ok(missing) => {
+                for cid in &missing {
+                    println!("{cid}");
+                }
+                if missing.is_empty() {
+                    ExitCode::SUCCESS
+                } else {
+                    eprintln!(
+                        "{} object(s) held without a timestamp; an archive must \
+                         timestamp everything it accepts (Section 13.4)",
+                        missing.len()
+                    );
+                    ExitCode::from(EXIT_VIOLATION)
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(EXIT_IO)
+            }
+        },
         "list" => match store.cids() {
             Ok(cids) => {
                 for cid in cids {
@@ -107,6 +133,82 @@ fn main() -> ExitCode {
         },
         _ => usage(),
     }
+}
+
+/// Withdraw a declared set, emitting the reduced set first.
+///
+/// The reduced declaration is printed before anything stops being served,
+/// so a peer reading it can acquire the difference rather than finding out
+/// when a request fails.
+fn undeclare(store: &Store, domain: Option<&str>) -> ExitCode {
+    let Some(domain) = domain else {
+        eprintln!("usage: pub-store undeclare DOMAIN");
+        return ExitCode::from(EXIT_USAGE);
+    };
+    let Ok(cid) = domain.parse::<Cid>() else {
+        eprintln!("not a CID: {domain}");
+        return ExitCode::from(EXIT_USAGE);
+    };
+    match store.undeclare(&cid) {
+        Ok(true) => match store.declared() {
+            Ok(remaining) => {
+                for d in &remaining {
+                    println!("{d}");
+                }
+                eprintln!(
+                    "withdrew {cid}; the reduced set is above, published before \
+                     service stops so peers can acquire the difference"
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(EXIT_IO)
+            }
+        },
+        Ok(false) => {
+            eprintln!("not declared: {cid}");
+            ExitCode::from(EXIT_VIOLATION)
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(EXIT_IO)
+        }
+    }
+}
+
+/// Timestamp everything held, as an archive must.
+///
+/// The attestation is supplied by the caller, because a timestamp an
+/// archive issued to itself establishes nothing: what makes it evidence is
+/// that an independent service asserted the object existed at a time.
+fn archive(store: &Store, service: Option<&str>) -> ExitCode {
+    let Some(service) = service else {
+        eprintln!("usage: pub-store archive SERVICE");
+        eprintln!("  SERVICE identifies the timestamping service; a timestamp");
+        eprintln!("  an archive issues to itself establishes nothing");
+        return ExitCode::from(EXIT_USAGE);
+    };
+    let missing = match store.untimestamped() {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(EXIT_IO);
+        }
+    };
+    let mut stamped = 0usize;
+    for cid_text in &missing {
+        let Ok(cid) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        if let Err(e) = store.timestamp(&cid, service) {
+            eprintln!("{e}");
+            return ExitCode::from(EXIT_IO);
+        }
+        stamped += 1;
+    }
+    eprintln!("timestamped {stamped} object(s) via {service}");
+    ExitCode::SUCCESS
 }
 
 fn add(store: &Store) -> ExitCode {

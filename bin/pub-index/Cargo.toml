@@ -1,0 +1,21 @@
+[package]
+name = "pub-index"
+description = "Resolve a subject under a declared policy, reproducibly."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "pub-index"
+path = "src/main.rs"
+
+[dependencies]
+publet-core.workspace = true
+publet-graph.workspace = true
+publet-eval.workspace = true
+publet-merkle.workspace = true
+
+[lints]
+workspace = true

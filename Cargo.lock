@@ -976,6 +976,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-index"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-eval",
+ "publet-graph",
+ "publet-merkle",
+]
+
+[[package]]
 name = "pub-lineage"
 version = "0.0.1"
 dependencies = [

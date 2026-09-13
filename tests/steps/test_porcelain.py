@@ -21,6 +21,8 @@ scenarios("../features/porcelain/why.feature")
 scenarios("../features/porcelain/compose.feature")
 scenarios("../features/scenarios/stale_basis.feature")
 scenarios("../features/scenarios/privacy_modes.feature")
+scenarios("../features/conformance/disclosure.feature")
+scenarios("../features/conformance/counts.feature")
 
 COHORT = (
     "In the 2031 cohort (n=4,182), daily supplementation with compound X "
@@ -391,3 +393,41 @@ def warns_about_replication(result):
 @then("it warns about joining two assertions")
 def warns_compound(result):
     assert "two assertions" in text_of(result)
+
+
+@then("it says publication is permanent and attributed")
+def says_permanent(result):
+    assert "permanent and attributed" in text_of(result)
+
+
+@then("it says personal data cannot be reliably recalled")
+def says_no_erasure(result):
+    body = text_of(result)
+    assert "no erasure" in body.lower() or "cannot be reliably" in body
+
+
+@then("it says to use separate keys for separate contexts")
+def says_separate_keys(result):
+    assert "separate keys for separate contexts" in text_of(result)
+
+
+@then("no raw count of annotations appears")
+def no_raw_counts(result):
+    """Fifty affirmations were added; the tally must not be the signal.
+
+    Identifiers are stripped first: a base32 digest will contain the digits
+    of any number, and matching inside one would fail for a reason that has
+    nothing to do with the rule.
+    """
+    import re
+    body = re.sub(r"pub:sha2-256:[a-z2-7]+", "", text_of(result))
+    assert not re.search(r"\b50\b", body), body
+    assert "affirm" in body
+
+
+@then("the affirming weight is shown instead")
+def weight_shown_instead(result):
+    body = text_of(result)
+    line = [l for l in body.splitlines() if l.strip().startswith("affirm")]
+    assert line, body
+    assert "." in line[0], line

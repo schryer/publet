@@ -62,6 +62,18 @@ def rootless_policy() -> Path:
     return path
 
 
+@given("an evaluation vector whose policy asks for 5000 iterations",
+       target_fixture="vector")
+def excessive_iterations() -> Path:
+    # Section 16: iteration must be bounded, because an unbounded count is a
+    # denial-of-service vector against every evaluator that honours a
+    # caller-supplied policy.
+    path = VECTORS.parent / "invalid" / "policy-iterations-too-many.cbor"
+    if not path.exists():
+        pytest.fail(f"missing vector: {path}")
+    return path
+
+
 @when("I evaluate it", target_fixture="result")
 def evaluate_one(runner, vector: Path):
     return runner.run("pub-eval", f"--vector={vector}")
@@ -161,3 +173,8 @@ def evaluation_fails(result):
 @then("it says a policy must declare at least one root")
 def says_roots_required(result):
     assert "at least one root" in result.stderr, result.stderr
+
+
+@then("it says iterations exceed the limit")
+def says_iterations_bounded(result):
+    assert "exceeds the limit" in result.stderr, result.stderr

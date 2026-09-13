@@ -10,6 +10,7 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 mod divergence;
+mod document;
 mod error;
 mod graph;
 mod lint;

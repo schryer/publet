@@ -47,6 +47,12 @@ def tagged_sections(features: Path) -> dict[str, list[str]]:
 # no requirement of its own and counting it would be a permanent false gap.
 KEYWORD_SECTIONS = {"1.3"}
 
+# Requirements that bind a future editor rather than running software. The
+# IANA section constrains what a later registry addition must specify; no
+# implementation can satisfy or violate it, so counting it would leave a
+# permanent gap that no work could close.
+PROCESS_SECTIONS = {"18"}
+
 
 def normative_sections(spec: Path) -> dict[str, int]:
     """Map section number -> count of normative statements in it."""
@@ -57,7 +63,7 @@ def normative_sections(spec: Path) -> dict[str, int]:
         if heading:
             current = heading.group(1)
             continue
-        if current in KEYWORD_SECTIONS:
+        if current in KEYWORD_SECTIONS or current in PROCESS_SECTIONS:
             continue
         if current and NORMATIVE.search(line):
             counts[current] = counts.get(current, 0) + 1

@@ -15,12 +15,15 @@ fn main() -> ExitCode {
     let mut dir = PathBuf::from(".");
     let mut want_type: Option<String> = None;
     let mut want_class: Option<Class> = None;
+    let mut forks = false;
 
     for arg in std::env::args().skip(1) {
         if let Some(v) = arg.strip_prefix("--dir=") {
             dir = PathBuf::from(v);
         } else if let Some(v) = arg.strip_prefix("--type=") {
             want_type = Some(v.to_owned());
+        } else if arg == "--forks" {
+            forks = true;
         } else if let Some(v) = arg.strip_prefix("--class=") {
             if let Some(c) = Class::from_id(v) {
                 want_class = Some(c);
@@ -30,7 +33,7 @@ fn main() -> ExitCode {
             }
         } else {
             eprintln!("unknown argument: {arg}");
-            eprintln!("usage: pub-ls [--dir=DIR] [--type=KIND] [--class=CLASS]");
+            eprintln!("usage: pub-ls [--dir=DIR] [--type=KIND] [--class=CLASS] [--forks]");
             return ExitCode::from(EXIT_USAGE);
         }
     }
@@ -42,6 +45,16 @@ fn main() -> ExitCode {
             return ExitCode::from(EXIT_VIOLATION);
         }
     };
+
+    if forks {
+        // Overlap is a signal, not a verdict: two documents on one subject
+        // will cite the same publets. The threshold is high and the result
+        // is reported rather than enforced.
+        for (left, right, percent) in graph.undeclared_forks(75) {
+            println!(r#"{{"left":"{left}","right":"{right}","shared_percent":{percent}}}"#);
+        }
+        return ExitCode::SUCCESS;
+    }
 
     for cid_text in graph.cids() {
         let Ok(cid) = cid_text.parse() else { continue };

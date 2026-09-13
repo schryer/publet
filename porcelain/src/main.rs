@@ -93,6 +93,25 @@ fn init(args: &[String]) -> Result<(), String> {
     println!("The policy trusts only this workspace's own key. Everything you");
     println!("evaluate is relative to that, so replace it with roots you have");
     println!("actually chosen (Section 11.9).");
+    println!();
+    // Section 17 requires these stated in plain language before a first
+    // publication, not buried in documentation someone may never read.
+    println!("Before you publish anything, three things about this system:");
+    println!();
+    println!("  Publication is permanent and attributed. Every object you");
+    println!("  sign is replicated and designed not to be removable, so your");
+    println!("  key accumulates a permanent, machine-readable record of every");
+    println!("  claim you make and every judgement you render.");
+    println!();
+    println!("  There is no erasure. `retracts` withdraws a claim without");
+    println!("  deleting it, and nodes are required to keep serving what they");
+    println!("  hold. Personal data published here cannot be reliably");
+    println!("  recalled -- by you or by anyone.");
+    println!();
+    println!("  Use separate keys for separate contexts. This workspace holds");
+    println!("  one; `pub init` elsewhere makes another. Reusing a single key");
+    println!("  across unrelated subjects links them permanently, and no");
+    println!("  later decision can unlink them.");
     Ok(())
 }
 
