@@ -8,6 +8,7 @@
 mod compose;
 mod propose;
 mod read;
+mod relate;
 mod why;
 mod workspace;
 
@@ -24,6 +25,7 @@ fn usage() -> ExitCode {
     eprintln!("  read CID             show an assertion and the scope it was made under");
     eprintln!("  why CID              show its standing and every component of it");
     eprintln!("  compose              build a publet and add it to the workspace");
+    eprintln!("  relate               author a relation between two objects");
     eprintln!("  propose CID...       submit objects, recording what they were composed against");
     eprintln!("  witness DOMAIN       record the log root you observed");
     ExitCode::from(EXIT_USAGE)
@@ -43,6 +45,7 @@ async fn main() -> ExitCode {
         "read" => read::run(&rest),
         "why" => why::run(&rest),
         "compose" => compose::run(&rest),
+        "relate" => relate::run(&rest),
         "propose" => propose::run(&rest),
         "witness" => witness(&rest),
         "-h" | "--help" | "help" => return usage(),
