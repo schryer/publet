@@ -359,6 +359,9 @@ pub enum RelationKind {
     Supersedes,
     /// `from` translates `to`.
     Translates,
+    /// `from` implements the interface `to`. Acyclic; `from` and `to`
+    /// need not be signed publet objects (Section 6.2).
+    Implements,
     /// `from` presupposes `to`. Acyclic.
     Depends,
     /// `from` argues against `to`.
@@ -382,6 +385,7 @@ impl RelationKind {
         Some(match id {
             "supersedes" => Self::Supersedes,
             "translates" => Self::Translates,
+            "implements" => Self::Implements,
             "depends" => Self::Depends,
             "disputes" => Self::Disputes,
             "supports" => Self::Supports,
@@ -399,6 +403,7 @@ impl RelationKind {
         match self {
             Self::Supersedes => "supersedes",
             Self::Translates => "translates",
+            Self::Implements => "implements",
             Self::Depends => "depends",
             Self::Disputes => "disputes",
             Self::Supports => "supports",
@@ -413,11 +418,15 @@ impl RelationKind {
     ///
     /// Section 6: relations may form cycles in general -- mutual dispute is
     /// ordinary disagreement and `equivalent` cycles are how classes form.
-    /// These three express a lineage or a presupposition, which a cycle
-    /// would make incoherent.
+    /// These four express a lineage or a presupposition, which a cycle
+    /// would make incoherent -- `implements` closing a cycle would make
+    /// one thing both an interface's contract and a satisfier of it.
     #[must_use]
     pub fn is_acyclic(self) -> bool {
-        matches!(self, Self::Supersedes | Self::Depends | Self::DerivedFrom)
+        matches!(
+            self,
+            Self::Supersedes | Self::Implements | Self::Depends | Self::DerivedFrom
+        )
     }
 }
 

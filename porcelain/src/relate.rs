@@ -60,7 +60,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
 
     let kind_id = kind.ok_or(
-        "--kind is required: supersedes, translates, depends, disputes, \
+        "--kind is required: supersedes, translates, implements, depends, disputes, \
          supports, equivalent, retracts, derived-from, or delegates\n\
          `translates` also requires --method and --fidelity",
     )?;
@@ -138,12 +138,34 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     if parsed_kind.is_acyclic() {
         eprintln!();
         eprintln!(
-            "`{kind_id}` is acyclic and constitutes lineage: nothing is \
-             overwritten, but readers following {to} will now find {from} \
-             ahead of it."
+            "`{kind_id}` is acyclic: {}",
+            acyclic_detail(parsed_kind, &from, &to)
         );
     }
     Ok(())
+}
+
+/// What an acyclic edge means, one sentence, specific to its kind.
+///
+/// Not every acyclic kind means the same thing by "acyclic" -- Section
+/// 6.1 defines lineage strictly as what `supersedes` edges reach, so a
+/// single "constitutes lineage" message for every acyclic kind was never
+/// quite right even for `depends`/`derived-from`, and would be actively
+/// wrong for `implements`: an implementation does not supersede its
+/// interface, it satisfies it.
+fn acyclic_detail(kind: RelationKind, from: &str, to: &str) -> String {
+    match kind {
+        RelationKind::Supersedes => format!(
+            "constitutes lineage: nothing is overwritten, but readers \
+             following {to} will now find {from} ahead of it."
+        ),
+        RelationKind::Depends => format!("{from} now presupposes {to} to evaluate."),
+        RelationKind::DerivedFrom => format!("{from} is recorded as copying or adapting {to}."),
+        RelationKind::Implements => {
+            format!("{from} is recorded as implementing the interface {to}.")
+        }
+        _ => String::new(),
+    }
 }
 
 /// Validate the `method`/`fidelity` pair a `translates` edge requires.

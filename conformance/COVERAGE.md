@@ -6,8 +6,8 @@ that showed only what passes would say nothing about what is
 untested.
 
 - specification: `/home/david/git/docs/publet-specification/index.md`
-- sections with normative language: 47
-- sections with at least one scenario: 47 (100%)
+- sections with normative language: 48
+- sections with at least one scenario: 47 (97%)
 
 ## Covered
 
@@ -65,3 +65,4 @@ untested.
 
 | Section | Statements |
 |---|---|
+| 6.2 | 1 |
