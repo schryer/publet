@@ -19,9 +19,12 @@
 //! `/`-joined name from the file root, e.g. `membership/Membership/prove`),
 //! `kind`, `cid` (the node's hash, addressed as a CID the same way a
 //! domain manifest's `snapshot` field is -- via [`Cid::from_digest`], not
-//! a stored object), and for leaves, the exact `start`/`end` byte
-//! offsets into the file, so a CID and the file together are enough to
-//! extract precisely the text that was hashed.
+//! a stored object), and `start`/`end` byte offsets into the file, so a
+//! CID and the file together are enough to extract precisely the text
+//! that was hashed. For a branch these bound the whole item -- `impl S {
+//! ... }`, braces included -- not just its own signature, since that is
+//! what its span already is; nothing here recomputes it as some
+//! narrower range.
 
 use std::path::PathBuf;
 
@@ -249,18 +252,10 @@ fn emit(draft: &Draft, text: &str, prefix: &str) -> Result<(), String> {
     };
     let cid = Cid::from_digest(HashAlg::Sha2_256, &draft.hash(text))
         .ok_or_else(|| format!("{path}: could not address a 32-byte hash as a CID"))?;
-    let kind = draft.kind;
-
-    if draft.children.is_empty() {
-        let (start, end) = (draft.start, draft.end);
-        println!(
-            r#"{{"path":{path:?},"kind":{kind:?},"cid":"{cid}","start":{start},"end":{end}}}"#
-        );
-    } else {
-        println!(r#"{{"path":{path:?},"kind":{kind:?},"cid":"{cid}"}}"#);
-        for child in &draft.children {
-            emit(child, text, &path)?;
-        }
+    let (kind, start, end) = (draft.kind, draft.start, draft.end);
+    println!(r#"{{"path":{path:?},"kind":{kind:?},"cid":"{cid}","start":{start},"end":{end}}}"#);
+    for child in &draft.children {
+        emit(child, text, &path)?;
     }
     Ok(())
 }
@@ -313,6 +308,16 @@ mod tests {
         assert!(imp.children.iter().any(|c| c.name == "a"));
         assert!(imp.children.iter().any(|c| c.name == "b"));
         let _ = text;
+    }
+
+    #[test]
+    fn a_branch_items_span_covers_its_whole_body_not_just_its_signature() {
+        let (drafts, text) = drafts("struct S;\nimpl S {\n    fn a() {}\n    fn b() {}\n}\n");
+        let imp = drafts.iter().find(|d| d.kind == "impl").expect("impl item");
+        assert_eq!(
+            &text[imp.start..imp.end],
+            "impl S {\n    fn a() {}\n    fn b() {}\n}"
+        );
     }
 
     #[test]
