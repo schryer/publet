@@ -7,6 +7,7 @@
 
 mod annotate;
 mod compose;
+mod domain;
 mod propose;
 mod read;
 mod relate;
@@ -30,6 +31,9 @@ fn usage() -> ExitCode {
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  propose CID...       submit objects, recording what they were composed against");
     eprintln!("  witness DOMAIN       record the log root you observed");
+    eprintln!(
+        "  domain               author a domain's manifest, snapshot, and genesis generation"
+    );
     ExitCode::from(EXIT_USAGE)
 }
 
@@ -51,6 +55,7 @@ async fn main() -> ExitCode {
         "annotate" => annotate::run(&rest),
         "propose" => propose::run(&rest),
         "witness" => witness(&rest),
+        "domain" => domain::run(&rest),
         "-h" | "--help" | "help" => return usage(),
         other => Err(format!("unknown command: {other}")),
     };
