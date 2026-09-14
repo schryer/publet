@@ -13,5 +13,5 @@ mod witness;
 
 pub use delta::{DeltaError, apply, checkpoints, fetches_required, hex};
 pub use generation::{Generation, GenerationError, Removal, RemovalCause};
-pub use manifest::{Manifest, ManifestError, check_depends_closure};
+pub use manifest::{Manifest, ManifestError, check_depends_closure, check_equivalence_closure};
 pub use witness::{SplitView, Witness, detect_split_views};

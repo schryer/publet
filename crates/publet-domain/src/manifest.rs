@@ -150,3 +150,56 @@ pub fn check_depends_closure(
     }
     Ok(())
 }
+
+/// Check that every member's closure under `kind` (`translates` or
+/// `equivalent`) is inside the domain, transitively.
+///
+/// `depends` closure exists because evaluating a claim needs its
+/// presuppositions available locally (Section 14.1). `translates` and
+/// `equivalent` are a different obligation with the same shape: both
+/// assert that two objects express *one* claim, so a domain holding one
+/// side without the other presents a silently partial view of it --
+/// exactly the gap Section 14.5 names for `disputes` published across a
+/// domain boundary, except that a translation or an equivalence is
+/// usually authored by the one party as a deliberate alternate rendering,
+/// not open-ended commentary, so (unlike `evidence`, `disputes`,
+/// `supports`) requiring it stays affordable.
+///
+/// Transitive because the relation chains: if A is equivalent to B and B
+/// to C, all three are the same claim, and a domain missing C is exactly
+/// as partial as one missing B outright. Both directions of an edge
+/// count -- which side is `from` records how the relation was authored,
+/// not which member depends on which, so `out` and `incoming` are walked
+/// the same way.
+///
+/// # Errors
+///
+/// Returns [`ManifestError::NotClosed`] naming the first absent member.
+pub fn check_equivalence_closure(
+    graph: &publet_graph::Graph,
+    members: &[String],
+    kind: publet_graph::RelationKind,
+) -> Result<(), ManifestError> {
+    let present: std::collections::BTreeSet<&str> = members.iter().map(String::as_str).collect();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut queue: std::collections::VecDeque<String> = members.iter().cloned().collect();
+    while let Some(current) = queue.pop_front() {
+        if !seen.insert(current.clone()) {
+            continue;
+        }
+        let Ok(cid) = current.parse::<Cid>() else {
+            continue;
+        };
+        for other in graph
+            .out(kind, &cid)
+            .into_iter()
+            .chain(graph.incoming(kind, &cid))
+        {
+            if !present.contains(other.as_str()) {
+                return Err(ManifestError::NotClosed { cid: other });
+            }
+            queue.push_back(other);
+        }
+    }
+    Ok(())
+}
