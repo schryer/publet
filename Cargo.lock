@@ -957,6 +957,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-code-tree"
+version = "0.0.1"
+dependencies = [
+ "graphset",
+ "proc-macro2",
+ "publet-core",
+ "quote",
+ "syn 3.0.5",
+]
+
+[[package]]
 name = "pub-delta"
 version = "0.0.1"
 dependencies = [
