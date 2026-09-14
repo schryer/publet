@@ -68,6 +68,17 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     println!("author    {}", object.author());
     println!("created   {}", object.created());
 
+    // A relation or annotation asserts something about two other objects
+    // (or one object and a value), and until now this printed nothing past
+    // the header for either: a reader -- or a tool trying to tell which
+    // relation object asserts a given edge -- had no way to see what it
+    // actually said without decoding the CBOR by hand.
+    match object.kind() {
+        "rel" => print_relation(body),
+        "ann" => print_annotation(body),
+        _ => {}
+    }
+
     if let Some(Value::Text(class)) = body.get("class") {
         println!("class     {class}");
     }
@@ -120,4 +131,50 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         println!("[{}] {}", mode.label(), mode.note());
     }
     Ok(())
+}
+
+/// Print a `rel` object's kind, endpoints, and any qualifiers it carries.
+fn print_relation(body: &std::collections::BTreeMap<String, Value>) {
+    if let Some(Value::Text(kind)) = body.get("kind") {
+        println!("kind      {kind}");
+    }
+    if let Some(Value::Text(from)) = body.get("from") {
+        println!("from      {from}");
+    }
+    if let Some(Value::Text(to)) = body.get("to") {
+        println!("to        {to}");
+    }
+    if let Some(Value::Text(aspect)) = body.get("aspect") {
+        println!("aspect    {aspect}");
+    }
+    if let Some(Value::Text(method)) = body.get("method") {
+        println!("method    {method}");
+    }
+    if let Some(Value::Text(fidelity)) = body.get("fidelity") {
+        println!("fidelity  {fidelity}");
+    }
+    if let Some(Value::Text(note)) = body.get("note") {
+        println!();
+        println!("{note}");
+    }
+}
+
+/// Print an `ann` object's kind, target, and value fields.
+fn print_annotation(body: &std::collections::BTreeMap<String, Value>) {
+    if let Some(Value::Text(kind)) = body.get("kind") {
+        println!("kind      {kind}");
+    }
+    if let Some(Value::Text(target)) = body.get("target") {
+        println!("target    {target}");
+    }
+    let Some(Value::Map(fields)) = body.get("value") else {
+        return;
+    };
+    println!();
+    println!("value:");
+    for (k, v) in fields {
+        if let Some(text) = v.as_text() {
+            println!("  {k}  {text}");
+        }
+    }
 }

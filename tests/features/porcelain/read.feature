@@ -14,3 +14,13 @@ Feature: An assertion is shown with the scope it was made under
     When I read the claim
     Then the mode is reported as "local"
     And the output says nothing was disclosed
+
+  Scenario: A relation is read as what it asserts, not as an empty header
+    Given a workspace with two claims and a relation between them
+    When I read the relation
+    Then its kind, endpoints, and aspect are shown
+
+  Scenario: An annotation is read as what it asserts
+    Given a workspace with a claim and a usage annotation on it
+    When I read the annotation
+    Then its kind, target, and value fields are shown

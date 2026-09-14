@@ -238,6 +238,44 @@ def read_claim(pub):
     return pub.run("read", pub.claim)
 
 
+@given("a workspace with two claims and a relation between them", target_fixture="pub")
+def workspace_with_relation(bin_dir: Path, tmp_path: Path):
+    p = Pub(bin_dir, tmp_path)
+    assert p.run("init").returncode == 0
+    a = p.run("compose", "--class=definitional", "--scope=unconditional",
+             "--content=alpha: the first thing").stdout.decode().strip()
+    b = p.run("compose", "--class=definitional", "--scope=unconditional",
+             "--content=beta: the second thing").stdout.decode().strip()
+    rel = p.run("relate", "--kind=depends", f"--from={a}", f"--to={b}",
+               "--aspect=construction")
+    assert rel.returncode == 0, text_of(rel)
+    p.relation = rel.stdout.decode().strip()
+    return p
+
+
+@when("I read the relation", target_fixture="result")
+def read_relation(pub):
+    return pub.run("read", pub.relation)
+
+
+@given("a workspace with a claim and a usage annotation on it", target_fixture="pub")
+def workspace_with_annotation(bin_dir: Path, tmp_path: Path):
+    p = Pub(bin_dir, tmp_path)
+    assert p.run("init").returncode == 0
+    a = p.run("compose", "--class=definitional", "--scope=unconditional",
+             "--content=gamma: the third thing").stdout.decode().strip()
+    ann = p.run("annotate", "--kind=usage", f"--target={a}",
+               "--source=an external reference", "--locator=section 2")
+    assert ann.returncode == 0, text_of(ann)
+    p.annotation = ann.stdout.decode().strip()
+    return p
+
+
+@when("I read the annotation", target_fixture="result")
+def read_annotation(pub):
+    return pub.run("read", pub.annotation)
+
+
 @when("I ask why", target_fixture="result")
 def ask_why(pub):
     return pub.run("why", pub.claim)
@@ -301,6 +339,25 @@ def scope_shown(result):
     body = text_of(result)
     assert "asserted under" in body
     assert "single-centre, unblinded" in body
+
+
+@then("its kind, endpoints, and aspect are shown")
+def relation_fields_shown(result):
+    body = text_of(result)
+    assert "kind      depends" in body, body
+    assert "from      " in body, body
+    assert "to        " in body, body
+    assert "aspect    construction" in body, body
+
+
+@then("its kind, target, and value fields are shown")
+def annotation_fields_shown(result):
+    body = text_of(result)
+    assert "kind      usage" in body, body
+    assert "target    " in body, body
+    assert "value:" in body, body
+    assert "an external reference" in body, body
+    assert "section 2" in body, body
 
 
 @then(parsers.parse('the mode is reported as "{mode}"'))

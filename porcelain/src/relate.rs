@@ -33,6 +33,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut to = None;
     let mut aspect: Option<String> = None;
     let mut note: Option<String> = None;
+    let mut method: Option<String> = None;
+    let mut fidelity: Option<String> = None;
     let mut created = "2026-09-12T00:00:00Z".to_owned();
 
     for arg in args {
@@ -46,6 +48,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             aspect = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--note=") {
             note = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--method=") {
+            method = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--fidelity=") {
+            fidelity = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
             v.clone_into(&mut created);
         } else {
@@ -55,7 +61,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 
     let kind_id = kind.ok_or(
         "--kind is required: supersedes, translates, depends, disputes, \
-         supports, equivalent, retracts, derived-from, or delegates",
+         supports, equivalent, retracts, derived-from, or delegates\n\
+         `translates` also requires --method and --fidelity",
     )?;
     let parsed_kind =
         RelationKind::from_id(&kind_id).ok_or(format!("unknown relation kind: {kind_id}"))?;
@@ -66,6 +73,14 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .parse()
         .map_err(|_| format!("--from is not a CID: {from}"))?;
     let to_cid: Cid = to.parse().map_err(|_| format!("--to is not a CID: {to}"))?;
+
+    // Section 18.4: a `translates` edge carries how the rendering was made
+    // and how faithful it is. Without them the edge says two things express
+    // one claim while hiding that one of them is lossy, which is the fact a
+    // reader most needs.
+    if parsed_kind == RelationKind::Translates {
+        check_translation_fields(method.as_deref(), fidelity.as_deref())?;
+    }
 
     if from_cid == to_cid {
         return Err(format!(
@@ -89,6 +104,12 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     }
     if let Some(note) = &note {
         builder = builder.field("note", Value::Text(note.clone()));
+    }
+    if let Some(method) = &method {
+        builder = builder.field("method", Value::Text(method.clone()));
+    }
+    if let Some(fidelity) = &fidelity {
+        builder = builder.field("fidelity", Value::Text(fidelity.clone()));
     }
     let bytes = builder.build().map_err(|e| e.to_string())?;
     let cid = Cid::of(&bytes, HashAlg::Sha2_256);
@@ -121,6 +142,31 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
              overwritten, but readers following {to} will now find {from} \
              ahead of it."
         );
+    }
+    Ok(())
+}
+
+/// Validate the `method`/`fidelity` pair a `translates` edge requires.
+fn check_translation_fields(method: Option<&str>, fidelity: Option<&str>) -> Result<(), String> {
+    const METHODS: [&str; 3] = ["human", "machine", "machine-post-edited"];
+    const FIDELITIES: [&str; 3] = ["literal", "idiomatic", "adapted"];
+    let m = method.ok_or_else(|| {
+        format!(
+            "--method is required for `translates`: one of {}",
+            METHODS.join(", ")
+        )
+    })?;
+    if !METHODS.contains(&m) {
+        return Err(format!("unknown translation method: {m}"));
+    }
+    let f = fidelity.ok_or_else(|| {
+        format!(
+            "--fidelity is required for `translates`: one of {}",
+            FIDELITIES.join(", ")
+        )
+    })?;
+    if !FIDELITIES.contains(&f) {
+        return Err(format!("unknown fidelity: {f}"));
     }
     Ok(())
 }
