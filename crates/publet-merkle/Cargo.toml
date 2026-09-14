@@ -1,6 +1,6 @@
 [package]
 name = "publet-merkle"
-description = "Append-only log and sorted membership tree, with proofs."
+description = "Re-exports graphset's log and membership modules at their original path, so every existing caller in this workspace keeps compiling unchanged."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,9 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-publet-core.workspace = true
-thiserror.workspace = true
-sha2 = "0.10"
+graphset.workspace = true
 
 [lints]
 workspace = true

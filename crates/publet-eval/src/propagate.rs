@@ -1,59 +1,53 @@
-//! Personalized `PageRank` over the trust graph (Section 11.2).
+//! Adapts this workspace's [`Policy`] (Cid-typed trust roots) to
+//! `graphset`'s generic personalized-`PageRank` propagation.
 //!
-//! The iteration is:
+//! The propagation algorithm itself moved to `graphset` after an audit
+//! found it never touched `Cid` or any other publet-specific type --
+//! `Policy::roots[i].key` was read as a string and never used as anything
+//! more. What stays here is the boundary: converting a `Policy` into the
+//! plain `Params`/`Seed` pair the generic algorithm actually needs. This
+//! is the smallest possible adapter, not a reimplementation, and it is
+//! also the only place in this workspace where "trust policy" (a
+//! publet-specific concept) touches "weighted graph propagation" (a
+//! generic one) -- exactly where the mathematics and this workspace's own
+//! definitions part ways.
 //!
-//! ```text
-//!   W_0     = R
-//!   W_{n+1} = ((10^6 - a) * R  +  a * (W_n . T)) / 10^6
-//!   W       = W_K              where K = policy.iterations
-//! ```
-//!
-//! Two properties are load-bearing and both are enforced by construction
-//! rather than by care:
-//!
-//! * **Exactly `K` iterations.** There is no tolerance parameter, so a
-//!   convergence criterion cannot be introduced by accident. Two
-//!   implementations that stop at different points produce different
-//!   numbers, and settlement depends on them producing the same ones.
-//! * **Ordered traversal.** Every map here is a [`BTreeMap`]. A `HashMap`
-//!   would make the accumulation order depend on a hash seed, and floating
-//!   point would make that visible; integers hide it, which is worse,
-//!   because the divergence would surface only on a value near a threshold.
+//! Per-key normalization (every node's total conferred weight is fixed
+//! regardless of how many nodes it points to) is what makes a disconnected
+//! adversary subgraph worth zero at every size (R7); that property lives
+//! in `graphset::propagate` now, and is exercised from here.
 
-use std::collections::{BTreeMap, BTreeSet};
+use graphset::propagate::{Params, Seed};
 
-use crate::{Fixed6, Policy, SCALE};
+pub use graphset::propagate::{TrustEdge, Weights};
 
-/// One declared trust edge.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TrustEdge {
-    /// The key conferring trust.
-    pub from: String,
-    /// The key receiving it.
-    pub to: String,
-    /// Declared weight, 1..=1000 per Section 11.1.
-    pub weight: Fixed6,
-    /// Age in days, for decay. Zero when the policy sets no half-life.
-    pub age_days: u64,
-    /// Subjects this edge is confined to (Section 18.5).
-    ///
-    /// Empty means unconfined: the edge trusts the key on everything. A
-    /// non-empty list is the difference between trusting a language
-    /// reference on that language and trusting it on the world, and it is
-    /// what makes a per-source trust root worth having rather than one
-    /// more undifferentiated scalar.
-    pub subjects: Vec<String>,
+use crate::Policy;
+
+fn params(policy: &Policy) -> Params {
+    Params {
+        damping: policy.damping,
+        iterations: policy.iterations,
+        decay_half_life_days: policy.decay_half_life_days,
+    }
 }
 
-/// Weight per key under a viewpoint.
-pub type Weights = BTreeMap<String, Fixed6>;
+fn seeds(policy: &Policy) -> Vec<Seed> {
+    policy
+        .roots
+        .iter()
+        .map(|r| Seed {
+            key: r.key.to_string(),
+            weight: r.weight,
+        })
+        .collect()
+}
 
 /// Run the propagation to a fixed iteration count.
 ///
 /// `edges` need not be sorted; they are grouped deterministically here.
 #[must_use]
 pub fn propagate(policy: &Policy, edges: &[TrustEdge]) -> Weights {
-    propagate_within(policy, edges, &[])
+    graphset::propagate::propagate(&params(policy), &seeds(policy), edges)
 }
 
 /// Propagate trust for a target belonging to the given subjects.
@@ -62,95 +56,9 @@ pub fn propagate(policy: &Policy, edges: &[TrustEdge]) -> Weights {
 /// is in one of them. Evaluating with no subject context therefore uses the
 /// unconfined edges alone: someone who said "I trust this reference on Rust
 /// terminology" has not said anything about a claim that is not one.
-///
-/// # Panics
-///
-/// Never; the iteration count is bounded by the policy.
 #[must_use]
 pub fn propagate_within(policy: &Policy, edges: &[TrustEdge], subjects: &[String]) -> Weights {
-    let edges: Vec<TrustEdge> = edges
-        .iter()
-        .filter(|e| e.subjects.is_empty() || e.subjects.iter().any(|s| subjects.contains(s)))
-        .cloned()
-        .collect();
-    let edges = &edges[..];
-    propagate_all(policy, edges)
-}
-
-fn propagate_all(policy: &Policy, edges: &[TrustEdge]) -> Weights {
-    // Seed vector, normalized to 10^6 in total.
-    let seed_total: Fixed6 = policy.roots.iter().map(|r| r.weight).sum();
-    let mut seed: Weights = BTreeMap::new();
-    for root in &policy.roots {
-        let share = root.weight.mul_div(Fixed6::ONE, seed_total);
-        *seed.entry(root.key.to_string()).or_insert(Fixed6::ZERO) = seed
-            .get(&root.key.to_string())
-            .copied()
-            .unwrap_or(Fixed6::ZERO)
-            + share;
-    }
-
-    // Outbound edges per key, with decay applied before normalization so
-    // that an old edge confers less rather than merely ranking lower.
-    let mut outbound: BTreeMap<String, BTreeMap<String, Fixed6>> = BTreeMap::new();
-    for edge in edges {
-        let weight = match policy.decay_half_life_days {
-            Some(half_life) => edge.weight.halve_fractional(edge.age_days, half_life),
-            None => edge.weight,
-        };
-        let slot = outbound
-            .entry(edge.from.clone())
-            .or_default()
-            .entry(edge.to.clone())
-            .or_insert(Fixed6::ZERO);
-        *slot = *slot + weight;
-    }
-
-    // Per-key normalization: a key's total conferred weight is fixed
-    // regardless of how many keys it vouches for, which is what makes a
-    // disconnected adversary subgraph worth zero at every size (R7).
-    let normalized: BTreeMap<String, BTreeMap<String, Fixed6>> = outbound
-        .into_iter()
-        .map(|(from, targets)| {
-            let total: Fixed6 = targets.values().copied().sum();
-            let shares = targets
-                .into_iter()
-                .map(|(to, w)| (to, w.mul_div(Fixed6::ONE, total)))
-                .collect();
-            (from, shares)
-        })
-        .collect();
-
-    let damping = policy.damping;
-    let complement = Fixed6::from_scaled(SCALE) - damping;
-    let mut weights = seed.clone();
-
-    for _ in 0..policy.iterations {
-        let mut next: Weights = BTreeMap::new();
-        // Seed contribution: (10^6 - a) * R / 10^6.
-        for (key, value) in &seed {
-            let share = value.times(complement);
-            *next.entry(key.clone()).or_insert(Fixed6::ZERO) =
-                next.get(key).copied().unwrap_or(Fixed6::ZERO) + share;
-        }
-        // Propagated contribution: a * (W . T) / 10^6.
-        for (from, share) in &weights {
-            let Some(targets) = normalized.get(from) else {
-                continue;
-            };
-            for (to, fraction) in targets {
-                let contribution = share.times(*fraction).times(damping);
-                *next.entry(to.clone()).or_insert(Fixed6::ZERO) =
-                    next.get(to).copied().unwrap_or(Fixed6::ZERO) + contribution;
-            }
-        }
-        weights = next;
-    }
-
-    // Keys that never received weight are absent rather than zero, so that
-    // callers cannot mistake "not reached" for "reached with nothing".
-    weights.retain(|_, v| !v.is_zero());
-    weights
+    graphset::propagate::propagate_within(&params(policy), &seeds(policy), edges, subjects)
 }
 
 /// Keys reachable from the roots, for independence checks.
@@ -160,34 +68,7 @@ pub fn reachable_within(
     edges: &[TrustEdge],
     start: &str,
     distance: u32,
-) -> BTreeSet<String> {
+) -> std::collections::BTreeSet<String> {
     let _ = policy;
-    let mut adjacency: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
-    for edge in edges {
-        adjacency
-            .entry(edge.from.as_str())
-            .or_default()
-            .insert(edge.to.as_str());
-        adjacency
-            .entry(edge.to.as_str())
-            .or_default()
-            .insert(edge.from.as_str());
-    }
-    let mut seen: BTreeSet<String> = BTreeSet::new();
-    let mut frontier: BTreeSet<&str> = BTreeSet::from([start]);
-    seen.insert(start.to_owned());
-    for _ in 0..distance {
-        let mut next: BTreeSet<&str> = BTreeSet::new();
-        for node in &frontier {
-            if let Some(neighbours) = adjacency.get(node) {
-                for n in neighbours {
-                    if seen.insert((*n).to_owned()) {
-                        next.insert(n);
-                    }
-                }
-            }
-        }
-        frontier = next;
-    }
-    seen
+    graphset::propagate::reachable_within(edges, start, distance)
 }

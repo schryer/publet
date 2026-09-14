@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+graphset.workspace = true
 publet-core.workspace = true
 publet-graph.workspace = true
 thiserror.workspace = true
