@@ -175,6 +175,14 @@ fn print_annotation(body: &std::collections::BTreeMap<String, Value>) {
     for (k, v) in fields {
         if let Some(text) = v.as_text() {
             println!("  {k}  {text}");
+        } else if let Value::Array(items) = v {
+            // `usage`'s `code` (Section 7.5) is the one array-valued field
+            // a citation carries -- one or more content identifiers, never
+            // free text, so there is nothing here to render but a list.
+            let joined: Vec<&str> = items.iter().filter_map(Value::as_text).collect();
+            if !joined.is_empty() {
+                println!("  {k}  {}", joined.join(", "));
+            }
         }
     }
 }

@@ -108,15 +108,50 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut value: std::collections::BTreeMap<String, Value> = std::collections::BTreeMap::new();
     match kind_id.as_str() {
         "usage" => {
-            // A citation names where a term is used. It deliberately need
-            // not carry the text: recording a location is what keeps a
-            // corpus of definitions from becoming a corpus of restatements,
-            // and it is why citing a source needs no licence from it.
-            let source = need("source", "a citable work this sense appears in")?;
-            value.insert("source".to_owned(), Value::Text(source));
-            for optional in ["locator", "sense"] {
-                if let Some(v) = flags.get(optional) {
-                    value.insert(optional.to_owned(), Value::Text(v.clone()));
+            // Section 7.5: evidence this corpus can hash names itself by
+            // content identifier, never by a file path plus a description
+            // of where in it to look -- there is nothing to match, so
+            // there is nothing to match incorrectly. Evidence outside what
+            // this corpus indexes (a document, an RFC section, prose)
+            // still falls back to `source`/`locator`, which deliberately
+            // does not carry the cited text: recording a location is what
+            // keeps a corpus of definitions from becoming a corpus of
+            // restatements, and it is why citing a source needs no
+            // licence from it.
+            if let Some(raw) = flags.get("code") {
+                let cids: Vec<Cid> = raw
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| {
+                        s.parse::<Cid>()
+                            .map_err(|_| format!("--code is not a CID: {s}"))
+                    })
+                    .collect::<Result<_, _>>()?;
+                if cids.is_empty() {
+                    return Err("--code names no identifiers".to_owned());
+                }
+                value.insert(
+                    "code".to_owned(),
+                    Value::Array(cids.iter().map(|c| Value::Text(c.to_string())).collect()),
+                );
+            } else {
+                let source = need("source", "a citable work this sense appears in")?;
+                let is_rust_source = std::path::Path::new(&source)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"));
+                if is_rust_source {
+                    return Err(format!(
+                        "{source} is Rust source this corpus can address by content \
+                         identifier (Section 6.2) -- run pub-code-tree over it and cite \
+                         the result with --code, not --source/--locator"
+                    ));
+                }
+                value.insert("source".to_owned(), Value::Text(source));
+                for optional in ["locator", "sense"] {
+                    if let Some(v) = flags.get(optional) {
+                        value.insert(optional.to_owned(), Value::Text(v.clone()));
+                    }
                 }
             }
         }
