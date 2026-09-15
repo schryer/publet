@@ -25,12 +25,24 @@
 //! ... }`, braces included -- not just its own signature, since that is
 //! what its span already is; nothing here recomputes it as some
 //! narrower range.
+//!
+//! A `fn` leaf also carries `calls` and `macros`: every function/method
+//! call and macro invocation found by walking its *body* -- deliberately
+//! not resolved to anything here. rustdoc's JSON (what the corpus's
+//! identifier resolver reads for everything else) documents signatures,
+//! never bodies, so a function's own call sites are otherwise invisible
+//! to it entirely. Bare names only, by design: matching a name against
+//! the rest of the corpus is a cross-file concern the corpus's own
+//! index is positioned to do consistently, not a guess this tool should
+//! make file-by-file.
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use proc_macro2::LineColumn;
 use publet_core::{Cid, HashAlg};
 use syn::spanned::Spanned as _;
+use syn::visit::Visit as _;
 
 /// Precomputed byte offset of the start of each line, so a
 /// `proc_macro2::LineColumn` (1-indexed line, 0-indexed char column) can
@@ -68,6 +80,47 @@ impl LineIndex {
     }
 }
 
+/// Every function/method call and macro invocation inside `block`, by
+/// bare name -- `Foo::bar()` and `x.bar()` both contribute `bar`, since
+/// resolving *which* `bar` is a cross-file job for the corpus's own
+/// index, not something decidable from one function's body in
+/// isolation. Deduplicated and sorted (a `BTreeSet`) so calling the same
+/// thing twice is one entry, not a count nothing here would make honest
+/// use of.
+fn collect_calls(block: &syn::Block) -> (Vec<String>, Vec<String>) {
+    #[derive(Default)]
+    struct CallCollector {
+        calls: BTreeSet<String>,
+        macros: BTreeSet<String>,
+    }
+    impl<'ast> syn::visit::Visit<'ast> for CallCollector {
+        fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
+            if let syn::Expr::Path(p) = &*node.func
+                && let Some(seg) = p.path.segments.last()
+            {
+                self.calls.insert(seg.ident.to_string());
+            }
+            syn::visit::visit_expr_call(self, node);
+        }
+        fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
+            self.calls.insert(node.method.to_string());
+            syn::visit::visit_expr_method_call(self, node);
+        }
+        fn visit_macro(&mut self, node: &'ast syn::Macro) {
+            if let Some(seg) = node.path.segments.last() {
+                self.macros.insert(seg.ident.to_string());
+            }
+            syn::visit::visit_macro(self, node);
+        }
+    }
+    let mut collector = CallCollector::default();
+    collector.visit_block(block);
+    (
+        collector.calls.into_iter().collect(),
+        collector.macros.into_iter().collect(),
+    )
+}
+
 /// One node on its way to becoming a `graphset::tree::Node`, still
 /// carrying its file position.
 struct Draft {
@@ -76,16 +129,27 @@ struct Draft {
     start: usize,
     end: usize,
     children: Vec<Draft>,
+    calls: Vec<String>,
+    macros: Vec<String>,
 }
 
 impl Draft {
-    fn leaf(name: String, kind: &'static str, start: usize, end: usize) -> Self {
+    fn leaf(
+        name: String,
+        kind: &'static str,
+        start: usize,
+        end: usize,
+        calls: Vec<String>,
+        macros: Vec<String>,
+    ) -> Self {
         Self {
             name,
             kind,
             start,
             end,
             children: Vec::new(),
+            calls,
+            macros,
         }
     }
 
@@ -174,24 +238,34 @@ fn draft_for_item(idx: &LineIndex, text: &str, item: &syn::Item) -> Option<Draft
         _ => Vec::new(),
     };
 
+    let (calls, macros) = match item {
+        syn::Item::Fn(f) => collect_calls(&f.block),
+        _ => (Vec::new(), Vec::new()),
+    };
+
     Some(Draft {
         name,
         kind,
         start,
         end,
         children,
+        calls,
+        macros,
     })
 }
 
 fn draft_for_impl_item(idx: &LineIndex, text: &str, item: &syn::ImplItem) -> Option<Draft> {
-    let (name, kind) = match item {
-        syn::ImplItem::Fn(f) => (f.sig.ident.to_string(), "fn"),
-        syn::ImplItem::Const(c) => (c.ident.to_string(), "const"),
-        syn::ImplItem::Type(t) => (t.ident.to_string(), "type"),
+    let (name, kind, calls, macros) = match item {
+        syn::ImplItem::Fn(f) => {
+            let (calls, macros) = collect_calls(&f.block);
+            (f.sig.ident.to_string(), "fn", calls, macros)
+        }
+        syn::ImplItem::Const(c) => (c.ident.to_string(), "const", Vec::new(), Vec::new()),
+        syn::ImplItem::Type(t) => (t.ident.to_string(), "type", Vec::new(), Vec::new()),
         _ => return None,
     };
     let (start, end) = span_bytes(idx, text, item.span());
-    Some(Draft::leaf(name, kind, start, end))
+    Some(Draft::leaf(name, kind, start, end, calls, macros))
 }
 
 fn main() -> std::process::ExitCode {
@@ -253,11 +327,25 @@ fn emit(draft: &Draft, text: &str, prefix: &str) -> Result<(), String> {
     let cid = Cid::from_digest(HashAlg::Sha2_256, &draft.hash(text))
         .ok_or_else(|| format!("{path}: could not address a 32-byte hash as a CID"))?;
     let (kind, start, end) = (draft.kind, draft.start, draft.end);
-    println!(r#"{{"path":{path:?},"kind":{kind:?},"cid":"{cid}","start":{start},"end":{end}}}"#);
+    let calls = json_string_array(&draft.calls);
+    let macros = json_string_array(&draft.macros);
+    println!(
+        r#"{{"path":{path:?},"kind":{kind:?},"cid":"{cid}","start":{start},"end":{end},"calls":{calls},"macros":{macros}}}"#
+    );
     for child in &draft.children {
         emit(child, text, &path)?;
     }
     Ok(())
+}
+
+/// A bare identifier never contains a character JSON string escaping
+/// would treat differently from Rust's own `Debug` -- both are `[A-Za-z0-9_]`
+/// only -- so `{:?}` is exactly as safe here as it already is for `path`
+/// above, which has relied on the same equivalence since this tool was
+/// first written.
+fn json_string_array(items: &[String]) -> String {
+    let parts: Vec<String> = items.iter().map(|s| format!("{s:?}")).collect();
+    format!("[{}]", parts.join(","))
 }
 
 #[cfg(test)]
@@ -318,6 +406,37 @@ mod tests {
             &text[imp.start..imp.end],
             "impl S {\n    fn a() {}\n    fn b() {}\n}"
         );
+    }
+
+    #[test]
+    fn a_function_call_and_a_method_call_are_both_collected() {
+        let (drafts, _) = drafts("fn f() { g(); x.h(); }\n");
+        assert_eq!(drafts[0].calls, vec!["g".to_owned(), "h".to_owned()]);
+    }
+
+    #[test]
+    fn a_macro_invocation_is_collected_separately_from_calls() {
+        let (drafts, _) = drafts("fn f() { matches!(1, 1); }\n");
+        assert!(drafts[0].calls.is_empty());
+        assert_eq!(drafts[0].macros, vec!["matches".to_owned()]);
+    }
+
+    #[test]
+    fn a_repeated_call_is_one_entry_not_two() {
+        let (drafts, _) = drafts("fn f() { g(); g(); }\n");
+        assert_eq!(drafts[0].calls, vec!["g".to_owned()]);
+    }
+
+    #[test]
+    fn a_method_calls_inside_an_impl_block_are_collected_on_the_method() {
+        let (drafts, _) = drafts("struct S;\nimpl S {\n    fn a() { b(); }\n    fn b() {}\n}\n");
+        let imp = drafts.iter().find(|d| d.kind == "impl").expect("impl item");
+        let a = imp
+            .children
+            .iter()
+            .find(|c| c.name == "a")
+            .expect("method a");
+        assert_eq!(a.calls, vec!["b".to_owned()]);
     }
 
     #[test]

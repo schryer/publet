@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 publet-core.workspace = true
 graphset.workspace = true
-syn = { version = "3", features = ["full", "extra-traits"] }
+syn = { version = "3", features = ["full", "extra-traits", "visit"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 quote = "1"
 
