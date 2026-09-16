@@ -15,7 +15,7 @@
 //! it is being evaluated in, and [`verify`] takes the expected purpose as
 //! an argument so that omitting the check is not possible.
 
-use ed25519_dalek::{Signature, Verifier as _, VerifyingKey};
+use ed25519_dalek::{Signature, Signer as _, SigningKey, Verifier as _, VerifyingKey};
 use thiserror::Error;
 
 /// The domain separation prefix.
@@ -59,6 +59,10 @@ pub enum SigError {
     /// The public key was not the right length or shape.
     #[error("malformed public key")]
     MalformedKey,
+
+    /// The secret key was not the right length or shape.
+    #[error("malformed secret key")]
+    MalformedSecretKey,
 
     /// The signature was not the right length or shape.
     #[error("malformed signature")]
@@ -139,10 +143,60 @@ pub fn verify(
     }
 }
 
+/// Produce a detached signature over `target_bytes` for `purpose`.
+///
+/// Deterministic (RFC 8032): the same key, purpose, and target always
+/// produce the same signature, so this needs no randomness at call time --
+/// unlike generating the key itself, which does.
+///
+/// # Errors
+///
+/// Returns [`SigError`] if `secret_key` is not a 32-byte Ed25519 seed, or
+/// if `purpose` contains the separator byte.
+pub fn sign(
+    alg: SigAlg,
+    secret_key: &[u8],
+    purpose: &str,
+    target_bytes: &[u8],
+) -> Result<Vec<u8>, SigError> {
+    let message = signing_message(purpose, target_bytes)?;
+    match alg {
+        SigAlg::Ed25519 => {
+            let key_bytes: [u8; 32] = secret_key
+                .try_into()
+                .map_err(|_| SigError::MalformedSecretKey)?;
+            let signing_key = SigningKey::from_bytes(&key_bytes);
+            Ok(signing_key.sign(&message).to_bytes().to_vec())
+        }
+    }
+}
+
+/// Derive the public key matching a secret key.
+///
+/// Lets a caller holding a freshly generated seed (bytes only -- generating
+/// them is not this crate's concern, since that needs an RNG source, not
+/// cryptography) obtain the public half without reaching past this module
+/// into `ed25519_dalek` directly.
+///
+/// # Errors
+///
+/// Returns [`SigError::MalformedSecretKey`] if `secret_key` is not a 32-byte
+/// Ed25519 seed.
+pub fn verifying_key(alg: SigAlg, secret_key: &[u8]) -> Result<Vec<u8>, SigError> {
+    match alg {
+        SigAlg::Ed25519 => {
+            let key_bytes: [u8; 32] = secret_key
+                .try_into()
+                .map_err(|_| SigError::MalformedSecretKey)?;
+            let signing_key = SigningKey::from_bytes(&key_bytes);
+            Ok(signing_key.verifying_key().as_bytes().to_vec())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ed25519_dalek::{Signer as _, SigningKey};
 
     fn key() -> SigningKey {
         // A fixed seed: these tests assert on behaviour, not on secrecy.
@@ -249,6 +303,38 @@ mod tests {
                 b""
             ),
             Err(SigError::MalformedSignature)
+        );
+    }
+
+    #[test]
+    fn a_signature_this_module_produces_verifies_against_itself() {
+        let sk = key();
+        let target = b"canonical bytes";
+        let produced = sign(
+            SigAlg::Ed25519,
+            sk.to_bytes().as_slice(),
+            "authored",
+            target,
+        )
+        .unwrap();
+        assert!(
+            verify(
+                SigAlg::Ed25519,
+                sk.verifying_key().as_bytes(),
+                &produced,
+                "authored",
+                "authored",
+                target,
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn sign_rejects_a_malformed_secret_key() {
+        assert_eq!(
+            sign(SigAlg::Ed25519, b"short", "p", b""),
+            Err(SigError::MalformedSecretKey)
         );
     }
 }

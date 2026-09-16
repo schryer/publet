@@ -17,4 +17,4 @@ mod sig;
 pub use cid::{Cid, CidError, HashAlg};
 pub use error::CanonError;
 pub use object::{Builder, Object, ObjectError, PROTOCOL_VERSION, Unverified, Verified};
-pub use sig::{SigAlg, SigError, signing_message, verify};
+pub use sig::{SigAlg, SigError, sign, signing_message, verify, verifying_key};
