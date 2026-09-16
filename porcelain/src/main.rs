@@ -17,6 +17,7 @@
 mod annotate;
 mod compose;
 mod domain;
+mod policy;
 mod propose;
 mod read;
 mod relate;
@@ -40,6 +41,7 @@ fn usage() -> ExitCode {
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, or sign a stored object");
+    eprintln!("  policy               author a policy object and set it as the workspace's");
     eprintln!("  propose CID...       submit objects, recording what they were composed against");
     eprintln!("  witness DOMAIN       record the log root you observed");
     eprintln!(
@@ -65,6 +67,7 @@ async fn main() -> ExitCode {
         "relate" => relate::run(&rest),
         "annotate" => annotate::run(&rest),
         "sign" => sign::run(&rest),
+        "policy" => policy::run(&rest),
         "propose" => propose::run(&rest),
         "witness" => witness(&rest),
         "domain" => domain::run(&rest),
