@@ -1123,6 +1123,7 @@ dependencies = [
 name = "publet-cli"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.17",
  "publet-core",
  "publet-domain",
  "publet-eval",
@@ -1130,6 +1131,7 @@ dependencies = [
  "publet-merkle",
  "publet-net",
  "publet-store",
+ "tempfile",
  "tokio",
 ]
 

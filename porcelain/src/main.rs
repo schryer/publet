@@ -1,3 +1,12 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing
+    )
+)]
 //! `pub`: the human-facing command.
 //!
 //! Local-first by default (R16). Every command says which mode it used,
@@ -11,6 +20,7 @@ mod domain;
 mod propose;
 mod read;
 mod relate;
+mod sign;
 mod why;
 mod workspace;
 
@@ -29,6 +39,7 @@ fn usage() -> ExitCode {
     eprintln!("  compose              build a publet and add it to the workspace");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
+    eprintln!("  sign                 generate a signing key, or sign a stored object");
     eprintln!("  propose CID...       submit objects, recording what they were composed against");
     eprintln!("  witness DOMAIN       record the log root you observed");
     eprintln!(
@@ -53,6 +64,7 @@ async fn main() -> ExitCode {
         "compose" => compose::run(&rest),
         "relate" => relate::run(&rest),
         "annotate" => annotate::run(&rest),
+        "sign" => sign::run(&rest),
         "propose" => propose::run(&rest),
         "witness" => witness(&rest),
         "domain" => domain::run(&rest),
