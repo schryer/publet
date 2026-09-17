@@ -28,6 +28,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut depends: Vec<String> = Vec::new();
     let mut method: Option<String> = None;
     let mut created = "2026-09-12T00:00:00Z".to_owned();
+    let mut cites: Vec<String> = Vec::new();
+    let mut cite_notes: Vec<String> = Vec::new();
 
     for arg in args {
         if let Some(v) = arg.strip_prefix("--class=") {
@@ -42,12 +44,18 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             method = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--depends=") {
             depends.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--cite=") {
+            cites.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--cite-note=") {
+            cite_notes.push(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
             v.clone_into(&mut created);
         } else {
             return Err(format!("unknown argument: {arg}"));
         }
     }
+
+    check_cite_notes(&cites, &cite_notes)?;
 
     let class_id = class.ok_or(
         "--class is required: formal, empirical, attributive, definitional, \
@@ -86,7 +94,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             "depends",
             Value::Array(depends.iter().map(|d| Value::Text(d.clone())).collect()),
         )
-        .field("evidence", evidence_for(method.as_deref()))
+        .field(
+            "evidence",
+            evidence_for(method.as_deref(), &cites, &cite_notes),
+        )
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -121,16 +132,56 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// The evidence list, carrying the method entry when one was named.
-fn evidence_for(method: Option<&str>) -> Value {
-    let Some(method) = method else {
-        return Value::Array(Vec::new());
-    };
-    let mut entry = std::collections::BTreeMap::new();
-    entry.insert("kind".to_owned(), Value::Text("claim".into()));
-    entry.insert("role".to_owned(), Value::Text("method".into()));
-    entry.insert("ref".to_owned(), Value::Text(method.to_owned()));
-    Value::Array(vec![Value::Map(entry)])
+/// A note is paired with the citation at the same position; a citation may
+/// be given without one, but a note cannot outnumber the citations it
+/// annotates -- there would be nothing left to say it about.
+fn check_cite_notes(cites: &[String], cite_notes: &[String]) -> Result<(), String> {
+    if cite_notes.len() > cites.len() {
+        return Err(format!(
+            "{} --cite-note value(s) given but only {} --cite value(s); \
+             each --cite-note pairs with the --cite given at the same position",
+            cite_notes.len(),
+            cites.len()
+        ));
+    }
+    Ok(())
+}
+
+/// The evidence list (Section 5.5): a `method` entry when one was named,
+/// followed by a `citation` entry for each `--cite`.
+///
+/// A citation names a source lying outside this corpus's integrity
+/// guarantees, so `kind` is `"external"` and `ref` is whatever the author
+/// gave -- a DOI, a URL, a stable identifier -- displayed as unverified,
+/// per Section 5.5. This is deliberately the only evidence role `pub
+/// compose` writes besides `method`: `measurement`, `derivation`, and
+/// `replication` name evidence a claim's own author produced, which is a
+/// different act from citing someone else's, and conflating them here
+/// would let a citation masquerade as one of the roles Section 11.4
+/// weighs more heavily.
+fn evidence_for(method: Option<&str>, cites: &[String], cite_notes: &[String]) -> Value {
+    let mut entries = Vec::new();
+
+    if let Some(method) = method {
+        let mut entry = std::collections::BTreeMap::new();
+        entry.insert("kind".to_owned(), Value::Text("claim".into()));
+        entry.insert("role".to_owned(), Value::Text("method".into()));
+        entry.insert("ref".to_owned(), Value::Text(method.to_owned()));
+        entries.push(Value::Map(entry));
+    }
+
+    for (i, cite) in cites.iter().enumerate() {
+        let mut entry = std::collections::BTreeMap::new();
+        entry.insert("kind".to_owned(), Value::Text("external".into()));
+        entry.insert("role".to_owned(), Value::Text("citation".into()));
+        entry.insert("ref".to_owned(), Value::Text(cite.clone()));
+        if let Some(note) = cite_notes.get(i) {
+            entry.insert("note".to_owned(), Value::Text(note.clone()));
+        }
+        entries.push(Value::Map(entry));
+    }
+
+    Value::Array(entries)
 }
 
 /// Offer a new object to the loader against everything already held, and
@@ -202,4 +253,63 @@ pub(crate) fn default_policy(author: &Cid) -> Result<Vec<u8>, String> {
         .field("independence_distance", Value::Uint(2))
         .build()
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entries(value: &Value) -> &[Value] {
+        let Value::Array(entries) = value else {
+            panic!("evidence is not an array");
+        };
+        entries
+    }
+
+    fn field<'a>(entry: &'a Value, name: &str) -> Option<&'a str> {
+        let Value::Map(map) = entry else {
+            panic!("evidence entry is not a map");
+        };
+        map.get(name).and_then(Value::as_text)
+    }
+
+    #[test]
+    fn no_method_and_no_citations_is_an_empty_list() {
+        assert_eq!(evidence_for(None, &[], &[]), Value::Array(Vec::new()));
+    }
+
+    #[test]
+    fn a_citation_is_external_and_carries_the_citation_role() {
+        let cites = vec!["https://doi.org/10.1136/bmj.b2680".to_owned()];
+        let value = evidence_for(None, &cites, &[]);
+        let entry = &entries(&value)[0];
+        assert_eq!(field(entry, "kind"), Some("external"));
+        assert_eq!(field(entry, "role"), Some("citation"));
+        assert_eq!(field(entry, "ref"), Some(cites[0].as_str()));
+        assert_eq!(field(entry, "note"), None);
+    }
+
+    #[test]
+    fn a_note_pairs_with_the_citation_at_its_position() {
+        let cites = vec!["A".to_owned(), "B".to_owned()];
+        let notes = vec!["note for A".to_owned()];
+        let value = evidence_for(None, &cites, &notes);
+        let list = entries(&value);
+        assert_eq!(field(&list[0], "ref"), Some("A"));
+        assert_eq!(field(&list[0], "note"), Some("note for A"));
+        assert_eq!(field(&list[1], "ref"), Some("B"));
+        assert_eq!(field(&list[1], "note"), None);
+    }
+
+    #[test]
+    fn method_precedes_citations_and_keeps_its_own_kind_and_role() {
+        let cites = vec!["https://example.org/case".to_owned()];
+        let value = evidence_for(Some("pub:sha2-256:abc"), &cites, &[]);
+        let list = entries(&value);
+        assert_eq!(list.len(), 2);
+        assert_eq!(field(&list[0], "kind"), Some("claim"));
+        assert_eq!(field(&list[0], "role"), Some("method"));
+        assert_eq!(field(&list[0], "ref"), Some("pub:sha2-256:abc"));
+        assert_eq!(field(&list[1], "role"), Some("citation"));
+    }
 }
