@@ -428,6 +428,20 @@ impl RelationKind {
             Self::Supersedes | Self::Implements | Self::Depends | Self::DerivedFrom
         )
     }
+
+    /// Whether asserting this relation *does* something rather than
+    /// describing something (Section 6).
+    ///
+    /// A performative relation has no truth value to affirm or deny: a
+    /// retraction is not true or false, it either takes effect or it does
+    /// not. This is exactly the set carrying the authority rule --
+    /// authoritative only from a key that signed the target -- because
+    /// only the party who made an assertion can withdraw it, supersede it,
+    /// or delegate its continuation.
+    #[must_use]
+    pub fn is_performative(self) -> bool {
+        matches!(self, Self::Supersedes | Self::Retracts | Self::Delegates)
+    }
 }
 
 /// A relation (Section 6).

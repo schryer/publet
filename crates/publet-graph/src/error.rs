@@ -104,6 +104,18 @@ pub enum GraphError {
         class: &'static str,
     },
 
+    /// A judgement targeted a relation that asserts nothing to judge.
+    #[error(
+        "a `{kind}` annotation may not target a `{relation}` relation: asserting \
+         one performs an act rather than describing something that can be wrong"
+    )]
+    JudgementOnPerformative {
+        /// The annotation kind attempted.
+        kind: String,
+        /// The relation kind targeted.
+        relation: &'static str,
+    },
+
     /// A verdict on a provenance-only class named another aspect.
     #[error(
         "a verdict on a `{class}` claim must have aspect `provenance`, found {found:?}; \

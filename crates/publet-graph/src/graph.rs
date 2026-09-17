@@ -202,8 +202,13 @@ impl Graph {
         false
     }
 
-    /// Reject annotations the class rules of Section 5.2 forbid.
+    /// Reject annotations the class rules of Section 5.2 forbid, and
+    /// judgements Section 6 forbids on a performative relation.
     fn check_annotation(&self, annotation: &Annotation) -> Result<(), GraphError> {
+        Self::check_judgement_target(
+            annotation,
+            self.relations.get(&annotation.target().to_string()),
+        )?;
         if annotation.kind() != "verdict" {
             return Ok(());
         }
@@ -213,6 +218,33 @@ impl Graph {
             return Ok(());
         };
         Self::check_verdict(target.class(), annotation.aspect())
+    }
+
+    /// Section 6: a verdict or assessment on a performative relation.
+    ///
+    /// Annotating a relation is ordinary -- it is how a constative relation
+    /// gets its evidence. But `supersedes`, `retracts`, and `delegates`
+    /// assert nothing that could be affirmed or denied, so judging one is
+    /// the same category error Section 5.2 already refuses on a
+    /// `normative` claim.
+    fn check_judgement_target(
+        annotation: &Annotation,
+        target: Option<&Relation>,
+    ) -> Result<(), GraphError> {
+        if !matches!(annotation.kind(), "verdict" | "assessment") {
+            return Ok(());
+        }
+        // A target that has not arrived yet is checked again by `validate`.
+        let Some(relation) = target else {
+            return Ok(());
+        };
+        if relation.kind().is_performative() {
+            return Err(GraphError::JudgementOnPerformative {
+                kind: annotation.kind().to_owned(),
+                relation: relation.kind().id(),
+            });
+        }
+        Ok(())
     }
 
     fn check_verdict(class: Class, aspect: Option<&str>) -> Result<(), GraphError> {
@@ -239,6 +271,10 @@ impl Graph {
     /// Returns the first [`GraphError`] found.
     pub fn validate(&self) -> Result<(), GraphError> {
         for annotation in self.annotations.values() {
+            Self::check_judgement_target(
+                annotation,
+                self.relations.get(&annotation.target().to_string()),
+            )?;
             if annotation.kind() != "verdict" {
                 continue;
             }

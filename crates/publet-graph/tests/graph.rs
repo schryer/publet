@@ -463,3 +463,59 @@ fn class_identifiers_round_trip() {
     }
     assert!(Class::from_id("invented").is_none());
 }
+
+/// Section 6: a relation is a claim, so annotating one is ordinary -- it
+/// is how a constative relation gets its evidence, and the whole
+/// implements-with-evidence structure rests on it being allowed.
+#[test]
+fn a_constative_relation_may_be_judged() {
+    let kc = author("K_c");
+    let (p1, p1b) = claim(&kc, "2026-09-12T10:00:00Z", "definitional", "a term", &[]);
+    let (p2, p2b) = claim(&kc, "2026-09-12T10:01:00Z", "formal", "a statement", &[]);
+    let (r, rb) = relation(&kc, "2026-09-12T10:02:00Z", "implements", &p2, &p1);
+    let (v, vb) = verdict(&kc, &r, None);
+
+    let mut graph = Graph::new();
+    for (cid, bytes) in [(&p1, &p1b), (&p2, &p2b), (&r, &rb), (&v, &vb)] {
+        let object = Object::parse(bytes).unwrap().verify(cid).unwrap();
+        graph.insert(cid, object).unwrap();
+    }
+    graph.validate().unwrap();
+}
+
+/// Asserting `retracts` performs an act rather than describing one, so
+/// there is nothing in it to affirm or deny.
+#[test]
+fn a_performative_relation_may_not_be_judged() {
+    let kc = author("K_c");
+    let (p1, p1b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    let (p2, p2b) = claim(&kc, "2026-09-12T10:01:00Z", "empirical", "a rereading", &[]);
+    let (r, rb) = relation(&kc, "2026-09-12T10:02:00Z", "retracts", &p2, &p1);
+    let (v, vb) = verdict(&kc, &r, None);
+
+    let mut graph = Graph::new();
+    for (cid, bytes) in [(&p1, &p1b), (&p2, &p2b), (&r, &rb)] {
+        let object = Object::parse(bytes).unwrap().verify(cid).unwrap();
+        graph.insert(cid, object).unwrap();
+    }
+    let object = Object::parse(&vb).unwrap().verify(&v).unwrap();
+    assert!(graph.insert(&v, object).is_err());
+}
+
+/// The same rule must hold when the verdict is loaded before the relation
+/// it targets, which `insert` cannot catch on its own.
+#[test]
+fn a_judgement_arriving_before_its_target_is_still_caught() {
+    let kc = author("K_c");
+    let (p1, p1b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    let (p2, p2b) = claim(&kc, "2026-09-12T10:01:00Z", "empirical", "a rereading", &[]);
+    let (r, rb) = relation(&kc, "2026-09-12T10:02:00Z", "supersedes", &p2, &p1);
+    let (v, vb) = verdict(&kc, &r, None);
+
+    let mut graph = Graph::new();
+    for (cid, bytes) in [(&v, &vb), (&p1, &p1b), (&p2, &p2b), (&r, &rb)] {
+        let object = Object::parse(bytes).unwrap().verify(cid).unwrap();
+        let _ = graph.insert(cid, object);
+    }
+    assert!(graph.validate().is_err());
+}
