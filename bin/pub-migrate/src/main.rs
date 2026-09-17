@@ -17,12 +17,27 @@
 //! of each type. Field enumeration would silently miss a reference the day
 //! a new annotation kind carries one.
 //!
-//! Prose is deliberately left alone. Migrating bytes is not the same as
-//! revising assertions, and a claim whose text defines a term this rename
-//! retired needs a human to re-author it, not a search and replace.
+//! Prose is left alone unless `--rewrite-prose` is passed. Migrating bytes
+//! is not the same as revising assertions, so retiring a term inside a
+//! claim's own text is a decision for whoever owns the claim, not a side
+//! effect of a format change. The flag exists because that decision was
+//! taken for this corpus; it protects repository paths and the protocol's
+//! own name, both of which legitimately still contain the old word.
+//!
+//! `domain` and `generation` objects are skipped. A manifest's `snapshot`
+//! is a membership root over member CIDs -- a hash of the set, not a
+//! reference to an object -- so rewriting the members would leave the root
+//! naming a set that no longer exists. Those are re-authored by
+//! `pub domain` against the migrated directory, which recomputes the root
+//! by construction.
+//!
+//! Several directories MAY be given. They are migrated against one shared
+//! index, so an object in a domain directory that names an object held
+//! only in the main one still resolves; each object is written back to the
+//! directory it came from.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use publet_core::cbor::{self, Value};
@@ -41,13 +56,80 @@ fn migrated_type(old: &str) -> Option<&'static str> {
     }
 }
 
+/// Types whose identity depends on a set root rather than on references,
+/// and which are therefore re-authored rather than migrated.
+const REAUTHORED: [&str; 2] = ["domain", "generation"];
+
 fn usage() -> ExitCode {
-    eprintln!("usage: pub-migrate --dir=DIR [--out=DIR] [--dry-run]");
+    eprintln!("usage: pub-migrate --dir=DIR... [--dry-run] [--rewrite-prose]");
     eprintln!();
-    eprintln!("  --dir      the object directory to read");
-    eprintln!("  --out      where to write migrated objects (default: in place)");
-    eprintln!("  --dry-run  report the mapping without writing anything");
+    eprintln!("  --dir            an object directory to migrate, repeatable");
+    eprintln!("  --dry-run        report the mapping without writing anything");
+    eprintln!("  --rewrite-prose  also retire `publet` inside claim text");
     ExitCode::from(EXIT_USAGE)
+}
+
+/// Whether the byte at `i` continues a word, for the purposes of deciding
+/// that an occurrence of `publet` is a standalone term rather than part of
+/// a path or an identifier.
+fn joins_word(bytes: &[u8], i: usize) -> bool {
+    bytes.get(i).is_some_and(|b| {
+        b.is_ascii_alphanumeric() || *b == b'_' || *b == b'-' || *b == b'/' || *b == b'.'
+    })
+}
+
+/// Retire `publet` as a term inside prose, leaving paths and the
+/// protocol's own name intact.
+fn retire_term(text: &str) -> String {
+    // `the Publet Protocol` is the protocol, not the retired object type,
+    // and appears as a scope domain throughout this corpus.
+    const KEEP: &str = "Publet Protocol";
+    let mut out = String::with_capacity(text.len());
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let rest = &text[i..];
+        if rest.starts_with(KEEP) {
+            out.push_str(KEEP);
+            i += KEEP.len();
+            continue;
+        }
+        let lower = rest.len() >= 6 && rest[..6].eq_ignore_ascii_case("publet");
+        if lower && !joins_word(bytes, i.wrapping_sub(1)) {
+            let plural = rest.as_bytes().get(6) == Some(&b's');
+            let end = i + if plural { 7 } else { 6 };
+            if !joins_word(bytes, end) {
+                let upper = rest.as_bytes().first() == Some(&b'P');
+                out.push_str(match (upper, plural) {
+                    (true, true) => "Claims",
+                    (true, false) => "Claim",
+                    (false, true) => "claims",
+                    (false, false) => "claim",
+                });
+                i = end;
+                continue;
+            }
+        }
+        let ch = rest.chars().next().unwrap_or('\0');
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
+/// Apply [`retire_term`] to every text in a subtree.
+fn rewrite_prose(value: &Value) -> Value {
+    match value {
+        Value::Text(text) => Value::Text(retire_term(text)),
+        Value::Array(items) => Value::Array(items.iter().map(rewrite_prose).collect()),
+        Value::Map(entries) => Value::Map(
+            entries
+                .iter()
+                .map(|(k, v)| (k.clone(), rewrite_prose(v)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
 }
 
 /// The filename an object is stored under: its CID with `:` replaced.
@@ -123,7 +205,11 @@ fn migrate_evidence_kinds(body: &mut BTreeMap<String, Value>) {
 }
 
 /// Apply every rename to one decoded object, returning its new bytes.
-fn migrate_one(value: &Value, mapping: &BTreeMap<String, String>) -> Result<Vec<u8>, String> {
+fn migrate_one(
+    value: &Value,
+    mapping: &BTreeMap<String, String>,
+    prose: bool,
+) -> Result<Vec<u8>, String> {
     let rewritten = rewrite_cids(value, mapping);
     let Value::Map(mut map) = rewritten else {
         return Err("object is not a map".to_owned());
@@ -139,25 +225,45 @@ fn migrate_one(value: &Value, mapping: &BTreeMap<String, String>) -> Result<Vec<
     if let Some(Value::Map(body)) = map.get("body") {
         let mut body = body.clone();
         migrate_evidence_kinds(&mut body);
+        // Prose rewriting is confined to the body: the header's `type` is a
+        // vocabulary term that `migrated_type` owns, and must not be caught
+        // by a rule meant for sentences.
+        if prose && let Value::Map(rewritten) = rewrite_prose(&Value::Map(body.clone())) {
+            body = rewritten;
+        }
         map.insert("body".to_owned(), Value::Map(body));
     }
 
     Ok(cbor::encode(&Value::Map(map)))
 }
 
-fn load(dir: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
+/// Every object across every directory, indexed by identifier.
+///
+/// An object legitimately appears in more than one directory -- a domain
+/// publishes its own copy of what it holds -- so each one remembers every
+/// directory it was found in and is written back to all of them.
+type Loaded = (BTreeMap<String, Vec<u8>>, BTreeMap<String, Vec<PathBuf>>);
+
+fn load(dirs: &[PathBuf]) -> Result<Loaded, String> {
     let mut objects = BTreeMap::new();
-    let entries = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    for entry in entries {
-        let path = entry.map_err(|e| e.to_string())?.path();
-        if path.extension().is_none_or(|e| e != "cbor") {
-            continue;
+    let mut origins: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
+    for dir in dirs {
+        let entries = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        for entry in entries {
+            let path = entry.map_err(|e| e.to_string())?.path();
+            if path.extension().is_none_or(|e| e != "cbor") {
+                continue;
+            }
+            let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+            let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+            origins
+                .entry(cid.to_string())
+                .or_default()
+                .push(dir.clone());
+            objects.insert(cid.to_string(), bytes);
         }
-        let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let cid = Cid::of(&bytes, HashAlg::Sha2_256);
-        objects.insert(cid.to_string(), bytes);
     }
-    Ok(objects)
+    Ok((objects, origins))
 }
 
 /// Migrate every object, in an order where each one's references already
@@ -170,6 +276,7 @@ fn load(dir: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
 fn migrate_all(
     decoded: &BTreeMap<String, Value>,
     objects: &BTreeMap<String, Vec<u8>>,
+    prose: bool,
 ) -> Result<Vec<(String, String, Vec<u8>)>, String> {
     let mut mapping: BTreeMap<String, String> = BTreeMap::new();
     let mut pending: Vec<String> = decoded.keys().cloned().collect();
@@ -192,7 +299,7 @@ fn migrate_all(
                 still_pending.push(cid);
                 continue;
             }
-            let bytes = migrate_one(value, &mapping).map_err(|e| format!("{cid}: {e}"))?;
+            let bytes = migrate_one(value, &mapping, prose).map_err(|e| format!("{cid}: {e}"))?;
             let new_cid = Cid::of(&bytes, HashAlg::Sha2_256);
             mapping.insert(cid.clone(), new_cid.to_string());
             migrated.push((cid, new_cid.to_string(), bytes));
@@ -213,16 +320,27 @@ fn migrate_all(
     Ok(migrated)
 }
 
-fn write_all(out: &Path, migrated: &[(String, String, Vec<u8>)]) -> Result<(), String> {
-    std::fs::create_dir_all(out).map_err(|e| format!("{}: {e}", out.display()))?;
+/// Write each migrated object back to every directory it came from, and
+/// remove the file it replaces.
+fn write_all(
+    migrated: &[(String, String, Vec<u8>)],
+    origins: &BTreeMap<String, Vec<PathBuf>>,
+) -> Result<(), String> {
     for (old, new, bytes) in migrated {
+        let old_cid = old
+            .parse::<Cid>()
+            .map_err(|_| format!("{old}: not a CID"))?;
         let new_cid = new
             .parse::<Cid>()
             .map_err(|_| format!("{new}: not a CID"))?;
-        std::fs::write(out.join(file_name(&new_cid)), bytes)
-            .map_err(|e| format!("{}: {e}", out.display()))?;
-        // In-place migration leaves the old file behind under its own name;
-        // removing it is the caller's decision, not this tool's.
+        for dir in origins.get(old).into_iter().flatten() {
+            std::fs::write(dir.join(file_name(&new_cid)), bytes)
+                .map_err(|e| format!("{}: {e}", dir.display()))?;
+            if old != new {
+                std::fs::remove_file(dir.join(file_name(&old_cid)))
+                    .map_err(|e| format!("{}: {e}", dir.display()))?;
+            }
+        }
         if old != new {
             println!("{old} {new}");
         }
@@ -231,51 +349,63 @@ fn write_all(out: &Path, migrated: &[(String, String, Vec<u8>)]) -> Result<(), S
 }
 
 fn main() -> ExitCode {
-    let mut dir: Option<PathBuf> = None;
-    let mut out: Option<PathBuf> = None;
+    let mut dirs: Vec<PathBuf> = Vec::new();
     let mut dry_run = false;
+    let mut prose = false;
 
     for arg in std::env::args().skip(1) {
         if let Some(v) = arg.strip_prefix("--dir=") {
-            dir = Some(PathBuf::from(v));
-        } else if let Some(v) = arg.strip_prefix("--out=") {
-            out = Some(PathBuf::from(v));
+            dirs.push(PathBuf::from(v));
         } else if arg == "--dry-run" {
             dry_run = true;
+        } else if arg == "--rewrite-prose" {
+            prose = true;
         } else {
             eprintln!("unknown argument: {arg}");
             return usage();
         }
     }
 
-    let Some(dir) = dir else {
+    if dirs.is_empty() {
         return usage();
-    };
-    let out = out.unwrap_or_else(|| dir.clone());
+    }
 
-    let objects = match load(&dir) {
-        Ok(objects) => objects,
+    let (objects, origins) = match load(&dirs) {
+        Ok(loaded) => loaded,
         Err(e) => {
             eprintln!("{e}");
             return ExitCode::from(EXIT_FAILED);
         }
     };
 
-    // Decode once; the loop below inspects each object repeatedly.
+    // Decode once; the loop below inspects each object repeatedly. Objects
+    // whose identity rests on a set root are left out entirely -- see the
+    // module comment on `REAUTHORED`.
     let mut decoded: BTreeMap<String, Value> = BTreeMap::new();
+    let mut skipped = 0usize;
     for (cid, bytes) in &objects {
-        match cbor::decode(bytes) {
-            Ok(value) => {
-                decoded.insert(cid.clone(), value);
-            }
+        let value = match cbor::decode(bytes) {
+            Ok(value) => value,
             Err(e) => {
                 eprintln!("{cid}: {e}");
                 return ExitCode::from(EXIT_FAILED);
             }
+        };
+        let kind = match &value {
+            Value::Map(map) => match map.get("type") {
+                Some(Value::Text(kind)) => kind.clone(),
+                _ => String::new(),
+            },
+            _ => String::new(),
+        };
+        if REAUTHORED.contains(&kind.as_str()) {
+            skipped += 1;
+            continue;
         }
+        decoded.insert(cid.clone(), value);
     }
 
-    let migrated = match migrate_all(&decoded, &objects) {
+    let migrated = match migrate_all(&decoded, &objects, prose) {
         Ok(migrated) => migrated,
         Err(e) => {
             eprintln!("{e}");
@@ -285,8 +415,11 @@ fn main() -> ExitCode {
 
     let unchanged = migrated.iter().filter(|(old, new, _)| old == new).count();
     eprintln!(
-        "migrated {} object(s); {unchanged} unchanged",
-        migrated.len()
+        "migrated {} object(s) across {} director{}; {unchanged} unchanged, \
+         {skipped} left for re-authoring",
+        migrated.len(),
+        dirs.len(),
+        if dirs.len() == 1 { "y" } else { "ies" }
     );
 
     if dry_run {
@@ -296,9 +429,55 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    if let Err(e) = write_all(&out, &migrated) {
+    if let Err(e) = write_all(&migrated, &origins) {
         eprintln!("{e}");
         return ExitCode::from(EXIT_FAILED);
     }
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retires_the_term_where_it_is_a_term() {
+        assert_eq!(
+            retire_term("lineage: the chain of revisions of one publet"),
+            "lineage: the chain of revisions of one claim"
+        );
+        assert_eq!(
+            retire_term("term extraction covers definitional publets only"),
+            "term extraction covers definitional claims only"
+        );
+        assert_eq!(retire_term("one publet's content"), "one claim's content");
+    }
+
+    #[test]
+    fn leaves_paths_and_the_protocol_name_alone() {
+        // These are the two places the old word is still correct: the
+        // repositories are really named that, and so is the protocol.
+        for path in [
+            "publet/crates/publet-eval/src/propagate.rs",
+            "docs/publet-specification/index.md",
+            "publet-corpus/objects",
+        ] {
+            assert_eq!(retire_term(path), path, "rewrote a path: {path}");
+        }
+        assert_eq!(retire_term("the Publet Protocol"), "the Publet Protocol");
+    }
+
+    #[test]
+    fn a_sentence_mixing_both_keeps_only_the_path() {
+        assert_eq!(
+            retire_term("the publet cited publet/crates/publet-core/src/cid.rs"),
+            "the claim cited publet/crates/publet-core/src/cid.rs"
+        );
+    }
+
+    #[test]
+    fn case_and_number_survive() {
+        assert_eq!(retire_term("Publets are claims"), "Claims are claims");
+        assert_eq!(retire_term("Publet"), "Claim");
+    }
 }
