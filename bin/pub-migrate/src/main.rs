@@ -1,9 +1,31 @@
-//! One-shot migration of an object directory to the `claim.*` type names.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing
+    )
+)]
+//! One-shot migration of an object directory to the current object format.
 //!
-//! Renaming `type` changes an object's canonical bytes, and therefore its
-//! CID, and therefore every reference to it. Nothing in the corpus is
-//! signed, so no signature is invalidated and the rewrite is purely
-//! mechanical -- but it has to happen in dependency order, because an
+//! This binary carries whatever migration is currently being run. The
+//! machinery is durable -- dependency ordering, CID rewriting across
+//! several directories, skipping kinds whose identity rests on a set root
+//! -- and the transformation in `migrate_one` is replaced each time. Past
+//! migrations live in git history rather than accumulating here as dead
+//! branches nothing will take again.
+//!
+//! **Current migration: R4 and R5 applied to every claim.** Relations and
+//! annotations gain the `scope` every assertion states, and the field
+//! inside an assessment naming what a judgement rests on becomes
+//! `grounds`, so that `basis` has one meaning -- the state an author was
+//! looking at (Section 4.6).
+//!
+//! Renaming or adding a body field changes an object's canonical bytes,
+//! and therefore its CID, and therefore every reference to it. Nothing in
+//! this corpus is signed, so no signature is invalidated and the rewrite
+//! is mechanical -- but it has to happen in dependency order, because an
 //! object's new CID cannot be computed until every CID it names has one.
 //!
 //! Content addressing guarantees that order exists: an object can only
@@ -17,13 +39,6 @@
 //! of each type. Field enumeration would silently miss a reference the day
 //! a new annotation kind carries one.
 //!
-//! Prose is left alone unless `--rewrite-prose` is passed. Migrating bytes
-//! is not the same as revising assertions, so retiring a term inside a
-//! claim's own text is a decision for whoever owns the claim, not a side
-//! effect of a format change. The flag exists because that decision was
-//! taken for this corpus; it protects repository paths and the protocol's
-//! own name, both of which legitimately still contain the old word.
-//!
 //! `domain` and `generation` objects are skipped. A manifest's `snapshot`
 //! is a membership root over member CIDs -- a hash of the set, not a
 //! reference to an object -- so rewriting the members would leave the root
@@ -33,8 +48,8 @@
 //!
 //! Several directories MAY be given. They are migrated against one shared
 //! index, so an object in a domain directory that names an object held
-//! only in the main one still resolves; each object is written back to the
-//! directory it came from.
+//! only in the main one still resolves; each object is written back to
+//! every directory it came from.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -46,90 +61,16 @@ use publet_core::{Cid, HashAlg};
 const EXIT_USAGE: u8 = 2;
 const EXIT_FAILED: u8 = 1;
 
-/// Old type name to new.
-fn migrated_type(old: &str) -> Option<&'static str> {
-    match old {
-        "publet" => Some("claim.prose"),
-        "rel" => Some("claim.relation"),
-        "ann" => Some("claim.annotation"),
-        _ => None,
-    }
-}
-
 /// Types whose identity depends on a set root rather than on references,
 /// and which are therefore re-authored rather than migrated.
 const REAUTHORED: [&str; 2] = ["domain", "generation"];
 
 fn usage() -> ExitCode {
-    eprintln!("usage: pub-migrate --dir=DIR... [--dry-run] [--rewrite-prose]");
+    eprintln!("usage: pub-migrate --dir=DIR... [--dry-run]");
     eprintln!();
-    eprintln!("  --dir            an object directory to migrate, repeatable");
-    eprintln!("  --dry-run        report the mapping without writing anything");
-    eprintln!("  --rewrite-prose  also retire `publet` inside claim text");
+    eprintln!("  --dir      an object directory to migrate, repeatable");
+    eprintln!("  --dry-run  report the mapping without writing anything");
     ExitCode::from(EXIT_USAGE)
-}
-
-/// Whether the byte at `i` continues a word, for the purposes of deciding
-/// that an occurrence of `publet` is a standalone term rather than part of
-/// a path or an identifier.
-fn joins_word(bytes: &[u8], i: usize) -> bool {
-    bytes.get(i).is_some_and(|b| {
-        b.is_ascii_alphanumeric() || *b == b'_' || *b == b'-' || *b == b'/' || *b == b'.'
-    })
-}
-
-/// Retire `publet` as a term inside prose, leaving paths and the
-/// protocol's own name intact.
-fn retire_term(text: &str) -> String {
-    // `the Publet Protocol` is the protocol, not the retired object type,
-    // and appears as a scope domain throughout this corpus.
-    const KEEP: &str = "Publet Protocol";
-    let mut out = String::with_capacity(text.len());
-    let bytes = text.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        let rest = &text[i..];
-        if rest.starts_with(KEEP) {
-            out.push_str(KEEP);
-            i += KEEP.len();
-            continue;
-        }
-        let lower = rest.len() >= 6 && rest[..6].eq_ignore_ascii_case("publet");
-        if lower && !joins_word(bytes, i.wrapping_sub(1)) {
-            let plural = rest.as_bytes().get(6) == Some(&b's');
-            let end = i + if plural { 7 } else { 6 };
-            if !joins_word(bytes, end) {
-                let upper = rest.as_bytes().first() == Some(&b'P');
-                out.push_str(match (upper, plural) {
-                    (true, true) => "Claims",
-                    (true, false) => "Claim",
-                    (false, true) => "claims",
-                    (false, false) => "claim",
-                });
-                i = end;
-                continue;
-            }
-        }
-        let ch = rest.chars().next().unwrap_or('\0');
-        out.push(ch);
-        i += ch.len_utf8();
-    }
-    out
-}
-
-/// Apply [`retire_term`] to every text in a subtree.
-fn rewrite_prose(value: &Value) -> Value {
-    match value {
-        Value::Text(text) => Value::Text(retire_term(text)),
-        Value::Array(items) => Value::Array(items.iter().map(rewrite_prose).collect()),
-        Value::Map(entries) => Value::Map(
-            entries
-                .iter()
-                .map(|(k, v)| (k.clone(), rewrite_prose(v)))
-                .collect(),
-        ),
-        other => other.clone(),
-    }
 }
 
 /// The filename an object is stored under: its CID with `:` replaced.
@@ -179,62 +120,65 @@ fn rewrite_cids(value: &Value, mapping: &BTreeMap<String, String>) -> Value {
     }
 }
 
-/// Section 5.5's evidence vocabulary renamed `publet` to `claim`.
-///
-/// Scoped deliberately to `evidence[].kind` rather than applied to the
-/// tree: the same string appears in claim prose, where rewriting it would
-/// be editing an assertion rather than migrating a format.
-fn migrate_evidence_kinds(body: &mut BTreeMap<String, Value>) {
-    let Some(Value::Array(items)) = body.get("evidence") else {
-        return;
-    };
-    let migrated: Vec<Value> = items
-        .iter()
-        .map(|item| {
-            let Value::Map(entry) = item else {
-                return item.clone();
-            };
-            let mut entry = entry.clone();
-            if entry.get("kind") == Some(&Value::Text("publet".to_owned())) {
-                entry.insert("kind".to_owned(), Value::Text("claim".to_owned()));
-            }
-            Value::Map(entry)
-        })
-        .collect();
-    body.insert("evidence".to_owned(), Value::Array(migrated));
-}
-
 /// Apply every rename to one decoded object, returning its new bytes.
-fn migrate_one(
-    value: &Value,
-    mapping: &BTreeMap<String, String>,
-    prose: bool,
-) -> Result<Vec<u8>, String> {
+fn migrate_one(value: &Value, mapping: &BTreeMap<String, String>) -> Result<Vec<u8>, String> {
     let rewritten = rewrite_cids(value, mapping);
     let Value::Map(mut map) = rewritten else {
         return Err("object is not a map".to_owned());
     };
 
-    let Some(Value::Text(kind)) = map.get("type") else {
+    let Some(Value::Text(kind)) = map.get("type").cloned() else {
         return Err("object has no `type`".to_owned());
     };
-    if let Some(new_kind) = migrated_type(kind) {
-        map.insert("type".to_owned(), Value::Text(new_kind.to_owned()));
-    }
 
     if let Some(Value::Map(body)) = map.get("body") {
         let mut body = body.clone();
-        migrate_evidence_kinds(&mut body);
-        // Prose rewriting is confined to the body: the header's `type` is a
-        // vocabulary term that `migrated_type` owns, and must not be caught
-        // by a rule meant for sentences.
-        if prose && let Value::Map(rewritten) = rewrite_prose(&Value::Map(body.clone())) {
-            body = rewritten;
+        if matches!(kind.as_str(), "claim.relation" | "claim.annotation") {
+            add_unconditional_scope(&mut body);
+        }
+        if kind == "claim.annotation" {
+            rename_basis_to_grounds(&mut body);
         }
         map.insert("body".to_owned(), Value::Map(body));
     }
 
     Ok(cbor::encode(&Value::Map(map)))
+}
+
+/// R4: every assertion states the conditions its author asserts under.
+///
+/// Existing relations and annotations were composed before the rule was
+/// applied to their grammars, and every one of them was in fact meant
+/// unconditionally -- there was no way to say otherwise. `"unconditional"`
+/// is therefore the honest migration, and Section 5.3 provides it as an
+/// explicit value rather than as an absence.
+fn add_unconditional_scope(body: &mut BTreeMap<String, Value>) {
+    if body.contains_key("scope") {
+        return;
+    }
+    let mut scope = BTreeMap::new();
+    scope.insert("domain".to_owned(), Value::Text("unconditional".to_owned()));
+    scope.insert("conditions".to_owned(), Value::Array(Vec::new()));
+    body.insert("scope".to_owned(), Value::Map(scope));
+}
+
+/// `basis` inside a judgement becomes `grounds`.
+///
+/// The word now has one meaning across the format -- the state an author
+/// was looking at (Section 4.6) -- and "grounds" is what the document
+/// already called what a judgement rests on, in Section 6's requirement
+/// that a dispute name them.
+fn rename_basis_to_grounds(body: &mut BTreeMap<String, Value>) {
+    let Some(Value::Map(value)) = body.get("value") else {
+        return;
+    };
+    let Some(basis) = value.get("basis").cloned() else {
+        return;
+    };
+    let mut value = value.clone();
+    value.remove("basis");
+    value.insert("grounds".to_owned(), basis);
+    body.insert("value".to_owned(), Value::Map(value));
 }
 
 /// Every object across every directory, indexed by identifier.
@@ -276,7 +220,6 @@ fn load(dirs: &[PathBuf]) -> Result<Loaded, String> {
 fn migrate_all(
     decoded: &BTreeMap<String, Value>,
     objects: &BTreeMap<String, Vec<u8>>,
-    prose: bool,
 ) -> Result<Vec<(String, String, Vec<u8>)>, String> {
     let mut mapping: BTreeMap<String, String> = BTreeMap::new();
     let mut pending: Vec<String> = decoded.keys().cloned().collect();
@@ -299,7 +242,7 @@ fn migrate_all(
                 still_pending.push(cid);
                 continue;
             }
-            let bytes = migrate_one(value, &mapping, prose).map_err(|e| format!("{cid}: {e}"))?;
+            let bytes = migrate_one(value, &mapping).map_err(|e| format!("{cid}: {e}"))?;
             let new_cid = Cid::of(&bytes, HashAlg::Sha2_256);
             mapping.insert(cid.clone(), new_cid.to_string());
             migrated.push((cid, new_cid.to_string(), bytes));
@@ -351,15 +294,12 @@ fn write_all(
 fn main() -> ExitCode {
     let mut dirs: Vec<PathBuf> = Vec::new();
     let mut dry_run = false;
-    let mut prose = false;
 
     for arg in std::env::args().skip(1) {
         if let Some(v) = arg.strip_prefix("--dir=") {
             dirs.push(PathBuf::from(v));
         } else if arg == "--dry-run" {
             dry_run = true;
-        } else if arg == "--rewrite-prose" {
-            prose = true;
         } else {
             eprintln!("unknown argument: {arg}");
             return usage();
@@ -405,7 +345,7 @@ fn main() -> ExitCode {
         decoded.insert(cid.clone(), value);
     }
 
-    let migrated = match migrate_all(&decoded, &objects, prose) {
+    let migrated = match migrate_all(&decoded, &objects) {
         Ok(migrated) => migrated,
         Err(e) => {
             eprintln!("{e}");
@@ -440,44 +380,99 @@ fn main() -> ExitCode {
 mod tests {
     use super::*;
 
-    #[test]
-    fn retires_the_term_where_it_is_a_term() {
-        assert_eq!(
-            retire_term("lineage: the chain of revisions of one publet"),
-            "lineage: the chain of revisions of one claim"
+    fn body_of(bytes: &[u8]) -> BTreeMap<String, Value> {
+        let Ok(Value::Map(map)) = cbor::decode(bytes) else {
+            panic!("not a map");
+        };
+        let Some(Value::Map(body)) = map.get("body") else {
+            panic!("no body");
+        };
+        body.clone()
+    }
+
+    fn object(kind: &str, body: BTreeMap<String, Value>) -> Value {
+        let mut map = BTreeMap::new();
+        map.insert(
+            "author".to_owned(),
+            Value::Text(
+                "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra".to_owned(),
+            ),
         );
-        assert_eq!(
-            retire_term("term extraction covers definitional publets only"),
-            "term extraction covers definitional claims only"
+        map.insert("body".to_owned(), Value::Map(body));
+        map.insert(
+            "created".to_owned(),
+            Value::Text("2026-09-17T00:00:00Z".to_owned()),
         );
-        assert_eq!(retire_term("one publet's content"), "one claim's content");
+        map.insert("pub".to_owned(), Value::Text("1".to_owned()));
+        map.insert("type".to_owned(), Value::Text(kind.to_owned()));
+        Value::Map(map)
     }
 
     #[test]
-    fn leaves_paths_and_the_protocol_name_alone() {
-        // These are the two places the old word is still correct: the
-        // repositories are really named that, and so is the protocol.
-        for path in [
-            "publet/crates/publet-eval/src/propagate.rs",
-            "docs/publet-specification/index.md",
-            "publet-corpus/objects",
-        ] {
-            assert_eq!(retire_term(path), path, "rewrote a path: {path}");
-        }
-        assert_eq!(retire_term("the Publet Protocol"), "the Publet Protocol");
+    fn a_relation_gains_an_unconditional_scope() {
+        let mut body = BTreeMap::new();
+        body.insert("kind".to_owned(), Value::Text("implements".to_owned()));
+        let bytes = migrate_one(&object("claim.relation", body), &BTreeMap::new()).unwrap();
+
+        let Some(Value::Map(scope)) = body_of(&bytes).get("scope").cloned() else {
+            panic!("no scope");
+        };
+        assert_eq!(
+            scope.get("domain"),
+            Some(&Value::Text("unconditional".to_owned()))
+        );
+        assert_eq!(scope.get("conditions"), Some(&Value::Array(Vec::new())));
     }
 
     #[test]
-    fn a_sentence_mixing_both_keeps_only_the_path() {
+    fn a_scope_already_stated_is_left_alone() {
+        // Re-running a migration must not overwrite a real scope with
+        // `unconditional`, which would silently widen a claim.
+        let mut scope = BTreeMap::new();
+        scope.insert("domain".to_owned(), Value::Text("aarch64".to_owned()));
+        scope.insert("conditions".to_owned(), Value::Array(Vec::new()));
+        let mut body = BTreeMap::new();
+        body.insert("kind".to_owned(), Value::Text("implements".to_owned()));
+        body.insert("scope".to_owned(), Value::Map(scope));
+
+        let bytes = migrate_one(&object("claim.relation", body), &BTreeMap::new()).unwrap();
+        let Some(Value::Map(scope)) = body_of(&bytes).get("scope").cloned() else {
+            panic!("no scope");
+        };
         assert_eq!(
-            retire_term("the publet cited publet/crates/publet-core/src/cid.rs"),
-            "the claim cited publet/crates/publet-core/src/cid.rs"
+            scope.get("domain"),
+            Some(&Value::Text("aarch64".to_owned()))
         );
     }
 
     #[test]
-    fn case_and_number_survive() {
-        assert_eq!(retire_term("Publets are claims"), "Claims are claims");
-        assert_eq!(retire_term("Publet"), "Claim");
+    fn an_assessments_basis_becomes_grounds() {
+        let mut value = BTreeMap::new();
+        value.insert("verdict".to_owned(), Value::Text("sound".to_owned()));
+        value.insert("basis".to_owned(), Value::Text("read it".to_owned()));
+        let mut body = BTreeMap::new();
+        body.insert("kind".to_owned(), Value::Text("assessment".to_owned()));
+        body.insert("value".to_owned(), Value::Map(value));
+
+        let bytes = migrate_one(&object("claim.annotation", body), &BTreeMap::new()).unwrap();
+        let Some(Value::Map(value)) = body_of(&bytes).get("value").cloned() else {
+            panic!("no value");
+        };
+        assert_eq!(
+            value.get("grounds"),
+            Some(&Value::Text("read it".to_owned()))
+        );
+        assert_eq!(value.get("basis"), None);
+    }
+
+    #[test]
+    fn a_prose_claim_is_untouched_but_for_its_references() {
+        // Prose claims already state a scope and have no `basis` to rename,
+        // so this migration must leave their bytes alone entirely.
+        let mut body = BTreeMap::new();
+        body.insert("content".to_owned(), Value::Text("a claim".to_owned()));
+        let before = object("claim.prose", body);
+        let after = migrate_one(&before, &BTreeMap::new()).unwrap();
+        assert_eq!(after, cbor::encode(&before));
     }
 }
