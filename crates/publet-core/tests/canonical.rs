@@ -8,6 +8,7 @@
 //! input constructed to violate exactly it.
 
 use publet_core::cbor::{Value, decode, encode};
+use publet_core::{Cid, HashAlg, Object};
 use std::collections::BTreeMap;
 
 fn rule_for(bytes: &[u8]) -> &'static str {
@@ -157,4 +158,35 @@ fn encoder_emits_sorted_keys_regardless_of_insertion_order() {
     let zebra = bytes.windows(5).position(|w| w == b"zebra").unwrap();
     assert!(apple < zebra, "keys must be emitted in UTF-8 byte order");
     assert!(decode(&bytes).is_ok());
+}
+
+/// Section 4.6: one header field for the state an author was looking at,
+/// replacing the four type-specific fields that each said it separately.
+#[test]
+fn basis_round_trips_as_a_header_field() {
+    const AUTHOR: &str = "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra";
+    let read = Cid::of(b"the generation I read", HashAlg::Sha2_256);
+
+    let bytes = Object::builder("claim.prose", AUTHOR)
+        .created("2026-09-17T00:00:00Z")
+        .basis(&read.to_string())
+        .field("content", Value::Text("a claim".into()))
+        .build()
+        .unwrap();
+    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let object = Object::parse(&bytes).unwrap().verify(&cid).unwrap();
+    assert_eq!(object.object().basis(), Some(&read));
+}
+
+/// It is optional, and an object without one is not thereby malformed.
+#[test]
+fn basis_is_optional() {
+    const AUTHOR: &str = "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra";
+    let bytes = Object::builder("claim.prose", AUTHOR)
+        .created("2026-09-17T00:00:00Z")
+        .build()
+        .unwrap();
+    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let object = Object::parse(&bytes).unwrap().verify(&cid).unwrap();
+    assert_eq!(object.object().basis(), None);
 }

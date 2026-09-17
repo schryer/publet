@@ -76,16 +76,12 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
 
-    let mut scope_map = std::collections::BTreeMap::new();
-    scope_map.insert("domain".to_owned(), Value::Text(scope.clone()));
-    scope_map.insert("conditions".to_owned(), Value::Array(Vec::new()));
-
     let bytes = Object::builder("claim.prose", &author)
         .created(&created)
         .field("class", Value::Text(class_id.clone()))
         .field("lang", Value::Text(lang))
         .field("content", Value::Text(content))
-        .field("scope", Value::Map(scope_map))
+        .field("scope", scope_value(&scope))
         .field(
             "depends",
             Value::Array(depends.iter().map(|d| Value::Text(d.clone())).collect()),
@@ -135,6 +131,50 @@ fn evidence_for(method: Option<&str>) -> Value {
     entry.insert("role".to_owned(), Value::Text("method".into()));
     entry.insert("ref".to_owned(), Value::Text(method.to_owned()));
     Value::Array(vec![Value::Map(entry)])
+}
+
+/// Offer a new object to the loader against everything already held, and
+/// store it only if the loader accepts.
+///
+/// The rules that decide whether an object may enter a graph live in
+/// `publet_graph` (Section 5.2's class rules, Section 6's acyclicity), and
+/// checking them a second time here is how the two implementations would
+/// come to disagree. `refused` names what the caller was trying to do, so
+/// the message reads in terms of the command the author ran.
+///
+/// # Errors
+///
+/// Returns a message if the loader refuses the object or the store fails.
+pub(crate) fn offer_then_store(
+    store: &publet_store::Store,
+    cid: &Cid,
+    bytes: &[u8],
+    refused: &str,
+) -> Result<(), String> {
+    let mut objects = vec![(cid.clone(), bytes.to_vec())];
+    for cid_text in store.cids().map_err(|e| e.to_string())? {
+        let Ok(held) = cid_text.parse::<Cid>() else {
+            continue;
+        };
+        if let Ok(Some(held_bytes)) = store.get(&held) {
+            objects.push((held, held_bytes));
+        }
+    }
+    publet_graph::load::from_objects(objects)
+        .map_err(|e| format!("{refused}, so it was not stored: {e}"))?;
+    store.put(cid, bytes).map_err(|e| e.to_string())
+}
+
+/// The scope every claim states (R4, Section 5.3).
+///
+/// One shape for all three grammars: `pub compose`, `pub relate`, and
+/// `pub annotate` each state the conditions their author asserts under,
+/// and `"unconditional"` is the explicit way of saying there are none.
+pub(crate) fn scope_value(domain: &str) -> Value {
+    let mut map = std::collections::BTreeMap::new();
+    map.insert("domain".to_owned(), Value::Text(domain.to_owned()));
+    map.insert("conditions".to_owned(), Value::Array(Vec::new()));
+    Value::Map(map)
 }
 
 /// A starting policy trusting only the workspace's own key.

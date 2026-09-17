@@ -97,7 +97,7 @@ fn main() -> ExitCode {
             // assumed key, because writing that down would create the
             // compellable artifact the design exists to avoid.
             println!(
-                r#"{{"assumer":"{}","assumed":"{}","basis":"{}"}}"#,
+                r#"{{"assumer":"{}","assumed":"{}","grounds":"{}"}}"#,
                 assumption.assumer,
                 assumption.assumed,
                 assumption.basis.id()

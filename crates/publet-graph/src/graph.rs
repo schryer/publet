@@ -202,49 +202,36 @@ impl Graph {
         false
     }
 
-    /// Reject annotations the class rules of Section 5.2 forbid, and
-    /// judgements Section 6 forbids on a performative relation.
+    /// Reject annotations the class rules of Section 5.2 forbid.
+    ///
+    /// One rule over every grammar. A prose claim declares its class; a
+    /// relation and an annotation take the class their `kind` carries
+    /// (Sections 6 and 7.1); the same admissibility check runs over all
+    /// three. Until Section 5.2 gained a `performative` class this needed
+    /// a second rule written specially for relations, which was the same
+    /// rule with different words.
     fn check_annotation(&self, annotation: &Annotation) -> Result<(), GraphError> {
-        Self::check_judgement_target(
-            annotation,
-            self.relations.get(&annotation.target().to_string()),
-        )?;
         if annotation.kind() != "verdict" {
             return Ok(());
         }
-        let Some(target) = self.prose_claims.get(&annotation.target().to_string()) else {
-            // The target may arrive later; the rule is enforced again by
-            // `validate` once the graph is complete.
+        let Some(class) = self.class_of(&annotation.target().to_string()) else {
+            // Either the target has not arrived yet -- `validate` enforces
+            // the rule again once the graph is complete -- or it is an
+            // object with no class, which nothing here judges.
             return Ok(());
         };
-        Self::check_verdict(target.class(), annotation.aspect())
+        Self::check_verdict(class, annotation.aspect())
     }
 
-    /// Section 6: a verdict or assessment on a performative relation.
-    ///
-    /// Annotating a relation is ordinary -- it is how a constative relation
-    /// gets its evidence. But `supersedes`, `retracts`, and `delegates`
-    /// assert nothing that could be affirmed or denied, so judging one is
-    /// the same category error Section 5.2 already refuses on a
-    /// `normative` claim.
-    fn check_judgement_target(
-        annotation: &Annotation,
-        target: Option<&Relation>,
-    ) -> Result<(), GraphError> {
-        if !matches!(annotation.kind(), "verdict" | "assessment") {
-            return Ok(());
+    /// The class of whatever `key` names, whichever grammar it is in.
+    fn class_of(&self, key: &str) -> Option<Class> {
+        if let Some(claim) = self.prose_claims.get(key) {
+            return Some(claim.class());
         }
-        // A target that has not arrived yet is checked again by `validate`.
-        let Some(relation) = target else {
-            return Ok(());
-        };
-        if relation.kind().is_performative() {
-            return Err(GraphError::JudgementOnPerformative {
-                kind: annotation.kind().to_owned(),
-                relation: relation.kind().id(),
-            });
+        if let Some(relation) = self.relations.get(key) {
+            return Some(relation.kind().class());
         }
-        Ok(())
+        self.annotations.get(key).and_then(Annotation::class)
     }
 
     fn check_verdict(class: Class, aspect: Option<&str>) -> Result<(), GraphError> {
@@ -271,15 +258,11 @@ impl Graph {
     /// Returns the first [`GraphError`] found.
     pub fn validate(&self) -> Result<(), GraphError> {
         for annotation in self.annotations.values() {
-            Self::check_judgement_target(
-                annotation,
-                self.relations.get(&annotation.target().to_string()),
-            )?;
             if annotation.kind() != "verdict" {
                 continue;
             }
-            if let Some(target) = self.prose_claims.get(&annotation.target().to_string()) {
-                Self::check_verdict(target.class(), annotation.aspect())?;
+            if let Some(class) = self.class_of(&annotation.target().to_string()) {
+                Self::check_verdict(class, annotation.aspect())?;
             }
         }
         for anchor in self.anchors.values() {

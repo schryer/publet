@@ -117,11 +117,14 @@ pub struct Object {
     author: Cid,
     body: BTreeMap<String, Value>,
     prev: Option<Cid>,
+    basis: Option<Cid>,
     ext: Option<BTreeMap<String, Value>>,
     bytes: Vec<u8>,
 }
 
-const HEADER_FIELDS: [&str; 7] = ["author", "body", "created", "ext", "prev", "pub", "type"];
+const HEADER_FIELDS: [&str; 8] = [
+    "author", "basis", "body", "created", "ext", "prev", "pub", "type",
+];
 
 impl Object {
     /// Parse canonical bytes into an object whose identity is not yet checked.
@@ -172,6 +175,10 @@ impl Object {
                 Some(_) => Some(cid_field(&map, "prev")?),
                 None => None,
             },
+            basis: match map.get("basis") {
+                Some(_) => Some(cid_field(&map, "basis")?),
+                None => None,
+            },
             ext: match map.get("ext") {
                 Some(Value::Map(m)) => Some(m.clone()),
                 Some(_) => {
@@ -197,6 +204,7 @@ impl Object {
             created: None,
             body: BTreeMap::new(),
             prev: None,
+            basis: None,
             ext: None,
         }
     }
@@ -238,6 +246,17 @@ impl Object {
     #[must_use]
     pub fn prev(&self) -> Option<&Cid> {
         self.prev.as_ref()
+    }
+
+    /// The state the author was looking at, if this one names it.
+    ///
+    /// Section 4.6. Advisory and never gating: nothing is overwritten
+    /// (R1), so a stale basis cannot clobber anything. What it buys is
+    /// that the interval between what an author read and what was true
+    /// when their work landed is recorded rather than reconstructed.
+    #[must_use]
+    pub fn basis(&self) -> Option<&Cid> {
+        self.basis.as_ref()
     }
 
     /// Extension fields, if present.
@@ -314,6 +333,7 @@ pub struct Builder {
     created: Option<String>,
     body: BTreeMap<String, Value>,
     prev: Option<String>,
+    basis: Option<String>,
     ext: Option<BTreeMap<String, Value>>,
 }
 
@@ -336,6 +356,13 @@ impl Builder {
     #[must_use]
     pub fn prev(mut self, cid: &str) -> Self {
         self.prev = Some(cid.to_owned());
+        self
+    }
+
+    /// Name the state the author was looking at (Section 4.6).
+    #[must_use]
+    pub fn basis(mut self, cid: &str) -> Self {
+        self.basis = Some(cid.to_owned());
         self
     }
 
@@ -366,6 +393,13 @@ impl Builder {
                 source,
             })?;
             map.insert("prev".to_owned(), Value::Text(parsed.to_string()));
+        }
+        if let Some(basis) = self.basis {
+            let parsed: Cid = basis.parse().map_err(|source| ObjectError::BadCid {
+                field: "basis",
+                source,
+            })?;
+            map.insert("basis".to_owned(), Value::Text(parsed.to_string()));
         }
         if let Some(ext) = self.ext {
             map.insert("ext".to_owned(), Value::Map(ext));

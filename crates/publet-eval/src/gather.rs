@@ -148,13 +148,13 @@ fn absorb(
                     .and_then(Value::as_text)
                     .map(ToOwned::to_owned)
             };
-            // A judgement with no stated basis is a preference, and the
+            // A judgement with no stated grounds is a preference, and the
             // reader has no way to weigh one. It is not read.
-            if let (Some(verdict), Some(basis)) = (field("verdict"), field("basis")) {
+            if let (Some(verdict), Some(grounds)) = (field("verdict"), field("grounds")) {
                 evidence.assessments.push(crate::Assessment {
                     author: author.clone(),
                     verdict,
-                    basis,
+                    grounds,
                 });
             }
         }

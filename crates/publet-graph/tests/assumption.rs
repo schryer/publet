@@ -26,7 +26,7 @@ fn add(graph: &mut Graph, cid: &Cid, bytes: &[u8]) {
 fn assumption_object(assumer: &Cid, pseudonym: &Cid) -> (Cid, Vec<u8>) {
     let mut value = std::collections::BTreeMap::new();
     value.insert(
-        "basis".to_owned(),
+        "grounds".to_owned(),
         Value::Text("work-reviewed-by-me".into()),
     );
     build(

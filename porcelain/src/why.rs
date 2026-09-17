@@ -130,7 +130,7 @@ fn print_assessments(assessments: &[publet_eval::Assessment]) {
     println!();
     println!("assessments (judgements, not inputs to the outcome)");
     for assessment in assessments {
-        println!("  {:<16} {}", assessment.verdict, assessment.basis);
+        println!("  {:<16} {}", assessment.verdict, assessment.grounds);
     }
     let in_scope = assessments
         .iter()

@@ -149,7 +149,7 @@ pub struct Assessment {
     pub verdict: String,
     /// What the judgement rests on. Required: a judgement without one is a
     /// preference, and the reader cannot weigh a preference.
-    pub basis: String,
+    pub grounds: String,
 }
 
 /// The result of evaluating one claim.

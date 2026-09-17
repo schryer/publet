@@ -13,7 +13,7 @@
 //! a caller of it.
 
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_graph::{RelationKind, load};
+use publet_graph::RelationKind;
 
 use crate::workspace::Workspace;
 
@@ -36,6 +36,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut method: Option<String> = None;
     let mut fidelity: Option<String> = None;
     let mut created = "2026-09-12T00:00:00Z".to_owned();
+    let mut scope: Option<String> = None;
 
     for arg in args {
         if let Some(v) = arg.strip_prefix("--kind=") {
@@ -52,6 +53,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             method = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--fidelity=") {
             fidelity = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--scope=") {
+            scope = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
             v.clone_into(&mut created);
         } else {
@@ -90,47 +93,44 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         ));
     }
 
+    // R4 applies to every claim, not to prose alone: an `implements` edge
+    // that holds on one target architecture and not another is ordinary,
+    // and without a scope there is nowhere to say so.
+    let scope = scope.ok_or(
+        "--scope is required. State the conditions you assert this relation \
+         under, or \"unconditional\" if it holds without any (Section 5.3)",
+    )?;
+
     let author = ws
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
 
+    let optional = [
+        ("aspect", aspect.as_deref()),
+        ("note", note.as_deref()),
+        ("method", method.as_deref()),
+        ("fidelity", fidelity.as_deref()),
+    ];
     let mut builder = Object::builder("claim.relation", &author)
         .created(&created)
         .field("kind", Value::Text(kind_id.clone()))
         .field("from", Value::Text(from.clone()))
-        .field("to", Value::Text(to.clone()));
-    if let Some(aspect) = &aspect {
-        builder = builder.field("aspect", Value::Text(aspect.clone()));
-    }
-    if let Some(note) = &note {
-        builder = builder.field("note", Value::Text(note.clone()));
-    }
-    if let Some(method) = &method {
-        builder = builder.field("method", Value::Text(method.clone()));
-    }
-    if let Some(fidelity) = &fidelity {
-        builder = builder.field("fidelity", Value::Text(fidelity.clone()));
+        .field("to", Value::Text(to.clone()))
+        .field("scope", crate::compose::scope_value(&scope));
+    for (name, value) in optional {
+        if let Some(value) = value {
+            builder = builder.field(name, Value::Text(value.to_owned()));
+        }
     }
     let bytes = builder.build().map_err(|e| e.to_string())?;
     let cid = Cid::of(&bytes, HashAlg::Sha2_256);
 
-    // Offer the edge to the loader before storing it. An acyclic kind that
-    // closes a cycle is refused here for the same reason, by the same code,
-    // that would refuse it at load time (Section 6).
-    let mut objects = vec![(cid.clone(), bytes.clone())];
-    for cid_text in store.cids().map_err(|e| e.to_string())? {
-        let Ok(held) = cid_text.parse::<Cid>() else {
-            continue;
-        };
-        if let Ok(Some(held_bytes)) = store.get(&held) {
-            objects.push((held, held_bytes));
-        }
-    }
-    load::from_objects(objects).map_err(|e| {
-        format!("this edge would make the graph invalid, so it was not stored: {e}")
-    })?;
-
-    store.put(&cid, &bytes).map_err(|e| e.to_string())?;
+    crate::compose::offer_then_store(
+        &store,
+        &cid,
+        &bytes,
+        "this edge would make the graph invalid",
+    )?;
     println!("{cid}");
 
     // An acyclic kind carries a consequence the author should see at the

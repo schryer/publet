@@ -74,7 +74,7 @@ impl Assumption {
             assumed: body.get("target").and_then(Value::as_text)?.parse().ok()?,
             basis: body
                 .get("value")
-                .and_then(|v| v.get("basis"))
+                .and_then(|v| v.get("grounds"))
                 .and_then(Value::as_text)
                 .and_then(Basis::from_id)?,
         })

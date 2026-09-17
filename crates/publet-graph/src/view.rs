@@ -29,6 +29,9 @@ pub enum Class {
     Archival,
     /// An instruction or method, settled by reproduction reports.
     Procedural,
+    /// An act done by asserting it. Not truth-apt: what it has instead of
+    /// evidence is felicity conditions, which differ per kind.
+    Performative,
 }
 
 impl Class {
@@ -44,6 +47,7 @@ impl Class {
             "expressive" => Self::Expressive,
             "archival" => Self::Archival,
             "procedural" => Self::Procedural,
+            "performative" => Self::Performative,
             _ => return None,
         })
     }
@@ -60,19 +64,20 @@ impl Class {
             Self::Expressive => "expressive",
             Self::Archival => "archival",
             Self::Procedural => "procedural",
+            Self::Performative => "performative",
         }
     }
 
     /// Whether a verdict annotation may target a claim of this class.
     ///
-    /// Section 5.2: `definitional`, `normative`, and `expressive` are not
-    /// truth-apt, and a verdict on one is a category error rather than a
-    /// disagreement.
+    /// Section 5.2: `definitional`, `normative`, `expressive`, and
+    /// `performative` are not truth-apt, and a verdict on one is a category
+    /// error rather than a disagreement.
     #[must_use]
     pub fn accepts_verdict(self) -> bool {
         !matches!(
             self,
-            Self::Definitional | Self::Normative | Self::Expressive
+            Self::Definitional | Self::Normative | Self::Expressive | Self::Performative
         )
     }
 
@@ -429,18 +434,31 @@ impl RelationKind {
         )
     }
 
-    /// Whether asserting this relation *does* something rather than
-    /// describing something (Section 6).
+    /// The claim class this kind carries (Sections 5.2 and 6).
     ///
-    /// A performative relation has no truth value to affirm or deny: a
-    /// retraction is not true or false, it either takes effect or it does
-    /// not. This is exactly the set carrying the authority rule --
-    /// authoritative only from a key that signed the target -- because
-    /// only the party who made an assertion can withdraw it, supersede it,
-    /// or delegate its continuation.
+    /// A relation does not declare a class the way a prose claim does,
+    /// because its `kind` already fixes what is being asserted; declaring
+    /// it again per object would only create something to disagree with.
+    /// Everything that follows from a class -- above all which judgements
+    /// are admissible -- then applies here through one rule rather than a
+    /// second one written for relations.
+    ///
+    /// The `performative` ones are exactly those carrying a felicity
+    /// condition on who may assert them, which is not a coincidence: only
+    /// the party who made an assertion can withdraw or supersede it, and
+    /// asserting a dispute is what disputes.
     #[must_use]
-    pub fn is_performative(self) -> bool {
-        matches!(self, Self::Supersedes | Self::Retracts | Self::Delegates)
+    pub fn class(self) -> Class {
+        match self {
+            Self::Implements | Self::Translates => Class::Empirical,
+            Self::Depends | Self::Equivalent => Class::Definitional,
+            Self::DerivedFrom => Class::Attributive,
+            Self::Supersedes
+            | Self::Retracts
+            | Self::Delegates
+            | Self::Disputes
+            | Self::Supports => Class::Performative,
+        }
     }
 }
 
@@ -580,6 +598,37 @@ impl Annotation {
     #[must_use]
     pub fn kind(&self) -> &str {
         &self.kind
+    }
+
+    /// The claim class this kind carries (Sections 5.2 and 7.1).
+    ///
+    /// As with a relation, the kind fixes what is asserted, so the class
+    /// follows from it rather than being declared. It is what decides
+    /// whether the annotation may itself be judged: a reproduction reports
+    /// something observable and so can be contradicted, while a verdict
+    /// performs a judgement and cannot be affirmed or denied in turn.
+    ///
+    /// An unrecognized kind has no class. Section 15 admits extension
+    /// kinds, and refusing to guess at one is better than assuming it is
+    /// judgeable.
+    #[must_use]
+    pub fn class(&self) -> Option<Class> {
+        Some(match self.kind.as_str() {
+            "proof-checked" | "reproduction" | "well-formed" | "attests" | "witnessed" => {
+                Class::Empirical
+            }
+            "assessment"
+            | "verdict"
+            | "critique"
+            | "triage"
+            | "resolution"
+            | "trusts"
+            | "assumes-accountability" => Class::Performative,
+            "classifies" => Class::Definitional,
+            "usage" | "affiliated" | "timestamped" => Class::Attributive,
+            "personhood" => Class::Formal,
+            _ => return None,
+        })
     }
 
     /// What the annotation is about.

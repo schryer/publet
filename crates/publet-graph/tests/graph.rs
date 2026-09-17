@@ -519,3 +519,48 @@ fn a_judgement_arriving_before_its_target_is_still_caught() {
     }
     assert!(graph.validate().is_err());
 }
+
+/// Section 5.2 now governs every grammar through one rule. A verdict on an
+/// annotation that performs a judgement is the same category error as a
+/// verdict on a `normative` claim, and is refused by the same check.
+#[test]
+fn a_verdict_on_a_judgement_is_refused() {
+    let kc = author("K_c");
+    let (p1, p1b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    let (v1, v1b) = verdict(&kc, &p1, None);
+    // A verdict targeting that verdict: `verdict` is a performative kind.
+    let (v2, v2b) = verdict(&kc, &v1, None);
+
+    let mut graph = Graph::new();
+    for (cid, bytes) in [(&p1, &p1b), (&v1, &v1b)] {
+        let object = Object::parse(bytes).unwrap().verify(cid).unwrap();
+        graph.insert(cid, object).unwrap();
+    }
+    let object = Object::parse(&v2b).unwrap().verify(&v2).unwrap();
+    assert!(graph.insert(&v2, object).is_err());
+}
+
+/// The converse: an annotation that reports something observable can be
+/// contradicted, because `reproduction` is an `empirical` kind.
+#[test]
+fn a_verdict_on_a_reported_observation_is_permitted() {
+    let kc = author("K_c");
+    let (p1, p1b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    let (r, rb) = build(
+        "claim.annotation",
+        &kc,
+        "2026-09-12T11:00:00Z",
+        &[
+            ("kind", Value::Text("reproduction".into())),
+            ("target", Value::Text(p1.to_string())),
+        ],
+    );
+    let (v, vb) = verdict(&kc, &r, None);
+
+    let mut graph = Graph::new();
+    for (cid, bytes) in [(&p1, &p1b), (&r, &rb), (&v, &vb)] {
+        let object = Object::parse(bytes).unwrap().verify(cid).unwrap();
+        graph.insert(cid, object).unwrap();
+    }
+    graph.validate().unwrap();
+}

@@ -18,7 +18,6 @@
 //! loader accepts, so there is one implementation of the rule.
 
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_graph::load;
 
 use crate::workspace::Workspace;
 
@@ -70,6 +69,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut kind = None;
     let mut target = None;
     let mut created = "2026-09-12T00:00:00Z".to_owned();
+    let mut scope: Option<String> = None;
     let mut flags: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
     let mut subjects: Vec<String> = Vec::new();
 
@@ -80,6 +80,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             target = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--created=") {
             v.clone_into(&mut created);
+        } else if let Some(v) = arg.strip_prefix("--scope=") {
+            scope = Some(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--subject=") {
             subjects.push(v.to_owned());
         } else if let Some(rest) = arg.strip_prefix("--")
@@ -224,9 +226,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
             // A judgement with no stated basis is a preference. The reader
             // cannot weigh a preference, so it is required rather than
             // stored and ignored.
-            let basis = need("basis", "what this judgement rests on")?;
+            let grounds = need("grounds", "what this judgement rests on")?;
             value.insert("verdict".to_owned(), Value::Text(verdict));
-            value.insert("basis".to_owned(), Value::Text(basis));
+            value.insert("grounds".to_owned(), Value::Text(grounds));
         }
         "attests" => {
             let claim = need("claim", &format!("one of {}", CLAIMS.join(", ")))?;
@@ -280,6 +282,13 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
+    // R4 again: a reproduction consistent under stated conditions and an
+    // assessment sound only within a named domain are both ordinary.
+    let scope = scope.ok_or(
+        "--scope is required. State the conditions you assert this annotation \
+         under, or \"unconditional\" if it holds without any (Section 5.3)",
+    )?;
+
     let author = ws
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
@@ -288,28 +297,13 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .created(&created)
         .field("kind", Value::Text(kind_id.clone()))
         .field("target", Value::Text(target.clone()))
+        .field("scope", crate::compose::scope_value(&scope))
         .field("value", Value::Map(value))
         .build()
         .map_err(|e| e.to_string())?;
     let cid = Cid::of(&bytes, HashAlg::Sha2_256);
 
-    // Offer it to the loader before storing. The class rules of Section 5.2
-    // -- no verdict on a definitional, normative, or expressive claim --
-    // are enforced there, and enforcing them again here is how the two
-    // would come to disagree.
-    let mut objects = vec![(cid.clone(), bytes.clone())];
-    for cid_text in store.cids().map_err(|e| e.to_string())? {
-        let Ok(held) = cid_text.parse::<Cid>() else {
-            continue;
-        };
-        if let Ok(Some(held_bytes)) = store.get(&held) {
-            objects.push((held, held_bytes));
-        }
-    }
-    load::from_objects(objects)
-        .map_err(|e| format!("this annotation was refused, so it was not stored: {e}"))?;
-
-    store.put(&cid, &bytes).map_err(|e| e.to_string())?;
+    crate::compose::offer_then_store(&store, &cid, &bytes, "this annotation was refused")?;
     println!("{cid}");
 
     if kind_id == "usage" {
