@@ -1044,6 +1044,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-migrate"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+]
+
+[[package]]
 name = "pub-person"
 version = "0.0.1"
 dependencies = [

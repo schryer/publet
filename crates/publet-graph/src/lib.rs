@@ -24,6 +24,6 @@ pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
 pub use graph::{Graph, Lineage, LineageView};
 pub use lint::{Finding, check, check_in};
-pub use view::{Annotation, Class, Key, Principal, Publet, Relation, RelationKind};
+pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
 
 pub mod load;

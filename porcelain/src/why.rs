@@ -57,7 +57,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let graph = load::from_objects(objects).map_err(|e| e.to_string())?;
 
     let class = class_of(&graph, &target)
-        .ok_or_else(|| format!("{target} is not a publet in your replica"))?;
+        .ok_or_else(|| format!("{target} is not a claim in your replica"))?;
     let evidence = evidence_for(&graph, &target);
     // Trust confined to subjects applies only to something in one of them
     // (Section 18.5), so the target's own memberships are the context the
@@ -121,7 +121,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 /// Separated from the weight block on purpose. An assessment is not input
 /// to the outcome: `sound-in-scope` is a remark about where a claim holds,
 /// and presenting it next to a computed weight would invite reading it as
-/// one. That is also why it is sayable about a definitional publet, which
+/// one. That is also why it is sayable about a definitional claim, which
 /// accepts no verdict at all.
 fn print_assessments(assessments: &[publet_eval::Assessment]) {
     if assessments.is_empty() {
@@ -148,7 +148,7 @@ fn print_assessments(assessments: &[publet_eval::Assessment]) {
 
 /// Show the citations supporting a definition.
 ///
-/// Section 5.2 permits no verdict on a definitional publet and settles it
+/// Section 5.2 permits no verdict on a definitional claim and settles it
 /// by usage instead, so the weight block above is all zeroes for one by
 /// construction. Without this the reader sees nothing at all about why a
 /// definition stands.
@@ -193,7 +193,7 @@ fn citation_locators(graph: &publet_graph::Graph, target: &Cid, source: &str) ->
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();

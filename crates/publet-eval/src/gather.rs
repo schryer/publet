@@ -32,7 +32,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();
@@ -60,7 +60,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
     tally(graph, &filed_reproductions, &mut evidence.reproductions);
     evidence.assessments.sort();
 
-    // A dispute counts only when it names a publet stating grounds, which
+    // A dispute counts only when it names a claim stating grounds, which
     // separates an argument from an objection (Section 6.4), and only when
     // it is not redundant under R10.
     let settled = settled_grounds(graph, target);
@@ -68,7 +68,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         let Ok(cid) = from.parse::<Cid>() else {
             continue;
         };
-        if graph.publet(&cid).is_none() {
+        if graph.prose_claim(&cid).is_none() {
             continue;
         }
         // R10: a dispute contributing no grounds beyond those already
@@ -158,7 +158,7 @@ fn absorb(
                 });
             }
         }
-        // Section 5.2: a definitional publet is settled by usage
+        // Section 5.2: a definitional claim is settled by usage
         // evidence and accepts no verdict. A citation names where a
         // term is used, and deliberately need not reproduce the text:
         // recording a location is what keeps a corpus of definitions
@@ -201,7 +201,7 @@ fn settled_grounds(graph: &Graph, target: &Cid) -> BTreeSet<String> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();
@@ -228,10 +228,12 @@ fn settled_grounds(graph: &Graph, target: &Cid) -> BTreeSet<String> {
     out
 }
 
-/// The claim class of a target, if it is a publet.
+/// The claim class of a target, if it is a claim.
 #[must_use]
 pub fn class_of(graph: &Graph, target: &Cid) -> Option<Class> {
-    graph.publet(target).map(publet_graph::Publet::class)
+    graph
+        .prose_claim(target)
+        .map(publet_graph::ProseClaim::class)
 }
 
 fn reproducibility_of(graph: &Graph, target: &Cid) -> Reproducibility {
@@ -431,7 +433,7 @@ fn same_person_links(graph: &Graph) -> BTreeSet<(String, String)> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();
@@ -472,7 +474,7 @@ fn affiliations_of(graph: &Graph, key: &Cid) -> Vec<Affiliation> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();
@@ -540,7 +542,7 @@ pub fn trust_edges(graph: &Graph) -> Vec<crate::TrustEdge> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();

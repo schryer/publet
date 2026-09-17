@@ -2,7 +2,7 @@
 //!
 //! A document contains no assertions of its own. Its glosses are
 //! presentational connective tissue, and an author who finds themselves
-//! arguing in one is required by the design to publish a publet instead --
+//! arguing in one is required by the design to publish a claim instead --
 //! which drags implicit argument into the open where it can be cited and
 //! contested.
 
@@ -41,9 +41,9 @@ impl Bind {
     }
 }
 
-/// What a document does with the publet it cites.
+/// What a document does with the claim it cites.
 ///
-/// The role is what makes a document's *use* explicit: including a publet
+/// The role is what makes a document's *use* explicit: including a claim
 /// as a counterpoint is not endorsing it, and a composition-aware
 /// evaluation can tell the difference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,7 +88,7 @@ impl Role {
     }
 }
 
-/// One cited publet within a document.
+/// One cited claim within a document.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
     /// What is cited: an object, or a lineage genesis.

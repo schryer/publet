@@ -18,8 +18,8 @@ fn key(seed: &str) -> String {
     Cid::of(seed.as_bytes(), HashAlg::Sha2_256).to_string()
 }
 
-fn publet(n: u32) -> (Cid, Vec<u8>) {
-    let bytes = Object::builder("publet", &key("author"))
+fn claim(n: u32) -> (Cid, Vec<u8>) {
+    let bytes = Object::builder("claim.prose", &key("author"))
         .created("2026-09-12T10:00:00Z")
         .field("class", Value::Text("empirical".into()))
         .field("lang", Value::Text("en".into()))
@@ -62,7 +62,7 @@ fn publisher(store: &Store) -> (Cid, Vec<String>) {
     let mut records = Vec::new();
 
     for index in 1..=20u64 {
-        let (cid, bytes) = publet(u32::try_from(index).unwrap());
+        let (cid, bytes) = claim(u32::try_from(index).unwrap());
         store.put(&cid, &bytes).unwrap();
         members.push(cid.to_string());
         let root = Membership::new(members.iter().cloned()).root();
@@ -114,7 +114,7 @@ async fn two_nodes_reach_identical_membership_roots() {
         let cid = Cid::of(&bytes, HashAlg::Sha2_256);
         replica.put(&cid, &bytes).unwrap();
         // Generation records are not themselves members.
-        if Object::parse(&bytes).is_ok_and(|o| o.peek().kind() == "publet") {
+        if Object::parse(&bytes).is_ok_and(|o| o.peek().kind() == "claim.prose") {
             replica_members.push(cid.to_string());
         }
     }
@@ -131,7 +131,7 @@ async fn two_nodes_reach_identical_membership_roots() {
 async fn a_peer_returning_the_wrong_object_is_rejected() {
     let dir = tempfile::tempdir().unwrap();
     let store = Arc::new(Store::open(&dir.path().join("s.redb")).unwrap());
-    let (_, honest) = publet(1);
+    let (_, honest) = claim(1);
     let honest_cid = Cid::of(&honest, HashAlg::Sha2_256);
     store.put(&honest_cid, &honest).unwrap();
 
@@ -140,7 +140,7 @@ async fn a_peer_returning_the_wrong_object_is_rejected() {
 
     // Asking for an object the peer does not hold yields a status, not
     // some other object.
-    let (absent, _) = publet(999);
+    let (absent, _) = claim(999);
     let err = client.object(&absent).await.unwrap_err();
     assert!(
         matches!(err, ClientError::Status { status: 404, .. }),
@@ -159,7 +159,7 @@ async fn the_client_verifies_bytes_against_the_identifier_requested() {
     // identifier and then asking for a different one.
     let dir = tempfile::tempdir().unwrap();
     let store = Arc::new(Store::open(&dir.path().join("s.redb")).unwrap());
-    let (cid, bytes) = publet(1);
+    let (cid, bytes) = claim(1);
     store.put(&cid, &bytes).unwrap();
 
     let base = serve(Arc::clone(&store)).await;
@@ -267,7 +267,7 @@ async fn offering_an_object_twice_is_reported_as_already_held() {
     let base = serve(Arc::clone(&store)).await;
     let client = Client::new(&base).unwrap();
 
-    let (_, bytes) = publet(7);
+    let (_, bytes) = claim(7);
     assert!(
         client.offer(&bytes).await.unwrap(),
         "first offer is accepted"
@@ -280,14 +280,14 @@ async fn offering_an_object_twice_is_reported_as_already_held() {
 
 #[test]
 fn packs_round_trip() {
-    let objects: Vec<Vec<u8>> = (1..=5).map(|n| publet(n).1).collect();
+    let objects: Vec<Vec<u8>> = (1..=5).map(|n| claim(n).1).collect();
     let packed = publet_net::wire::pack(&objects);
     assert_eq!(publet_net::wire::unpack(&packed).unwrap(), objects);
 }
 
 #[test]
 fn a_truncated_pack_is_refused() {
-    let objects: Vec<Vec<u8>> = (1..=3).map(|n| publet(n).1).collect();
+    let objects: Vec<Vec<u8>> = (1..=3).map(|n| claim(n).1).collect();
     let mut packed = publet_net::wire::pack(&objects);
     packed.truncate(packed.len() - 10);
     assert!(publet_net::wire::unpack(&packed).is_err());

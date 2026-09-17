@@ -37,7 +37,7 @@ fn usage() -> ExitCode {
     eprintln!("  sync                 fetch a domain from a peer by delta");
     eprintln!("  read CID             show an assertion and the scope it was made under");
     eprintln!("  why CID              show its standing and every component of it");
-    eprintln!("  compose              build a publet and add it to the workspace");
+    eprintln!("  compose              build a claim and add it to the workspace");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, or sign a stored object");

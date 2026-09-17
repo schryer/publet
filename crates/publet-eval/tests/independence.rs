@@ -62,7 +62,7 @@ fn funded_reproduction(
         ));
     }
     object(
-        "ann",
+        "claim.annotation",
         &author.to_string(),
         at,
         &[
@@ -95,7 +95,7 @@ fn affiliation(
         ));
     }
     object(
-        "ann",
+        "claim.annotation",
         &author.to_string(),
         at,
         &[
@@ -113,7 +113,7 @@ fn graph_with(affiliations: Vec<(Cid, Vec<u8>)>) -> (Graph, Cid) {
     let (second, second_key) = human_key("K_b");
 
     let (claim, claim_bytes) = object(
-        "publet",
+        "claim.prose",
         &first.to_string(),
         "2026-02-01T00:00:00Z",
         &[
@@ -124,7 +124,7 @@ fn graph_with(affiliations: Vec<(Cid, Vec<u8>)>) -> (Graph, Cid) {
             (
                 "evidence",
                 Value::Array(vec![map(&[
-                    ("kind", Value::Text("publet".into())),
+                    ("kind", Value::Text("claim".into())),
                     ("role", Value::Text("method".into())),
                     (
                         "ref",
@@ -182,7 +182,7 @@ fn two_reproducers_at_one_organization_are_one() {
 
 fn attests_same_person(author: &Cid, at: &str, subject: &Cid, about: &Cid) -> (Cid, Vec<u8>) {
     object(
-        "ann",
+        "claim.annotation",
         &author.to_string(),
         at,
         &[
@@ -222,7 +222,7 @@ fn an_unrelated_attestation_does_not_merge_keys() {
     // *distinct* must not.
     let (one, two) = keys();
     let (graph, claim) = graph_with(vec![object(
-        "ann",
+        "claim.annotation",
         &one.to_string(),
         "2026-01-05T00:00:00Z",
         &[
@@ -253,7 +253,7 @@ fn one_funder_is_one_party() {
     let (one_key, one_bytes) = human_key("K_a");
     let (two_key, two_bytes) = human_key("K_b");
     let (claim, claim_bytes) = object(
-        "publet",
+        "claim.prose",
         &one_key.to_string(),
         "2026-02-01T00:00:00Z",
         &[
@@ -264,7 +264,7 @@ fn one_funder_is_one_party() {
             (
                 "evidence",
                 Value::Array(vec![map(&[
-                    ("kind", Value::Text("publet".into())),
+                    ("kind", Value::Text("claim".into())),
                     ("role", Value::Text("method".into())),
                     (
                         "ref",

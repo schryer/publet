@@ -1,13 +1,13 @@
-//! Structural authoring tests for a publet's content (Section 5.7).
+//! Structural authoring tests for a claim's content (Section 5.7).
 //!
-//! These are warnings, never validity rules. A publet that fails them is
+//! These are warnings, never validity rules. A claim that fails them is
 //! flagged rather than rejected, which puts the pressure on the author at
 //! authoring time when the fix is cheap, and leaves the decision about what
-//! to do with a flagged publet to a viewpoint.
+//! to do with a flagged claim to a viewpoint.
 //!
 //! They catch compound assertions. They say nothing about which of two
 //! granularities is right: "the rate was 11.9%" and "the rate fell from
-//! 18.4% to 11.9%" are both valid publets and are not the same publet
+//! 18.4% to 11.9%" are both valid claims and are not the same claim
 //! (Appendix B.6). The second draws a finding because it carries two
 //! quantities, which is a question put to its author, not a verdict.
 //!
@@ -17,13 +17,13 @@
 //!
 //! # What this crate deliberately does not do
 //!
-//! It never compares two publets to each other. Section 5.7 forbids
+//! It never compares two claims to each other. Section 5.7 forbids
 //! deduplication by content similarity: whether two phrasings assert the
 //! same thing is a claim, and claims are made by signing them (R6, R14).
-//! Every function here takes exactly one publet's content, which is what
+//! Every function here takes exactly one claim's content, which is what
 //! makes the prohibition structural rather than a promise.
 
-/// A structural finding about a publet's content.
+/// A structural finding about a claim's content.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
     /// A stable identifier for the test that fired.
@@ -32,8 +32,8 @@ pub struct Finding {
     pub detail: String,
 }
 
-/// A term the caller considers contested, and whether this publet declares
-/// a dependency on the publet that defines it.
+/// A term the caller considers contested, and whether this claim declares
+/// a dependency on the claim that defines it.
 ///
 /// Contestedness is a graph question -- a term is contested when something
 /// disputes its definition -- so the caller answers it. This crate only
@@ -43,7 +43,7 @@ pub struct Finding {
 pub struct Term<'a> {
     /// The term as it would appear in prose, lowercase.
     pub word: &'a str,
-    /// Whether the publet's `depends` names the defining publet.
+    /// Whether the claim's `depends` names the defining claim.
     pub declared: bool,
 }
 
@@ -69,10 +69,10 @@ fn joins_two_clauses(lowered: &str, coordinator: &str) -> bool {
     })
 }
 
-/// Openers whose referent cannot be inside a publet that starts with them.
+/// Openers whose referent cannot be inside a claim that starts with them.
 ///
-/// A publet is quoted on its own, so an opening "it" or "this" resolves to
-/// whatever preceded the publet in the work it was cut from -- which is
+/// A claim is quoted on its own, so an opening "it" or "this" resolves to
+/// whatever preceded the claim in the work it was cut from -- which is
 /// exactly the context that does not travel with it.
 const OPENERS: [&str; 8] = [
     "it ", "this ", "that ", "these ", "those ", "they ", "he ", "she ",
@@ -84,7 +84,7 @@ const BACKREFERENCES: [&str; 4] = ["the former", "the latter", "the above", "as 
 /// The content ceiling, in bytes (Section 4.5).
 const CONTENT_CEILING: usize = 4096;
 
-/// Run the structural tests over one publet's content.
+/// Run the structural tests over one claim's content.
 ///
 /// Pass an empty slice for `terms` to run the text-only tests.
 ///
@@ -171,7 +171,7 @@ fn atomicity(content: &str, lowered: &str) -> Vec<Finding> {
     if sentences > 1 {
         findings.push(Finding {
             test: "single-assertion",
-            detail: format!("{sentences} sentences; a publet asserts one thing"),
+            detail: format!("{sentences} sentences; a claim asserts one thing"),
         });
     }
 
@@ -179,14 +179,14 @@ fn atomicity(content: &str, lowered: &str) -> Vec<Finding> {
     if quantities > 1 {
         findings.push(Finding {
             test: "single-quantity",
-            detail: format!("{quantities} quantitative claims; consider separate publets"),
+            detail: format!("{quantities} quantitative claims; consider separate claims"),
         });
     }
 
     findings
 }
 
-/// Anaphora whose antecedent is necessarily outside the publet.
+/// Anaphora whose antecedent is necessarily outside the claim.
 fn anaphora(lowered: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
     let start = lowered.trim_start();
@@ -195,7 +195,7 @@ fn anaphora(lowered: &str) -> Vec<Finding> {
             findings.push(Finding {
                 test: "dangling-anaphora",
                 detail: format!(
-                    "opens with {:?}, whose referent is outside the publet",
+                    "opens with {:?}, whose referent is outside the claim",
                     opener.trim()
                 ),
             });
@@ -206,7 +206,7 @@ fn anaphora(lowered: &str) -> Vec<Finding> {
         if lowered.contains(phrase) {
             findings.push(Finding {
                 test: "dangling-anaphora",
-                detail: format!("{phrase:?} points outside the publet"),
+                detail: format!("{phrase:?} points outside the claim"),
             });
             break;
         }
@@ -228,7 +228,7 @@ fn mentions(lowered: &str, word: &str) -> bool {
 
 /// Count sentences, treating a decimal point as part of its number.
 ///
-/// A publet is far more likely to carry a decimal than a second sentence,
+/// A claim is far more likely to carry a decimal than a second sentence,
 /// so splitting on every `.` reports "the rate fell to 11.9%" as two
 /// assertions and trains the author to ignore the linter.
 fn count_sentences(content: &str) -> usize {
@@ -265,7 +265,7 @@ fn count_sentences(content: &str) -> usize {
 /// reading each run of digits in it as a separate measurement reported
 /// `014f9e6a936bf4bf` as five quantitative claims. A corpus about this
 /// protocol is mostly content addresses, so that warning would have fired
-/// on nearly every publet and been trained away within a day -- which is
+/// on nearly every claim and been trained away within a day -- which is
 /// how an advisory tool stops protecting anything.
 fn count_quantities(content: &str) -> usize {
     content

@@ -4,7 +4,7 @@
 //! it (R3, R6). Four kinds are covered here because four were blocking:
 //!
 //! * `usage` -- corpus evidence. Section 5.2 permits no verdict on a
-//!   `definitional` publet and settles it by usage instead, so without this
+//!   `definitional` claim and settles it by usage instead, so without this
 //!   a definition had no evidence channel whatsoever.
 //! * `classifies` -- subject membership, which Section 9.1 makes an
 //!   annotation rather than a property of the object.
@@ -13,7 +13,7 @@
 //!
 //! `verdict` is here too, because a command that writes annotations and
 //! cannot write the commonest one would be strange. The class rule that
-//! rejects a verdict on a non-truth-apt publet is not reimplemented: as in
+//! rejects a verdict on a non-truth-apt claim is not reimplemented: as in
 //! `pub relate`, the object is offered to the loader and stored only if the
 //! loader accepts, so there is one implementation of the rule.
 
@@ -160,7 +160,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
                 .first()
                 .cloned()
                 .or_else(|| flags.get("subject").cloned())
-                .ok_or("--subject is required for `classifies`: the CID of the subject publet")?;
+                .ok_or("--subject is required for `classifies`: the CID of the subject claim")?;
             subject
                 .parse::<Cid>()
                 .map_err(|_| format!("--subject is not a CID: {subject}"))?;
@@ -284,7 +284,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
 
-    let bytes = Object::builder("ann", &author)
+    let bytes = Object::builder("claim.annotation", &author)
         .created(&created)
         .field("kind", Value::Text(kind_id.clone()))
         .field("target", Value::Text(target.clone()))
@@ -294,7 +294,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let cid = Cid::of(&bytes, HashAlg::Sha2_256);
 
     // Offer it to the loader before storing. The class rules of Section 5.2
-    // -- no verdict on a definitional, normative, or expressive publet --
+    // -- no verdict on a definitional, normative, or expressive claim --
     // are enforced there, and enforcing them again here is how the two
     // would come to disagree.
     let mut objects = vec![(cid.clone(), bytes.clone())];

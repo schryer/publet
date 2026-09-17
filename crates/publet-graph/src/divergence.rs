@@ -8,7 +8,7 @@
 //! separately rather than as one "the parties disagree about a word":
 //!
 //! - **Divergence** — the definitions have no common genesis. The parties
-//!   mean different things. The response is two scoped publets, one under
+//!   mean different things. The response is two scoped claims, one under
 //!   each definition.
 //! - **Staleness** — the definitions are different generations of one
 //!   lineage. The parties mean the same thing, one of them as it was
@@ -23,18 +23,18 @@ use crate::GraphError;
 use crate::graph::{Graph, Lineage};
 use crate::view::Class;
 
-/// One term two publets presuppose differently.
+/// One term two claims presuppose differently.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TermConflict {
     /// The term both definitions define.
     pub term: String,
-    /// The definitional publet the first party depends on.
+    /// The definitional claim the first party depends on.
     pub left: Cid,
-    /// The definitional publet the second party depends on.
+    /// The definitional claim the second party depends on.
     pub right: Cid,
 }
 
-/// The result of comparing two publets' definitional premises.
+/// The result of comparing two claims' definitional premises.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Divergence {
     /// Terms whose definitions have no common genesis.
@@ -51,7 +51,7 @@ impl Divergence {
     }
 }
 
-/// Compare the definitional premises of two publets.
+/// Compare the definitional premises of two claims.
 ///
 /// `trusted` decides whose `equivalent` relations count, since a trusted
 /// equivalence between two definitions means the parties do not in fact
@@ -105,21 +105,21 @@ pub fn compare(
     Ok(out)
 }
 
-/// Terms defined by the definitional publets in a publet's closure.
-/// How a set of publets divides on one term.
+/// Terms defined by the definitional claims in a claim's closure.
+/// How a set of claims divides on one term.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TermPartition {
     /// The term they divide on.
     pub term: String,
-    /// One entry per definition in play: the definition, and the publets
+    /// One entry per definition in play: the definition, and the claims
     /// presupposing it. Ordered largest group first, so the minority
     /// readings -- the ones worth looking at -- sort to the end.
     pub groups: Vec<(Cid, Vec<Cid>)>,
 }
 
-/// Partition publets by which definition of each shared term they use.
+/// Partition claims by which definition of each shared term they use.
 ///
-/// `compare` answers whether two publets differ. That is not the question a
+/// `compare` answers whether two claims differ. That is not the question a
 /// corpus drawn from several sources asks: with four sources and one term,
 /// what is wanted is how all four divide and which one stands alone.
 /// Pairwise comparison answers it in six runs and no aggregate.
@@ -130,10 +130,10 @@ pub struct TermPartition {
 /// # Errors
 ///
 /// Returns [`GraphError`] if a dependency closure cannot be resolved.
-pub fn partition(graph: &Graph, publets: &[Cid]) -> Result<Vec<TermPartition>, GraphError> {
-    // term -> definition -> the publets presupposing that definition
+pub fn partition(graph: &Graph, prose_claims: &[Cid]) -> Result<Vec<TermPartition>, GraphError> {
+    // term -> definition -> the claims presupposing that definition
     let mut seen: BTreeMap<String, BTreeMap<String, Vec<Cid>>> = BTreeMap::new();
-    for cid in publets {
+    for cid in prose_claims {
         for (term, definition) in definitional_terms(graph, cid)? {
             seen.entry(term)
                 .or_default()
@@ -169,16 +169,16 @@ pub fn partition(graph: &Graph, publets: &[Cid]) -> Result<Vec<TermPartition>, G
 fn definitional_terms(graph: &Graph, cid: &Cid) -> Result<BTreeMap<String, Cid>, GraphError> {
     let mut out = BTreeMap::new();
     for dep in graph.depends_closure(cid)? {
-        let Some(publet) = graph.publet(&dep) else {
+        let Some(claim) = graph.prose_claim(&dep) else {
             continue;
         };
-        if publet.class() != Class::Definitional {
+        if claim.class() != Class::Definitional {
             continue;
         }
         let Some(object) = graph.object(&dep) else {
             continue;
         };
-        if let Some(term) = publet.term(object) {
+        if let Some(term) = claim.term(object) {
             out.insert(term, dep);
         }
     }

@@ -29,7 +29,7 @@ pub enum Reproducibility {
 }
 
 impl Reproducibility {
-    /// Resolve the identifier used in a publet body.
+    /// Resolve the identifier used in a claim body.
     #[must_use]
     pub fn from_id(id: &str) -> Option<Self> {
         Some(match id {
@@ -41,7 +41,7 @@ impl Reproducibility {
         })
     }
 
-    /// The identifier used in a publet body.
+    /// The identifier used in a claim body.
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
@@ -127,11 +127,11 @@ pub struct Evidence {
     /// and an author's assessment of their own work is one annotation among
     /// many rather than a privileged field (R3). Nothing here reaches the
     /// outcome -- which is what makes `sound-in-scope` sayable about a
-    /// definitional publet, where no verdict may be cast at all.
+    /// definitional claim, where no verdict may be cast at all.
     pub assessments: Vec<Assessment>,
     /// Distinct corpora cited as evidence of usage (Section 5.2).
     ///
-    /// The evidence a `definitional` publet is settled by. Verdicts are not
+    /// The evidence a `definitional` claim is settled by. Verdicts are not
     /// permitted on that class, so without this a definition has no
     /// evidence channel at all -- which is what it had until this existed.
     /// Held as the set of sources rather than a count, because two

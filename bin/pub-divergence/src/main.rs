@@ -1,8 +1,8 @@
-//! Report how publets presuppose a term differently (Section 9.2).
+//! Report how claims presuppose a term differently (Section 9.2).
 //!
 //! Two identifiers give the pairwise answer: a term, two definitions, and
 //! which of the two outcomes it is. The distinction matters because the
-//! remedies differ -- divergence calls for two scoped publets, staleness
+//! remedies differ -- divergence calls for two scoped claims, staleness
 //! for superseding against the head.
 //!
 //! Three or more give the partition instead. A corpus drawn from several
@@ -23,7 +23,7 @@ const EXIT_VIOLATION: u8 = 1;
 const EXIT_USAGE: u8 = 2;
 const EXIT_NOT_FOUND: u8 = 3;
 
-/// Terms come from publet content and may carry quotes.
+/// Terms come from claim content and may carry quotes.
 fn escape(term: &str) -> String {
     term.replace('\\', "\\\\").replace('"', "\\\"")
 }
@@ -114,7 +114,7 @@ fn main() -> ExitCode {
             .map(|(definition, members)| {
                 let held: Vec<String> = members.iter().map(|m| format!(r#""{m}""#)).collect();
                 format!(
-                    r#"{{"definition":"{definition}","publets":[{}]}}"#,
+                    r#"{{"definition":"{definition}","claims":[{}]}}"#,
                     held.join(",")
                 )
             })

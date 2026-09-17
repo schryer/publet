@@ -32,7 +32,7 @@ fn fired(content: &str, atomic: bool) -> Vec<&'static str> {
 fn one_assertion_passes() {
     assert!(tests_that_fired("the cohort rate fell to 11.9%").is_empty());
     // A before-and-after is two quantities, which Section 5.7 asks the
-    // linter to raise. It stays one valid publet either way: the finding is
+    // linter to raise. It stays one valid claim either way: the finding is
     // a question for the author, not a verdict.
     assert_eq!(
         tests_that_fired("the rate fell from 18.4% to 11.9%"),
@@ -112,7 +112,7 @@ fn real_quantities_still_count() {
 
 #[test]
 fn an_opening_pronoun_is_flagged() {
-    // A publet travels alone, so an opening "it" resolves to whatever
+    // A claim travels alone, so an opening "it" resolves to whatever
     // preceded it in the work it was cut from -- the context that does not
     // come with it.
     assert_eq!(
@@ -170,7 +170,7 @@ fn a_contested_term_must_be_declared() {
 fn a_method_is_steps_not_assertions() {
     // Section 5.7 confines the atomicity tests to the classes whose content
     // is the assertion. A procedure joins steps, and Section 5.5 requires
-    // the whole method to be one publet, so flagging it would be telling an
+    // the whole method to be one claim, so flagging it would be telling an
     // author to break a rule the specification imposes elsewhere.
     let method = "to verify an object: recompute its content address from \
                   its bytes and compare it to the identifier it was \
@@ -216,7 +216,7 @@ fn nothing_here_compares_two_publets() {
     // inside a linter that no one can dispute.
     //
     // The prohibition is kept structurally: every entry point takes one
-    // publet's content, so there is no second publet to compare against.
+    // claim's content, so there is no second claim to compare against.
     let source = include_str!("../src/lib.rs");
     for signature in source
         .lines()
@@ -224,7 +224,7 @@ fn nothing_here_compares_two_publets() {
     {
         assert!(
             !signature.contains("&[&str]") && !signature.contains("other"),
-            "a lint entry point must not take a second publet: {signature}"
+            "a lint entry point must not take a second claim: {signature}"
         );
     }
     let banned = [

@@ -136,7 +136,7 @@ fn round_trips_a_realistic_object() {
 
     let mut obj = BTreeMap::new();
     obj.insert("pub".to_owned(), Value::Text("1".into()));
-    obj.insert("type".to_owned(), Value::Text("publet".into()));
+    obj.insert("type".to_owned(), Value::Text("claim.prose".into()));
     obj.insert("body".to_owned(), Value::Map(body));
 
     let value = Value::Map(obj);

@@ -11,7 +11,7 @@ use publet_core::{Cid, Object, Verified, cbor::Value};
 
 use crate::GraphError;
 use crate::document::{Anchor, Document};
-use crate::view::{Annotation, Class, Publet, Relation, RelationKind};
+use crate::view::{Annotation, Class, ProseClaim, Relation, RelationKind};
 
 /// Which `supersedes` edges a lineage query should follow (R15, Section 6.1).
 ///
@@ -56,7 +56,7 @@ impl LineageView {
 #[derive(Debug, Default)]
 pub struct Graph {
     objects: BTreeMap<String, Object>,
-    publets: BTreeMap<String, Publet>,
+    prose_claims: BTreeMap<String, ProseClaim>,
     relations: BTreeMap<String, Relation>,
     annotations: BTreeMap<String, Annotation>,
     documents: BTreeMap<String, Document>,
@@ -92,16 +92,16 @@ impl Graph {
         let object = object.into_inner();
         let key = cid.to_string();
         match object.kind() {
-            "publet" => {
-                let publet = Publet::from_object(cid.clone(), &object)?;
-                self.publets.insert(key.clone(), publet);
+            "claim.prose" => {
+                let claim = ProseClaim::from_object(cid.clone(), &object)?;
+                self.prose_claims.insert(key.clone(), claim);
             }
-            "rel" => {
+            "claim.relation" => {
                 let relation = Relation::from_object(cid.clone(), &object)?;
                 self.index_relation(&relation)?;
                 self.relations.insert(key.clone(), relation);
             }
-            "ann" => {
+            "claim.annotation" => {
                 let annotation = Annotation::from_object(cid.clone(), &object)?;
                 self.check_annotation(&annotation)?;
                 self.annotations.insert(key.clone(), annotation);
@@ -207,7 +207,7 @@ impl Graph {
         if annotation.kind() != "verdict" {
             return Ok(());
         }
-        let Some(target) = self.publets.get(&annotation.target().to_string()) else {
+        let Some(target) = self.prose_claims.get(&annotation.target().to_string()) else {
             // The target may arrive later; the rule is enforced again by
             // `validate` once the graph is complete.
             return Ok(());
@@ -242,7 +242,7 @@ impl Graph {
             if annotation.kind() != "verdict" {
                 continue;
             }
-            if let Some(target) = self.publets.get(&annotation.target().to_string()) {
+            if let Some(target) = self.prose_claims.get(&annotation.target().to_string()) {
                 Self::check_verdict(target.class(), annotation.aspect())?;
             }
         }
@@ -251,7 +251,7 @@ impl Graph {
         }
         for relation in self.relations.values() {
             if relation.kind() == RelationKind::Disputes
-                && !self.publets.contains_key(&relation.from().to_string())
+                && !self.prose_claims.contains_key(&relation.from().to_string())
                 && !self.objects.contains_key(&relation.from().to_string())
             {
                 return Err(GraphError::DisputeWithoutGrounds);
@@ -294,7 +294,7 @@ impl Graph {
     ///
     /// Forking is permitted and cannot be prevented; what the protocol can
     /// do is make an undeclared one conspicuous. Overlap is a signal, not a
-    /// verdict: two documents on one subject will cite the same publets,
+    /// verdict: two documents on one subject will cite the same claims,
     /// which is why the threshold is high and the result is reported rather
     /// than enforced.
     #[must_use]
@@ -371,7 +371,7 @@ impl Graph {
             .collect()
     }
 
-    /// Every term a `definitional` publet in this graph fixes.
+    /// Every term a `definitional` claim in this graph fixes.
     ///
     /// Returns *all* definitions of each term, and deliberately does not
     /// collapse them. Competing definitions for one string are the normal
@@ -387,13 +387,13 @@ impl Graph {
             let Ok(cid) = cid_text.parse::<Cid>() else {
                 continue;
             };
-            let Some(publet) = self.publet(&cid) else {
+            let Some(claim) = self.prose_claim(&cid) else {
                 continue;
             };
             let Some(object) = self.object(&cid) else {
                 continue;
             };
-            if let Some(term) = publet.term(object) {
+            if let Some(term) = claim.term(object) {
                 out.push((term, cid));
             }
         }
@@ -404,7 +404,7 @@ impl Graph {
         out
     }
 
-    /// Usage citations filed against a definitional publet (Section 5.2).
+    /// Usage citations filed against a definitional claim (Section 5.2).
     ///
     /// Each is a source and a locator naming where the sense was found. The
     /// citation is a pointer rather than a quotation, which is what lets a
@@ -419,7 +419,7 @@ impl Graph {
             let Some(object) = self.object(&cid) else {
                 continue;
             };
-            if object.kind() != "ann" {
+            if object.kind() != "claim.annotation" {
                 continue;
             }
             let body = object.body();
@@ -484,7 +484,7 @@ impl Graph {
             let Some(object) = self.object(&cid) else {
                 continue;
             };
-            if object.kind() != "ann" {
+            if object.kind() != "claim.annotation" {
                 continue;
             }
             let body = object.body();
@@ -518,10 +518,10 @@ impl Graph {
             .collect()
     }
 
-    /// Borrow a typed publet.
+    /// Borrow a typed claim.
     #[must_use]
-    pub fn publet(&self, cid: &Cid) -> Option<&Publet> {
-        self.publets.get(&cid.to_string())
+    pub fn prose_claim(&self, cid: &Cid) -> Option<&ProseClaim> {
+        self.prose_claims.get(&cid.to_string())
     }
 
     /// Identifiers reached from `cid` by outbound edges of `kind`.
@@ -640,7 +640,7 @@ impl Graph {
         }
     }
 
-    /// The transitive `depends` closure of a publet (Section 5.4).
+    /// The transitive `depends` closure of a claim (Section 5.4).
     ///
     /// Includes both the in-body `depends` field and any `depends` relation
     /// objects. The result excludes `cid` itself.
@@ -674,8 +674,8 @@ impl Graph {
                 out.push(parsed);
             }
             let mut next: BTreeSet<String> = BTreeSet::new();
-            if let Some(publet) = self.publets.get(&current) {
-                next.extend(publet.depends().iter().map(ToString::to_string));
+            if let Some(claim) = self.prose_claims.get(&current) {
+                next.extend(claim.depends().iter().map(ToString::to_string));
             }
             if let Some(edges) = self
                 .out_edges

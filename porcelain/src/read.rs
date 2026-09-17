@@ -1,7 +1,7 @@
 //! `pub read`: show an assertion and the scope it was made under.
 //!
 //! Section 11.3 requires scope to be rendered wherever a standing is, and
-//! the same reasoning applies to the assertion itself: a publet quoted
+//! the same reasoning applies to the assertion itself: a claim quoted
 //! without its validity conditions is the decontextualization the scope
 //! field exists to prevent.
 
@@ -74,8 +74,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     // relation object asserts a given edge -- had no way to see what it
     // actually said without decoding the CBOR by hand.
     match object.kind() {
-        "rel" => print_relation(body),
-        "ann" => print_annotation(body),
+        "claim.relation" => print_relation(body),
+        "claim.annotation" => print_annotation(body),
         _ => {}
     }
 

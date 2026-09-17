@@ -103,7 +103,7 @@ fn report_staleness(graph: &Graph, target: &Cid) -> bool {
         }
     }
 
-    // 2. A publet in the dependency closure has been superseded, so the
+    // 2. A claim in the dependency closure has been superseded, so the
     //    proposal rests on an earlier generation of a definition.
     if let Ok(closure) = graph.depends_closure(target) {
         for dependency in closure {
@@ -153,7 +153,7 @@ fn resolutions_for(graph: &Graph, target: &Cid) -> Vec<String> {
         let Some(object) = graph.object(&cid) else {
             continue;
         };
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();

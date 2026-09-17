@@ -1,4 +1,4 @@
-//! `pub compose`: build a publet and add it to the workspace.
+//! `pub compose`: build a claim and add it to the workspace.
 //!
 //! Scope is required, not optional. An assertion that states its own
 //! validity conditions does not drift, because nothing was left implicit to
@@ -11,7 +11,7 @@ use publet_graph::{Class, check};
 
 use crate::workspace::Workspace;
 
-/// Compose a publet.
+/// Compose a claim.
 ///
 /// # Errors
 ///
@@ -66,7 +66,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     // author never offered, so the command refuses instead.
     if parsed_class == Class::Empirical && method.is_none() {
         return Err("--method is required for an empirical claim: the CID of a \
-             `procedural` publet describing how the observation may be \
+             `procedural` claim describing how the observation may be \
              repeated. A measurement without one is a report of an \
              experience (Section 5.5)"
             .to_owned());
@@ -80,7 +80,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     scope_map.insert("domain".to_owned(), Value::Text(scope.clone()));
     scope_map.insert("conditions".to_owned(), Value::Array(Vec::new()));
 
-    let bytes = Object::builder("publet", &author)
+    let bytes = Object::builder("claim.prose", &author)
         .created(&created)
         .field("class", Value::Text(class_id.clone()))
         .field("lang", Value::Text(lang))
@@ -105,9 +105,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .verify(&cid)
         .map_err(|e| e.to_string())?;
-    let publet = publet_graph::Publet::from_object(cid.clone(), verified.object())
+    let claim = publet_graph::ProseClaim::from_object(cid.clone(), verified.object())
         .map_err(|e| e.to_string())?;
-    let findings = check(&publet);
+    let findings = check(&claim);
     if !findings.is_empty() {
         eprintln!();
         eprintln!("structural findings (warnings, not errors):");
@@ -131,7 +131,7 @@ fn evidence_for(method: Option<&str>) -> Value {
         return Value::Array(Vec::new());
     };
     let mut entry = std::collections::BTreeMap::new();
-    entry.insert("kind".to_owned(), Value::Text("publet".into()));
+    entry.insert("kind".to_owned(), Value::Text("claim".into()));
     entry.insert("role".to_owned(), Value::Text("method".into()));
     entry.insert("ref".to_owned(), Value::Text(method.to_owned()));
     Value::Array(vec![Value::Map(entry)])

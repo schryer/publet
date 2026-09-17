@@ -30,7 +30,7 @@ fn assumption_object(assumer: &Cid, pseudonym: &Cid) -> (Cid, Vec<u8>) {
         Value::Text("work-reviewed-by-me".into()),
     );
     build(
-        "ann",
+        "claim.annotation",
         assumer,
         &[
             ("kind", Value::Text("assumes-accountability".into())),
@@ -118,7 +118,7 @@ fn a_triage_annotation_without_its_engine_is_not_read() {
     let mut bare = std::collections::BTreeMap::new();
     bare.insert("finding".to_owned(), Value::Text("redundant-with".into()));
     let (id, bytes) = build(
-        "ann",
+        "claim.annotation",
         &author,
         &[
             ("kind", Value::Text("triage".into())),
@@ -137,7 +137,7 @@ fn a_triage_annotation_without_its_engine_is_not_read() {
     value.insert("finding".to_owned(), Value::Text("redundant-with".into()));
     value.insert("engine".to_owned(), Value::Map(engine));
     let (id, bytes) = build(
-        "ann",
+        "claim.annotation",
         &author,
         &[
             ("kind", Value::Text("triage".into())),

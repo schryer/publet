@@ -199,7 +199,7 @@ fn untimestamped(store: &Store) -> Result<Vec<String>, publet_store::StoreError>
             continue;
         };
         let object = parsed.peek();
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             continue;
         }
         let body = object.body();

@@ -15,14 +15,14 @@
 //! const AUTHOR: &str =
 //!     "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra";
 //!
-//! let bytes = Object::builder("publet", AUTHOR)
+//! let bytes = Object::builder("claim.prose", AUTHOR)
 //!     .created("2026-09-12T10:00:00Z")
 //!     .build()?;
 //! let cid = Cid::of(&bytes, HashAlg::Sha2_256);
 //!
 //! let parsed = Object::parse(&bytes)?;
 //! let verified = parsed.verify(&cid)?;
-//! assert_eq!(verified.object().kind(), "publet");
+//! assert_eq!(verified.object().kind(), "claim.prose");
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 

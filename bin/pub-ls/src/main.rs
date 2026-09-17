@@ -59,7 +59,7 @@ fn main() -> ExitCode {
 
     if forks {
         // Overlap is a signal, not a verdict: two documents on one subject
-        // will cite the same publets. The threshold is high and the result
+        // will cite the same claims. The threshold is high and the result
         // is reported rather than enforced.
         for (left, right, percent) in graph.undeclared_forks(75) {
             println!(r#"{{"left":"{left}","right":"{right}","shared_percent":{percent}}}"#);
@@ -80,7 +80,7 @@ fn main() -> ExitCode {
             continue;
         }
         if let Some(class) = want_class
-            && graph.publet(&cid).is_none_or(|p| p.class() != class)
+            && graph.prose_claim(&cid).is_none_or(|p| p.class() != class)
         {
             continue;
         }

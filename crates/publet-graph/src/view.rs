@@ -32,7 +32,7 @@ pub enum Class {
 }
 
 impl Class {
-    /// Resolve the identifier used in a publet body.
+    /// Resolve the identifier used in a claim body.
     #[must_use]
     pub fn from_id(id: &str) -> Option<Self> {
         Some(match id {
@@ -48,7 +48,7 @@ impl Class {
         })
     }
 
-    /// The identifier used in a publet body.
+    /// The identifier used in a claim body.
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
@@ -63,7 +63,7 @@ impl Class {
         }
     }
 
-    /// Whether a verdict annotation may target a publet of this class.
+    /// Whether a verdict annotation may target a claim of this class.
     ///
     /// Section 5.2: `definitional`, `normative`, and `expressive` are not
     /// truth-apt, and a verdict on one is a category error rather than a
@@ -96,16 +96,16 @@ impl Class {
     /// Section 5.2: for `attributive` and `archival`, a verdict speaks to
     /// whether the attribution or the custody chain holds, never to whether
     /// the quoted or archived content is true. That claim is made by
-    /// publishing an `empirical` publet asserting it, and contesting that.
+    /// publishing an `empirical` claim asserting it, and contesting that.
     #[must_use]
     pub fn verdict_confined_to_provenance(self) -> bool {
         matches!(self, Self::Attributive | Self::Archival)
     }
 }
 
-/// A publet (Section 5).
+/// A claim (Section 5).
 #[derive(Debug, Clone)]
-pub struct Publet {
+pub struct ProseClaim {
     cid: Cid,
     class: Class,
     lang: String,
@@ -113,17 +113,17 @@ pub struct Publet {
     depends: Vec<Cid>,
 }
 
-impl Publet {
-    /// Read a publet from a verified object.
+impl ProseClaim {
+    /// Read a claim from a verified object.
     ///
     /// # Errors
     ///
-    /// Returns [`GraphError`] if the object is not a publet or if a required
+    /// Returns [`GraphError`] if the object is not a claim or if a required
     /// body field is absent or ill-typed.
     pub fn from_object(cid: Cid, object: &Object) -> Result<Self, GraphError> {
-        if object.kind() != "publet" {
+        if object.kind() != "claim.prose" {
             return Err(GraphError::WrongKind {
-                expected: "publet",
+                expected: "claim.prose",
                 found: object.kind().to_owned(),
             });
         }
@@ -173,7 +173,7 @@ impl Publet {
         })
     }
 
-    /// This publet's identifier.
+    /// This claim's identifier.
     #[must_use]
     pub fn cid(&self) -> &Cid {
         &self.cid
@@ -197,13 +197,13 @@ impl Publet {
         &self.content
     }
 
-    /// Publets whose meaning this one presupposes.
+    /// Claims whose meaning this one presupposes.
     #[must_use]
     pub fn depends(&self) -> &[Cid] {
         &self.depends
     }
 
-    /// The term a `definitional` publet defines.
+    /// The term a `definitional` claim defines.
     ///
     /// Section 9.2 refers to `term(D)` without saying how it is obtained.
     /// This implementation reads `ext["term"]` when present, and otherwise
@@ -360,7 +360,7 @@ pub enum RelationKind {
     /// `from` translates `to`.
     Translates,
     /// `from` implements the interface `to`. Acyclic; `from` and `to`
-    /// need not be signed publet objects (Section 6.2).
+    /// need not be signed claim objects (Section 6.2).
     Implements,
     /// `from` presupposes `to`. Acyclic.
     Depends,
@@ -448,9 +448,9 @@ impl Relation {
     /// Returns [`GraphError`] if the object is not a relation or if a
     /// required body field is absent, ill-typed, or an unknown kind.
     pub fn from_object(cid: Cid, object: &Object) -> Result<Self, GraphError> {
-        if object.kind() != "rel" {
+        if object.kind() != "claim.relation" {
             return Err(GraphError::WrongKind {
-                expected: "rel",
+                expected: "claim.relation",
                 found: object.kind().to_owned(),
             });
         }
@@ -525,9 +525,9 @@ impl Annotation {
     /// Returns [`GraphError`] if the object is not an annotation or if a
     /// required body field is absent or ill-typed.
     pub fn from_object(cid: Cid, object: &Object) -> Result<Self, GraphError> {
-        if object.kind() != "ann" {
+        if object.kind() != "claim.annotation" {
             return Err(GraphError::WrongKind {
-                expected: "ann",
+                expected: "claim.annotation",
                 found: object.kind().to_owned(),
             });
         }

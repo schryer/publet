@@ -72,9 +72,9 @@ pub enum GraphError {
         lineage: String,
     },
 
-    /// An empirical publet named no method.
+    /// An empirical claim named no method.
     #[error(
-        "an `empirical` publet must carry an evidence entry with role `method`; \
+        "an `empirical` claim must carry an evidence entry with role `method`; \
          a measurement without a reproducible method is a report of an experience"
     )]
     EmpiricalWithoutMethod,
@@ -98,7 +98,7 @@ pub enum GraphError {
     },
 
     /// A verdict annotation targeted a class that is not truth-apt.
-    #[error("a verdict may not target a `{class}` publet; it is not truth-apt")]
+    #[error("a verdict may not target a `{class}` claim; it is not truth-apt")]
     VerdictOnNonTruthApt {
         /// The offending class.
         class: &'static str,
@@ -106,8 +106,8 @@ pub enum GraphError {
 
     /// A verdict on a provenance-only class named another aspect.
     #[error(
-        "a verdict on a `{class}` publet must have aspect `provenance`, found {found:?}; \
-         a claim about the content is made by publishing an `empirical` publet"
+        "a verdict on a `{class}` claim must have aspect `provenance`, found {found:?}; \
+         a claim about the content is made by publishing an `empirical` claim"
     )]
     VerdictAspectNotProvenance {
         /// The class whose verdicts are confined to provenance.
@@ -117,7 +117,7 @@ pub enum GraphError {
     },
 
     /// A `disputes` relation did not name grounds.
-    #[error("a `disputes` relation must name a publet stating grounds")]
+    #[error("a `disputes` relation must name a claim stating grounds")]
     DisputeWithoutGrounds,
 
     /// An object referenced an identifier the graph does not hold.

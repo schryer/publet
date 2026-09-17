@@ -1,8 +1,8 @@
-//! Structural authoring tests for a publet (Section 5.7).
+//! Structural authoring tests for a claim (Section 5.7).
 //!
-//! Findings are warnings, not validity rules: a flagged publet is still a
-//! valid publet. Exit 0 when clean, 1 when anything fired, so the command
-//! composes in a pipeline that wants only well-formed publets.
+//! Findings are warnings, not validity rules: a flagged claim is still a
+//! valid claim. Exit 0 when clean, 1 when anything fired, so the command
+//! composes in a pipeline that wants only well-formed claims.
 
 use std::io::{BufRead as _, IsTerminal as _};
 use std::path::PathBuf;
@@ -53,10 +53,10 @@ fn main() -> ExitCode {
             eprintln!("not a CID: {target}");
             return ExitCode::from(EXIT_USAGE);
         };
-        let Some(publet) = graph.publet(&cid) else {
+        let Some(claim) = graph.prose_claim(&cid) else {
             continue;
         };
-        for finding in check_in(&graph, publet) {
+        for finding in check_in(&graph, claim) {
             any = true;
             println!(
                 r#"{{"cid":"{cid}","test":"{}","detail":"{}"}}"#,

@@ -1,4 +1,4 @@
-//! Emit a publet's transitive `depends` closure (Section 5.4).
+//! Emit a claim's transitive `depends` closure (Section 5.4).
 //!
 //! Exits 1 if the closure contains a cycle, which the specification
 //! forbids: an assertion whose terms presuppose each other is not

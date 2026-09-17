@@ -279,7 +279,7 @@ mod tests {
                 panic!("pubkey is not bytes");
             };
 
-            let target_bytes = Object::builder("publet", &author)
+            let target_bytes = Object::builder("claim.prose", &author)
                 .created("2026-09-16T00:00:00Z")
                 .field("content", Value::Text("a test claim".into()))
                 .build()

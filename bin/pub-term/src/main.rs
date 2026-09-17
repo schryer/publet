@@ -1,7 +1,7 @@
-//! Resolve a term to the publets defining it (Section 9.1).
+//! Resolve a term to the claims defining it (Section 9.1).
 //!
 //! There is no namespace and no registry. A term is whatever some
-//! `definitional` publet says it is, several publets may say different
+//! `definitional` claim says it is, several claims may say different
 //! things, and choosing between them belongs to a viewpoint rather than to
 //! a lookup. So this reports every definition it finds and never one.
 //!
@@ -76,7 +76,7 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Terms come from publet content and may carry quotes.
+/// Terms come from claim content and may carry quotes.
 fn escape(term: &str) -> String {
     term.replace('\\', "\\\\").replace('"', "\\\"")
 }

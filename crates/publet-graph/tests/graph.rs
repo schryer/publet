@@ -24,7 +24,7 @@ fn add(graph: &mut Graph, cid: &Cid, bytes: &[u8]) -> Result<(), GraphError> {
     graph.insert(cid, verified)
 }
 
-fn publet(
+fn claim(
     author_key: &str,
     created: &str,
     class: &str,
@@ -41,20 +41,20 @@ fn publet(
     // Section 5.5: an empirical claim must name a method others can execute.
     if class == "empirical" {
         let mut entry = std::collections::BTreeMap::new();
-        entry.insert("kind".to_owned(), Value::Text("publet".into()));
+        entry.insert("kind".to_owned(), Value::Text("claim".into()));
         entry.insert("role".to_owned(), Value::Text("method".into()));
         entry.insert(
             "ref".to_owned(),
-            Value::Text(Cid::of(b"a method publet", HashAlg::Sha2_256).to_string()),
+            Value::Text(Cid::of(b"a method claim", HashAlg::Sha2_256).to_string()),
         );
         fields.push(("evidence", Value::Array(vec![Value::Map(entry)])));
     }
-    build("publet", author_key, created, &fields)
+    build("claim.prose", author_key, created, &fields)
 }
 
 fn relation(author_key: &str, created: &str, kind: &str, from: &Cid, to: &Cid) -> (Cid, Vec<u8>) {
     build(
-        "rel",
+        "claim.relation",
         author_key,
         created,
         &[
@@ -73,7 +73,12 @@ fn verdict(author_key: &str, target: &Cid, aspect: Option<&str>) -> (Cid, Vec<u8
     if let Some(a) = aspect {
         fields.push(("aspect", Value::Text(a.into())));
     }
-    build("ann", author_key, "2026-09-12T12:00:00Z", &fields)
+    build(
+        "claim.annotation",
+        author_key,
+        "2026-09-12T12:00:00Z",
+        &fields,
+    )
 }
 
 #[test]
@@ -83,7 +88,7 @@ fn appendix_a_lineage_and_translation() {
     let mut g = Graph::new();
 
     // A.2: K_a publishes P1.
-    let (p1, p1b) = publet(
+    let (p1, p1b) = claim(
         &ka,
         "2026-09-12T10:00:00Z",
         "empirical",
@@ -93,13 +98,13 @@ fn appendix_a_lineage_and_translation() {
     add(&mut g, &p1, &p1b).unwrap();
 
     // A.4: K_c translates it.
-    let (p3, p3b) = publet(&kc, "2026-09-12T10:05:00Z", "empirical", "rechute", &[]);
+    let (p3, p3b) = claim(&kc, "2026-09-12T10:05:00Z", "empirical", "rechute", &[]);
     add(&mut g, &p3, &p3b).unwrap();
     let (tr, trb) = relation(&kc, "2026-09-12T10:05:01Z", "translates", &p3, &p1);
     add(&mut g, &tr, &trb).unwrap();
 
     // A.5: K_a supersedes P1 with P4, authoritative because K_a signed both.
-    let (p4, p4b) = publet(
+    let (p4, p4b) = claim(
         &ka,
         "2026-09-12T11:00:00Z",
         "empirical",
@@ -131,11 +136,11 @@ fn third_party_supersession_is_not_authoritative() {
     let kb = author("K_b");
     let mut g = Graph::new();
 
-    let (p1, p1b) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "original", &[]);
+    let (p1, p1b) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "original", &[]);
     add(&mut g, &p1, &p1b).unwrap();
-    let (p2, p2b) = publet(&kb, "2026-09-12T10:30:00Z", "empirical", "proposal", &[]);
+    let (p2, p2b) = claim(&kb, "2026-09-12T10:30:00Z", "empirical", "proposal", &[]);
     add(&mut g, &p2, &p2b).unwrap();
-    // K_b proposes to replace K_a's publet: a proposal, not a revision.
+    // K_b proposes to replace K_a's claim: a proposal, not a revision.
     let (r, rb) = relation(&kb, "2026-09-12T10:30:01Z", "supersedes", &p2, &p1);
     add(&mut g, &r, &rb).unwrap();
 
@@ -154,10 +159,10 @@ fn third_party_supersession_is_not_authoritative() {
 fn branching_lineage_reports_several_heads() {
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (p1, p1b) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "base", &[]);
+    let (p1, p1b) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "base", &[]);
     add(&mut g, &p1, &p1b).unwrap();
     for (n, when) in [("a", "2026-09-12T11:00:00Z"), ("b", "2026-09-12T11:30:00Z")] {
-        let (p, pb) = publet(&ka, when, "empirical", n, &[]);
+        let (p, pb) = claim(&ka, when, "empirical", n, &[]);
         add(&mut g, &p, &pb).unwrap();
         let (r, rb) = relation(&ka, when, "supersedes", &p, &p1);
         add(&mut g, &r, &rb).unwrap();
@@ -172,8 +177,8 @@ fn acyclic_kinds_reject_cycle_closing_edges() {
     for kind in ["supersedes", "depends", "derived-from"] {
         let ka = author("K_a");
         let mut g = Graph::new();
-        let (a, ab) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
-        let (b, bb) = publet(&ka, "2026-09-12T10:00:01Z", "empirical", "b", &[]);
+        let (a, ab) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
+        let (b, bb) = claim(&ka, "2026-09-12T10:00:01Z", "empirical", "b", &[]);
         add(&mut g, &a, &ab).unwrap();
         add(&mut g, &b, &bb).unwrap();
 
@@ -194,8 +199,8 @@ fn cyclic_kinds_permit_cycles() {
     // Section 6: mutual dispute is ordinary disagreement, not an error.
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (a, ab) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
-    let (b, bb) = publet(&ka, "2026-09-12T10:00:01Z", "empirical", "b", &[]);
+    let (a, ab) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
+    let (b, bb) = claim(&ka, "2026-09-12T10:00:01Z", "empirical", "b", &[]);
     add(&mut g, &a, &ab).unwrap();
     add(&mut g, &b, &bb).unwrap();
 
@@ -210,7 +215,7 @@ fn cyclic_kinds_permit_cycles() {
 fn self_edges_of_acyclic_kinds_are_rejected() {
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (a, ab) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
+    let (a, ab) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "a", &[]);
     add(&mut g, &a, &ab).unwrap();
     let (r, rb) = relation(&ka, "2026-09-12T10:01:00Z", "supersedes", &a, &a);
     assert!(matches!(
@@ -224,7 +229,7 @@ fn verdicts_are_refused_on_classes_that_are_not_truth_apt() {
     for class in ["definitional", "normative", "expressive"] {
         let ka = author("K_a");
         let mut g = Graph::new();
-        let (p, pb) = publet(&ka, "2026-09-12T10:00:00Z", class, "term: meaning", &[]);
+        let (p, pb) = claim(&ka, "2026-09-12T10:00:00Z", class, "term: meaning", &[]);
         add(&mut g, &p, &pb).unwrap();
         let (v, vb) = verdict(&ka, &p, None);
         let err = add(&mut g, &v, &vb).unwrap_err();
@@ -240,7 +245,7 @@ fn verdicts_on_provenance_classes_must_name_provenance() {
     for class in ["attributive", "archival"] {
         let ka = author("K_a");
         let mut g = Graph::new();
-        let (p, pb) = publet(&ka, "2026-09-12T10:00:00Z", class, "X said Y", &[]);
+        let (p, pb) = claim(&ka, "2026-09-12T10:00:00Z", class, "X said Y", &[]);
         add(&mut g, &p, &pb).unwrap();
 
         let (bad, badb) = verdict(&ka, &p, Some("effect-size"));
@@ -259,7 +264,7 @@ fn verdicts_are_permitted_on_truth_apt_classes() {
     for class in ["formal", "empirical", "procedural"] {
         let ka = author("K_a");
         let mut g = Graph::new();
-        let (p, pb) = publet(&ka, "2026-09-12T10:00:00Z", class, "a claim", &[]);
+        let (p, pb) = claim(&ka, "2026-09-12T10:00:00Z", class, "a claim", &[]);
         add(&mut g, &p, &pb).unwrap();
         let (v, vb) = verdict(&ka, &p, None);
         add(&mut g, &v, &vb).expect("truth-apt classes accept verdicts");
@@ -270,7 +275,7 @@ fn verdicts_are_permitted_on_truth_apt_classes() {
 fn dependency_closure_is_transitive() {
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (d1, d1b) = publet(
+    let (d1, d1b) = claim(
         &ka,
         "2026-09-12T09:00:00Z",
         "definitional",
@@ -278,7 +283,7 @@ fn dependency_closure_is_transitive() {
         &[],
     );
     add(&mut g, &d1, &d1b).unwrap();
-    let (d2, d2b) = publet(
+    let (d2, d2b) = claim(
         &ka,
         "2026-09-12T09:01:00Z",
         "definitional",
@@ -286,7 +291,7 @@ fn dependency_closure_is_transitive() {
         &[&d1],
     );
     add(&mut g, &d2, &d2b).unwrap();
-    let (p, pb) = publet(
+    let (p, pb) = claim(
         &ka,
         "2026-09-12T10:00:00Z",
         "empirical",
@@ -310,7 +315,7 @@ fn divergence_and_staleness_are_reported_separately() {
     let always = |_: &Cid| true;
 
     // One lineage: "heritability" defined, then superseded.
-    let (h1, h1b) = publet(
+    let (h1, h1b) = claim(
         &ka,
         "2026-09-12T08:00:00Z",
         "definitional",
@@ -318,7 +323,7 @@ fn divergence_and_staleness_are_reported_separately() {
         &[],
     );
     add(&mut g, &h1, &h1b).unwrap();
-    let (h2, h2b) = publet(
+    let (h2, h2b) = claim(
         &ka,
         "2026-09-12T08:30:00Z",
         "definitional",
@@ -330,7 +335,7 @@ fn divergence_and_staleness_are_reported_separately() {
     add(&mut g, &hs, &hsb).unwrap();
 
     // Two unrelated lineages for "theory".
-    let (t1, t1b) = publet(
+    let (t1, t1b) = claim(
         &ka,
         "2026-09-12T08:00:00Z",
         "definitional",
@@ -338,7 +343,7 @@ fn divergence_and_staleness_are_reported_separately() {
         &[],
     );
     add(&mut g, &t1, &t1b).unwrap();
-    let (t2, t2b) = publet(
+    let (t2, t2b) = claim(
         &kb,
         "2026-09-12T08:00:00Z",
         "definitional",
@@ -349,7 +354,7 @@ fn divergence_and_staleness_are_reported_separately() {
 
     // Two claims: one on the old heritability generation and mathematics'
     // theory, the other on the new generation and ordinary speech's theory.
-    let (left, leftb) = publet(
+    let (left, leftb) = claim(
         &ka,
         "2026-09-12T10:00:00Z",
         "empirical",
@@ -357,7 +362,7 @@ fn divergence_and_staleness_are_reported_separately() {
         &[&h1, &t1],
     );
     add(&mut g, &left, &leftb).unwrap();
-    let (right, rightb) = publet(
+    let (right, rightb) = claim(
         &kb,
         "2026-09-12T10:00:00Z",
         "empirical",
@@ -387,14 +392,14 @@ fn divergence_and_staleness_are_reported_separately() {
 fn a_trusted_equivalence_removes_a_conflict() {
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (d1, d1b) = publet(
+    let (d1, d1b) = claim(
         &ka,
         "2026-09-12T08:00:00Z",
         "definitional",
         "x: one meaning",
         &[],
     );
-    let (d2, d2b) = publet(
+    let (d2, d2b) = claim(
         &ka,
         "2026-09-12T08:00:01Z",
         "definitional",
@@ -403,8 +408,8 @@ fn a_trusted_equivalence_removes_a_conflict() {
     );
     add(&mut g, &d1, &d1b).unwrap();
     add(&mut g, &d2, &d2b).unwrap();
-    let (l, lb) = publet(&ka, "2026-09-12T10:00:00Z", "empirical", "L", &[&d1]);
-    let (r, rb) = publet(&ka, "2026-09-12T10:00:01Z", "empirical", "R", &[&d2]);
+    let (l, lb) = claim(&ka, "2026-09-12T10:00:00Z", "empirical", "L", &[&d1]);
+    let (r, rb) = claim(&ka, "2026-09-12T10:00:01Z", "empirical", "R", &[&d2]);
     add(&mut g, &l, &lb).unwrap();
     add(&mut g, &r, &rb).unwrap();
 
@@ -432,7 +437,7 @@ fn class_rules_survive_out_of_order_insertion() {
     // checked on insert; `validate` catches it once the graph is loaded.
     let ka = author("K_a");
     let mut g = Graph::new();
-    let (p, pb) = publet(&ka, "2026-09-12T10:00:00Z", "normative", "should fund", &[]);
+    let (p, pb) = claim(&ka, "2026-09-12T10:00:00Z", "normative", "should fund", &[]);
     let (v, vb) = verdict(&ka, &p, None);
     add(&mut g, &v, &vb).expect("target not yet present");
     add(&mut g, &p, &pb).unwrap();
