@@ -1,0 +1,33 @@
+version: 1
+project:
+  title: The Publet Protocol (PUB)
+  # index.md is the document (see docs repo's AGENTS.md, which this
+  # convention is inherited from -- the build machinery itself stays in
+  # that repo). Working notes kept alongside it are not part of it, and
+  # without this they are globbed into the project and sort ahead of
+  # index.md, so the export silently builds them instead.
+  exclude:
+    - DESIGN-*.md
+  description: A protocol that makes the unit of publication equal to the unit of assertion, so that a single claim can be cited, checked, and contested on its own, with trust computed from roots each reader chooses rather than decreed globally.
+  keywords:
+    - decentralized knowledge graph
+    - content addressing
+    - trust propagation
+    - peer review
+    - protocol specification
+  authors:
+    - name: David Schryer
+      email: schryer@gmail.com
+    - name: Claude (Anthropic)
+  exports:
+    - format: typst
+      # bookly-typst is a genuine work in progress -- see its own
+      # template.typ for the diagnosed, unresolved raw-block/label
+      # incompatibility with this document's angle-bracket-heavy code
+      # examples. lapreprint-typst is the proven-working template kept
+      # active here so the build stays green while that is worked out.
+      template: ../templates/lapreprint-typst
+      output: lapreprint/main.typ
+site:
+  title: The Publet Protocol (PUB)
+  nav: []
