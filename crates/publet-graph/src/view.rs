@@ -622,7 +622,7 @@ impl Annotation {
             | "resolution"
             | "trusts"
             | "assumes-accountability" => Class::Performative,
-            "classifies" => Class::Definitional,
+            "classifies" | "tagged" => Class::Definitional,
             "usage" | "affiliated" | "timestamped" => Class::Attributive,
             "personhood" => Class::Formal,
             _ => return None,

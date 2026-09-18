@@ -8,6 +8,8 @@
 //!   a definition had no evidence channel whatsoever.
 //! * `classifies` -- subject membership, which Section 9.1 makes an
 //!   annotation rather than a property of the object.
+//! * `tagged` -- a short citation tag for a publet, the same non-namespace
+//!   discipline as `classifies` applied to Section 9.1's citation tags.
 //! * `trusts` -- trust graph edges, optionally scoped to subjects.
 //! * `affiliated` -- Section 10.4, load-bearing for independence.
 //!
@@ -54,6 +56,35 @@ const ROLES: [&str; 5] = [
     "sponsor",
 ];
 
+/// Section 9.1: `XXXX-YYYYYY-MM-YYYY` -- four letters, six letters, a
+/// two-digit month, a four-digit year, each segment fixed-width so a tag
+/// is recognizable as one at a glance. The check is only about shape; who
+/// is entitled to pick a given tag is a question this format has nothing
+/// to say about (Section 9.1 again -- nobody is).
+fn check_tag_format(tag: &str) -> Result<(), String> {
+    let bad = || {
+        format!(
+            "--tag={tag} does not match XXXX-YYYYYY-MM-YYYY: four letters, \
+             six letters, a two-digit month, a four-digit year"
+        )
+    };
+    let segments: Vec<&str> = tag.split('-').collect();
+    let [domain, name, month, year] = segments.as_slice() else {
+        return Err(bad());
+    };
+    let is_alpha =
+        |s: &str, len: usize| s.len() == len && s.bytes().all(|b| b.is_ascii_alphabetic());
+    let is_digits = |s: &str, len: usize| s.len() == len && s.bytes().all(|b| b.is_ascii_digit());
+    if !is_alpha(domain, 4) || !is_alpha(name, 6) || !is_digits(month, 2) || !is_digits(year, 4) {
+        return Err(bad());
+    }
+    let month_num: u32 = month.parse().map_err(|_| bad())?;
+    if !(1..=12).contains(&month_num) {
+        return Err(format!("--tag={tag}: {month} is not a month, 01-12"));
+    }
+    Ok(())
+}
+
 /// Author an annotation.
 ///
 /// # Errors
@@ -93,8 +124,8 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
-    let kind_id =
-        kind.ok_or("--kind is required: usage, classifies, trusts, affiliated, or verdict")?;
+    let kind_id = kind
+        .ok_or("--kind is required: usage, classifies, tagged, trusts, affiliated, or verdict")?;
     let target = target.ok_or("--target is required: the CID being annotated")?;
     let target_cid: Cid = target
         .parse()
@@ -167,6 +198,15 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
                 .parse::<Cid>()
                 .map_err(|_| format!("--subject is not a CID: {subject}"))?;
             value.insert("subject".to_owned(), Value::Text(subject));
+        }
+        "tagged" => {
+            // Section 9.1: non-authoritative and self-declared, like every
+            // other name here -- the format check is only about the tag
+            // being recognizable as one, never about who is entitled to
+            // pick it.
+            let tag = need("tag", "a short citation tag matching XXXX-YYYYYY-MM-YYYY")?;
+            check_tag_format(&tag)?;
+            value.insert("tag".to_owned(), Value::Text(tag));
         }
         "trusts" => {
             let raw = need("weight", "1..1000")?;
@@ -276,7 +316,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         other => {
             return Err(format!(
                 "unknown or unsupported annotation kind: {other}\n\
-                 supported: usage, classifies, trusts, affiliated, \
+                 supported: usage, classifies, tagged, trusts, affiliated, \
                  assessment, attests, timestamped, verdict"
             ));
         }
@@ -314,4 +354,38 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_well_formed_tag_passes() {
+        assert!(check_tag_format("PROT-SEMDRI-09-2026").is_ok());
+    }
+
+    #[test]
+    fn wrong_segment_lengths_are_refused() {
+        assert!(check_tag_format("PRO-SEMDRI-09-2026").is_err());
+        assert!(check_tag_format("PROT-SEMDRI-9-2026").is_err());
+        assert!(check_tag_format("PROT-SEMDRI-09-26").is_err());
+    }
+
+    #[test]
+    fn a_month_outside_01_12_is_refused() {
+        assert!(check_tag_format("PROT-SEMDRI-00-2026").is_err());
+        assert!(check_tag_format("PROT-SEMDRI-13-2026").is_err());
+    }
+
+    #[test]
+    fn digits_where_letters_belong_are_refused() {
+        assert!(check_tag_format("PR0T-SEMDRI-09-2026").is_err());
+    }
+
+    #[test]
+    fn wrong_segment_count_is_refused() {
+        assert!(check_tag_format("PROT-SEMDRI-2026").is_err());
+        assert!(check_tag_format("PROT-SEMDRI-09-2026-extra").is_err());
+    }
 }
