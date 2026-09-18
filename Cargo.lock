@@ -949,6 +949,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pub-cite"
+version = "0.0.1"
+dependencies = [
+ "publet-core",
+ "publet-graph",
+]
+
+[[package]]
 name = "pub-closure"
 version = "0.0.1"
 dependencies = [
