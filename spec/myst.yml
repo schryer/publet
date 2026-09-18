@@ -21,9 +21,6 @@ project:
     - name: Claude (Anthropic)
   exports:
     - format: typst
-      # bookly-typst turned out to be incompatible with this document
-      # (see its own template.typ for the diagnosis) -- classicthesis
-      # is the book-style template in active use instead.
       template: ../templates/classicthesis-typst
       output: classicthesis/main.typ
 site:

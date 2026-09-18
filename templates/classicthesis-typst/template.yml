@@ -5,9 +5,9 @@ description: >
   Thin jtex wrapper around the @preview/classicthesis Typst Universe
   package (not itself a jtex template), so MyST/Curvenote can drive it
   the same way as any other jtex template -- same pattern as
-  templates/charged-ieee in the docs repo and templates/bookly-typst
-  here. See https://typst.app/universe/package/classicthesis for the
-  underlying package's own docs, and
+  templates/charged-ieee in the docs repo. See
+  https://typst.app/universe/package/classicthesis for the underlying
+  package's own docs, and
   https://github.com/adwiteeymauriya/classicthesis-typst for its
   source and real usage example.
 template: template.typ
@@ -33,7 +33,7 @@ parts:
   - id: abstract
     description: >
       Rendered on its own front-matter page via classicthesis's own
-      `abstract` parameter -- a real, dedicated slot, unlike bookly's.
+      `abstract` parameter -- a real, dedicated slot.
     required: false
   - id: dedication
     description: >
