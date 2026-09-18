@@ -21,13 +21,11 @@ project:
     - name: Claude (Anthropic)
   exports:
     - format: typst
-      # bookly-typst is a genuine work in progress -- see its own
-      # template.typ for the diagnosed, unresolved raw-block/label
-      # incompatibility with this document's angle-bracket-heavy code
-      # examples. lapreprint-typst is the proven-working template kept
-      # active here so the build stays green while that is worked out.
-      template: ../templates/lapreprint-typst
-      output: lapreprint/main.typ
+      # bookly-typst turned out to be incompatible with this document
+      # (see its own template.typ for the diagnosis) -- classicthesis
+      # is the book-style template in active use instead.
+      template: ../templates/classicthesis-typst
+      output: classicthesis/main.typ
 site:
   title: The Publet Protocol (PUB)
   nav: []

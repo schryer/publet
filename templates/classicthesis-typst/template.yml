@@ -1,0 +1,42 @@
+jtex: v1
+kind: typst
+title: ClassicThesis (local wrapper)
+description: >
+  Thin jtex wrapper around the @preview/classicthesis Typst Universe
+  package (not itself a jtex template), so MyST/Curvenote can drive it
+  the same way as any other jtex template -- same pattern as
+  templates/charged-ieee in the docs repo and templates/bookly-typst
+  here. See https://typst.app/universe/package/classicthesis for the
+  underlying package's own docs, and
+  https://github.com/adwiteeymauriya/classicthesis-typst for its
+  source and real usage example.
+template: template.typ
+files:
+  - template.typ
+version: 0.1.0
+license: MIT
+tags:
+  - book
+  - report
+  - thesis
+doc:
+  - id: title
+    required: true
+  - id: authors
+    required: true
+  - id: subtitle
+options:
+  - id: lang
+    type: string
+    description: Passed straight through to classicthesis's `lang`.
+parts:
+  - id: abstract
+    description: >
+      Rendered on its own front-matter page via classicthesis's own
+      `abstract` parameter -- a real, dedicated slot, unlike bookly's.
+    required: false
+  - id: dedication
+    description: >
+      Rendered on its own front-matter page via classicthesis's own
+      `dedication` parameter.
+    required: false
