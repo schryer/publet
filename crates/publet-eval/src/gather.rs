@@ -22,6 +22,13 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         reproducibility: reproducibility_of(graph, target),
         ..Evidence::default()
     };
+    // R9 settles a `formal` claim and an `empirical`/`procedural` one by
+    // different acts -- one checker's verdict against many independent
+    // reproductions -- even though both are now filed as one annotation
+    // kind (Section 7.2). `absorb` needs to know which rule applies.
+    let target_class = graph
+        .prose_claim(target)
+        .map(publet_graph::ProseClaim::class);
 
     let mut filed_reproductions: Vec<Filed> = Vec::new();
 
@@ -52,6 +59,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
             object,
             kind,
             &author,
+            target_class,
             &mut evidence,
             &mut filed_reproductions,
         );
@@ -113,6 +121,7 @@ fn absorb(
     object: &Object,
     kind: &str,
     author: &str,
+    target_class: Option<Class>,
     evidence: &mut Evidence,
     filed_reproductions: &mut Vec<Filed>,
 ) {
@@ -131,9 +140,25 @@ fn absorb(
             }
             _ => {}
         },
-        "proof-checked" => {
-            if result_of(body) == Some("accepted") {
+        // Section 7.2: one annotation kind carries what settles a
+        // `formal` claim and what settles an `empirical`/`procedural`
+        // one, since both report "an independent party executed what
+        // settles this class, and what happened." The two acts remain
+        // different -- one checker's verdict against many independent
+        // reproductions -- so the branch is on the target's class, not
+        // on anything the annotation itself declares.
+        "settled" if target_class == Some(Class::Formal) => {
+            if outcome_of(body) == Some("verified") {
                 evidence.proof_checked = true;
+            }
+        }
+        "settled" => {
+            if let Some(filed) = read_reproduction(
+                body,
+                object.author(),
+                authored_by_human(graph, object.author()),
+            ) {
+                filed_reproductions.push(filed);
             }
         }
         // A judgement, not an input. Permitted on every class --
@@ -170,15 +195,6 @@ fn absorb(
                 .and_then(Value::as_text)
             {
                 evidence.usage.insert(source.to_owned());
-            }
-        }
-        "reproduction" => {
-            if let Some(filed) = read_reproduction(
-                body,
-                object.author(),
-                authored_by_human(graph, object.author()),
-            ) {
-                filed_reproductions.push(filed);
             }
         }
         _ => {}
@@ -250,8 +266,8 @@ fn finding_of(body: &std::collections::BTreeMap<String, Value>) -> Option<&str> 
     body.get("value")?.get("finding")?.as_text()
 }
 
-fn result_of(body: &std::collections::BTreeMap<String, Value>) -> Option<&str> {
-    body.get("value")?.get("result")?.as_text()
+fn outcome_of(body: &std::collections::BTreeMap<String, Value>) -> Option<&str> {
+    body.get("value")?.get("outcome")?.as_text()
 }
 
 /// Whether a key declares a human principal (R11).

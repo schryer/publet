@@ -66,7 +66,7 @@ fn funded_reproduction(
         &author.to_string(),
         at,
         &[
-            ("kind", Value::Text("reproduction".into())),
+            ("kind", Value::Text("settled".into())),
             ("target", Value::Text(target.to_string())),
             ("value", map(&value)),
         ],
@@ -368,4 +368,57 @@ fn an_undisclosed_end_date_does_not_manufacture_independence() {
             .independent_consistent,
         1
     );
+}
+
+/// Section 7.2: `settled` carries what proves a `formal` claim as well as
+/// what reproduces an `empirical` one, and the two acts are read
+/// differently -- one checker's outcome, not a floor of independent
+/// filings. This is the formal path, and until this merge it had no
+/// coverage through a real graph at all: the old `proof-checked` handling
+/// was only ever exercised by constructing an `Evidence` struct directly.
+#[test]
+fn a_verified_settlement_on_a_formal_claim_is_proof_checked() {
+    let (author, author_key) = human_key("K_a");
+    let (claim, claim_bytes) = object(
+        "claim.prose",
+        &author.to_string(),
+        "2026-02-01T00:00:00Z",
+        &[
+            ("class", Value::Text("formal".into())),
+            ("lang", Value::Text("en".into())),
+            ("content", Value::Text("the recursion terminates".into())),
+            ("depends", Value::Array(Vec::new())),
+            ("evidence", Value::Array(Vec::new())),
+        ],
+    );
+    let checker = map(&[
+        ("system", Value::Text("kani".into())),
+        ("version", Value::Text("0.55".into())),
+        ("artifact", Value::Text(claim.to_string())),
+    ]);
+    let settlement = object(
+        "claim.annotation",
+        &author.to_string(),
+        "2026-03-01T00:00:00Z",
+        &[
+            ("kind", Value::Text("settled".into())),
+            ("target", Value::Text(claim.to_string())),
+            (
+                "value",
+                map(&[
+                    ("method", checker),
+                    ("outcome", Value::Text("verified".into())),
+                ]),
+            ),
+        ],
+    );
+
+    let graph = load::from_objects(vec![
+        (author.clone(), author_key),
+        (claim.clone(), claim_bytes),
+        settlement,
+    ])
+    .unwrap();
+
+    assert!(evidence_for(&graph, &claim).proof_checked);
 }

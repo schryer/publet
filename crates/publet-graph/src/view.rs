@@ -604,7 +604,7 @@ impl Annotation {
     ///
     /// As with a relation, the kind fixes what is asserted, so the class
     /// follows from it rather than being declared. It is what decides
-    /// whether the annotation may itself be judged: a reproduction reports
+    /// whether the annotation may itself be judged: `settled` reports
     /// something observable and so can be contradicted, while a verdict
     /// performs a judgement and cannot be affirmed or denied in turn.
     ///
@@ -614,9 +614,7 @@ impl Annotation {
     #[must_use]
     pub fn class(&self) -> Option<Class> {
         Some(match self.kind.as_str() {
-            "proof-checked" | "reproduction" | "well-formed" | "attests" | "witnessed" => {
-                Class::Empirical
-            }
+            "settled" | "well-formed" | "attests" | "witnessed" => Class::Empirical,
             "assessment"
             | "verdict"
             | "critique"

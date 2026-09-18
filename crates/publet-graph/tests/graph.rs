@@ -551,7 +551,7 @@ fn a_verdict_on_a_reported_observation_is_permitted() {
         &kc,
         "2026-09-12T11:00:00Z",
         &[
-            ("kind", Value::Text("reproduction".into())),
+            ("kind", Value::Text("settled".into())),
             ("target", Value::Text(p1.to_string())),
         ],
     );
