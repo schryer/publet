@@ -1,0 +1,19 @@
+version: 1
+project:
+  title: Namespace Capture
+  description: A name in a shared registry coming under the control of a party other than the one whose work it names, so that what the name resolves to is decided by registration order rather than by the reader.
+  keywords:
+    - namespace capture
+    - definitional claim
+    - publet
+  authors:
+    - name: David Schryer
+      email: schryer@gmail.com
+    - name: Claude (Anthropic)
+  exports:
+    - format: typst
+      template: ../../templates/classicthesis-typst
+      output: classicthesis/main.typ
+site:
+  title: Namespace Capture
+  nav: []

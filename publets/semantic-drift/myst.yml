@@ -1,0 +1,19 @@
+version: 1
+project:
+  title: Semantic Drift
+  description: A term's sense changing over time with no change to the term itself, so that a reader recovers a meaning its author did not intend.
+  keywords:
+    - semantic drift
+    - definitional claim
+    - publet
+  authors:
+    - name: David Schryer
+      email: schryer@gmail.com
+    - name: Claude (Anthropic)
+  exports:
+    - format: typst
+      template: ../../templates/classicthesis-typst
+      output: classicthesis/main.typ
+site:
+  title: Semantic Drift
+  nav: []

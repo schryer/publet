@@ -76,6 +76,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     match object.kind() {
         "claim.relation" => print_relation(body),
         "claim.annotation" => print_annotation(body),
+        "doc" => print_document(body),
         _ => {}
     }
 
@@ -156,6 +157,58 @@ fn print_relation(body: &std::collections::BTreeMap<String, Value>) {
     if let Some(Value::Text(note)) = body.get("note") {
         println!();
         println!("{note}");
+    }
+}
+
+/// Print a `doc` object's title and its sections of glossed references.
+///
+/// Section 8: "a document contains no assertions of its own." `gloss` is
+/// presentational connective tissue and MUST NOT be mistaken for one, so
+/// it is labelled and indented under the reference it explains rather
+/// than run into the surrounding text. `role` is printed for the same
+/// reason -- `counterpoint` is not endorsement, and a reader needs that
+/// distinction at a glance, not just on request.
+fn print_document(body: &std::collections::BTreeMap<String, Value>) {
+    if let Some(Value::Text(title)) = body.get("title") {
+        println!("title     {title}");
+    }
+    if let Some(Value::Text(license)) = body.get("license") {
+        println!("license   {license}");
+    }
+    if let Some(Value::Text(abstract_cid)) = body.get("abstract") {
+        println!("abstract  {abstract_cid}");
+    }
+    let Some(Value::Array(sections)) = body.get("sections") else {
+        return;
+    };
+    println!();
+    println!("sections:");
+    for section in sections {
+        let Some(Value::Text(heading)) = section.get("heading") else {
+            continue;
+        };
+        println!("  {heading}");
+        let Some(Value::Array(items)) = section.get("items") else {
+            continue;
+        };
+        for item in items {
+            let Some(Value::Text(reference)) = item.get("ref") else {
+                continue;
+            };
+            println!("    - ref    {reference}");
+            if let Some(Value::Text(bind)) = item.get("bind") {
+                println!("      bind   {bind}");
+            }
+            if let Some(Value::Text(at)) = item.get("at") {
+                println!("      at     {at}");
+            }
+            if let Some(Value::Text(role)) = item.get("role") {
+                println!("      role   {role}");
+            }
+            if let Some(Value::Text(gloss)) = item.get("gloss") {
+                println!("      gloss  {gloss}");
+            }
+        }
     }
 }
 

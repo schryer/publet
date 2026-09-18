@@ -423,6 +423,46 @@ impl Graph {
         out
     }
 
+    /// Short citation tags filed against an object (Section 9.1).
+    ///
+    /// Anyone MAY tag any object (R6), so this can return more than one
+    /// string; which a reader sees is resolved per viewpoint, never by
+    /// precedence. Returned sorted and deduplicated -- two keys filing the
+    /// same tag string is agreement, not two tags. A tag's own standing
+    /// (whether it has since been retracted) is not resolved here, the
+    /// same way `usage_of` and `subjects_of` do not resolve theirs.
+    #[must_use]
+    pub fn tags_of(&self, target: &Cid) -> Vec<String> {
+        let mut out = Vec::new();
+        for cid_text in self.cids() {
+            let Ok(cid) = cid_text.parse::<Cid>() else {
+                continue;
+            };
+            let Some(object) = self.object(&cid) else {
+                continue;
+            };
+            if object.kind() != "claim.annotation" {
+                continue;
+            }
+            let body = object.body();
+            if body.get("kind").and_then(Value::as_text) != Some("tagged")
+                || body.get("target").and_then(Value::as_text) != Some(&target.to_string())
+            {
+                continue;
+            }
+            let Some(value) = body.get("value") else {
+                continue;
+            };
+            let Some(tag) = value.get("tag").and_then(Value::as_text) else {
+                continue;
+            };
+            out.push(tag.to_owned());
+        }
+        out.sort();
+        out.dedup();
+        out
+    }
+
     /// Usage citations filed against a definitional claim (Section 5.2).
     ///
     /// Each is a source and a locator naming where the sense was found. The

@@ -1,0 +1,19 @@
+version: 1
+project:
+  title: Split-Brain Forking
+  description: One lineage continuing as two divergent heads with nothing on either recording that the other exists, so a reader consulting one has no way to learn the other was ever said.
+  keywords:
+    - split-brain forking
+    - definitional claim
+    - publet
+  authors:
+    - name: David Schryer
+      email: schryer@gmail.com
+    - name: Claude (Anthropic)
+  exports:
+    - format: typst
+      template: ../../templates/classicthesis-typst
+      output: classicthesis/main.typ
+site:
+  title: Split-Brain Forking
+  nav: []
