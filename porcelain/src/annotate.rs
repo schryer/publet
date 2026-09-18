@@ -56,15 +56,16 @@ const ROLES: [&str; 5] = [
     "sponsor",
 ];
 
-/// Section 9.1: `XXXX-YYYYYY-MM-YYYY` -- four letters, six letters, a
-/// two-digit month, a four-digit year, each segment fixed-width so a tag
-/// is recognizable as one at a glance. The check is only about shape; who
-/// is entitled to pick a given tag is a question this format has nothing
-/// to say about (Section 9.1 again -- nobody is).
+/// Section 9.1: `<domain>-<name>-MM-YYYY` -- 3-6 letters, six letters, a
+/// two-digit month, a four-digit year. The domain segment is a range
+/// rather than a fixed width because a domain's own natural abbreviation
+/// is not always six letters. The check is only about shape; who is
+/// entitled to pick a given tag is a question this format has nothing to
+/// say about (Section 9.1 again -- nobody is).
 fn check_tag_format(tag: &str) -> Result<(), String> {
     let bad = || {
         format!(
-            "--tag={tag} does not match XXXX-YYYYYY-MM-YYYY: four letters, \
+            "--tag={tag} does not match <domain>-<name>-MM-YYYY: 3-6 letters, \
              six letters, a two-digit month, a four-digit year"
         )
     };
@@ -72,10 +73,17 @@ fn check_tag_format(tag: &str) -> Result<(), String> {
     let [domain, name, month, year] = segments.as_slice() else {
         return Err(bad());
     };
+    let is_alpha_in_range = |s: &str, range: std::ops::RangeInclusive<usize>| {
+        range.contains(&s.len()) && s.bytes().all(|b| b.is_ascii_alphabetic())
+    };
     let is_alpha =
         |s: &str, len: usize| s.len() == len && s.bytes().all(|b| b.is_ascii_alphabetic());
     let is_digits = |s: &str, len: usize| s.len() == len && s.bytes().all(|b| b.is_ascii_digit());
-    if !is_alpha(domain, 4) || !is_alpha(name, 6) || !is_digits(month, 2) || !is_digits(year, 4) {
+    if !is_alpha_in_range(domain, 3..=6)
+        || !is_alpha(name, 6)
+        || !is_digits(month, 2)
+        || !is_digits(year, 4)
+    {
         return Err(bad());
     }
     let month_num: u32 = month.parse().map_err(|_| bad())?;
@@ -366,10 +374,22 @@ mod tests {
     }
 
     #[test]
+    fn the_domain_segment_accepts_three_through_six_letters() {
+        assert!(check_tag_format("PUB-SEMDRI-09-2026").is_ok());
+        assert!(check_tag_format("PROTOC-SEMDRI-09-2026").is_ok());
+    }
+
+    #[test]
+    fn the_domain_segment_outside_three_to_six_is_refused() {
+        assert!(check_tag_format("PU-SEMDRI-09-2026").is_err());
+        assert!(check_tag_format("PROTOCO-SEMDRI-09-2026").is_err());
+    }
+
+    #[test]
     fn wrong_segment_lengths_are_refused() {
-        assert!(check_tag_format("PRO-SEMDRI-09-2026").is_err());
         assert!(check_tag_format("PROT-SEMDRI-9-2026").is_err());
         assert!(check_tag_format("PROT-SEMDRI-09-26").is_err());
+        assert!(check_tag_format("PROT-SEMDR-09-2026").is_err());
     }
 
     #[test]
