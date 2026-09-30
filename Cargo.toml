@@ -15,7 +15,7 @@ repository = "https://github.com/schryer/publet"
 # a standalone, independently-tested sibling repo -- see graphset's own
 # README for the audit that established each piece had no coupling to
 # publet's own types before the move.
-graphset = { path = "/home/david/git/graphset", version = "0.1.0" }
+graphset = { git = "https://github.com/schryer/graphset", rev = "91a095fcc44dc041f3c24f7806c777bfd56d72b2", version = "0.1.0" }
 publet-core = { path = "crates/publet-core", version = "0.0.1" }
 publet-graph = { path = "crates/publet-graph", version = "0.0.1" }
 publet-lint = { path = "crates/publet-lint", version = "0.0.1" }

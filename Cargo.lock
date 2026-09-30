@@ -475,6 +475,7 @@ dependencies = [
 [[package]]
 name = "graphset"
 version = "0.1.0"
+source = "git+https://github.com/schryer/graphset?rev=91a095fcc44dc041f3c24f7806c777bfd56d72b2#91a095fcc44dc041f3c24f7806c777bfd56d72b2"
 dependencies = [
  "sha2",
 ]
