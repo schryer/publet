@@ -14,11 +14,11 @@ Feature: A judgement is not a verdict
     And asking why shows the judgement
     And asking why still reports the class not truth-apt
 
-  Scenario: A judgement with no stated basis is refused
+  Scenario: A judgement with no stated grounds is refused
     Given a workspace with a scoped definition
-    When I assess it with no basis
+    When I assess it with no grounds
     Then it fails
-    And stderr mentions "basis"
+    And stderr mentions "grounds"
 
   Scenario: An unknown assessment is refused
     Given a workspace with a scoped definition

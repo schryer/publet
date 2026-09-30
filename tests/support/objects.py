@@ -127,16 +127,16 @@ def publet(author: str, created: str, cls: str, content: str,
     body.append(("depends", head(4, len(deps)) + b"".join(text(d) for d in deps)))
     if cls == "empirical":
         entry = cbor_map([
-            ("kind", text("publet")),
+            ("kind", text("claim")),
             ("role", text("method")),
             ("ref", text(method or cid_of(b"a method publet"))),
         ])
         body.append(("evidence", head(4, 1) + entry))
-    return obj("publet", author, created, body)
+    return obj("claim.prose", author, created, body)
 
 
 def relation(author: str, created: str, kind: str, frm: str, to: str) -> bytes:
-    return obj("rel", author, created, [
+    return obj("claim.relation", author, created, [
         ("kind", text(kind)),
         ("from", text(frm)),
         ("to", text(to)),
@@ -148,7 +148,7 @@ def annotation(author: str, created: str, kind: str, target: str,
     body = [("kind", text(kind)), ("target", text(target))]
     if aspect is not None:
         body.append(("aspect", text(aspect)))
-    return obj("ann", author, created, body)
+    return obj("claim.annotation", author, created, body)
 
 
 def write_store(directory, objects: list[bytes]) -> dict[str, str]:
@@ -173,7 +173,7 @@ def value_annotation(author: str, created: str, kind: str, target: str,
     `kind` says what is being asserted and `value` carries the disclosure
     that makes it readable at all.
     """
-    return obj("ann", author, created, [
+    return obj("claim.annotation", author, created, [
         ("kind", text(kind)),
         ("target", text(target)),
         ("value", value),
@@ -181,9 +181,9 @@ def value_annotation(author: str, created: str, kind: str, target: str,
 
 
 def assumption(assumer: str, created: str, pseudonym: str,
-               basis: str = "work-reviewed-by-me") -> bytes:
+               grounds: str = "work-reviewed-by-me") -> bytes:
     return value_annotation(assumer, created, "assumes-accountability",
-                            pseudonym, cbor_map([("basis", text(basis))]))
+                            pseudonym, cbor_map([("grounds", text(grounds))]))
 
 
 def triage(author: str, created: str, target: str, finding: str,

@@ -109,13 +109,13 @@ def majority_group(result, count: int):
     # Largest first, so the reading most publets share leads and the one
     # worth looking at sorts to the end.
     groups = _rows(result)[0]["groups"]
-    assert len(groups[0]["publets"]) == count, groups
+    assert len(groups[0]["claims"]) == count, groups
 
 
 @then(parsers.parse("the outlier group holds {count:d}"))
 def outlier_group(result, count: int):
     groups = _rows(result)[0]["groups"]
-    assert len(groups[-1]["publets"]) == count, groups
+    assert len(groups[-1]["claims"]) == count, groups
 
 
 @then("nothing is reported")
