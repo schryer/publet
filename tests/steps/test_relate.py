@@ -35,7 +35,7 @@ def _held(runner) -> set[str]:
 
 @given(parsers.parse('they are already related as "{kind}"'))
 def already_related(runner, pair, kind: str):
-    out = runner.run("pub", "relate", f"--kind={kind}",
+    out = runner.run("pub", "relate", "--scope=unconditional", f"--kind={kind}",
                      f"--from={pair['first']}", f"--to={pair['second']}")
     assert out.code == 0, out.stderr
     pair["before"] = _held(runner)
@@ -44,7 +44,7 @@ def already_related(runner, pair, kind: str):
 @when(parsers.parse('I relate them as "{kind}"'), target_fixture="result")
 def relate(runner, pair, kind: str):
     pair.setdefault("before", _held(runner))
-    return runner.run("pub", "relate", f"--kind={kind}",
+    return runner.run("pub", "relate", "--scope=unconditional", f"--kind={kind}",
                       f"--from={pair['first']}", f"--to={pair['second']}")
 
 
@@ -52,7 +52,7 @@ def relate(runner, pair, kind: str):
       target_fixture="result")
 def relate_reverse(runner, pair, kind: str):
     pair.setdefault("before", _held(runner))
-    return runner.run("pub", "relate", f"--kind={kind}",
+    return runner.run("pub", "relate", "--scope=unconditional", f"--kind={kind}",
                       f"--from={pair['second']}", f"--to={pair['first']}")
 
 
@@ -60,7 +60,7 @@ def relate_reverse(runner, pair, kind: str):
       target_fixture="result")
 def relate_self(runner, pair, kind: str):
     pair.setdefault("before", _held(runner))
-    return runner.run("pub", "relate", f"--kind={kind}",
+    return runner.run("pub", "relate", "--scope=unconditional", f"--kind={kind}",
                       f"--from={pair['first']}", f"--to={pair['first']}")
 
 

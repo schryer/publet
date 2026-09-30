@@ -154,7 +154,7 @@ def every_step_reached(result, store):
 
 @then("no finding is reported for any of them")
 def no_finding_for_steps(runner, store):
-    listed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet")
+    listed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose")
     assert listed.code == 0, listed.stderr
     out = runner.run("pub-lint", f"--dir={store['dir']}", *listed.stdout.split())
     assert out.stdout.strip() == "", out.stdout
@@ -163,7 +163,7 @@ def no_finding_for_steps(runner, store):
 
 @when("I lint the store", target_fixture="result")
 def lint(runner, store):
-    listed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet")
+    listed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose")
     assert listed.code == 0, listed.stderr
     cids = [c for c in listed.stdout.split() if c]
     return runner.run("pub-lint", f"--dir={store['dir']}", *cids)
@@ -171,7 +171,7 @@ def lint(runner, store):
 
 @when("I list the store", target_fixture="result")
 def list_store(runner, store):
-    return runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet")
+    return runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose")
 
 
 @then(parsers.parse('a "{test}" finding is reported'))

@@ -117,7 +117,7 @@ def doc_counterpoint(tmp_path):
 def doc_with_critique(tmp_path):
     p = publet(KA, "2026-09-12T09:00:00Z", "empirical", "a claim")
     doc = document([[("ref", text(cid_of(p))), ("role", text("assert"))]])
-    critique = obj("ann", KA, "2026-09-12T12:00:00Z", [
+    critique = obj("claim.annotation", KA, "2026-09-12T12:00:00Z", [
         ("kind", text("critique")),
         ("target", text(cid_of(doc))),
         ("value", cbor_map([("defect", text("omission"))])),
@@ -143,7 +143,7 @@ def role_shown(runner, store, role: str):
 
 @then("the critique is shown")
 def critique_shown(runner, store):
-    anns = runner.run("pub-ls", f"--dir={store['dir']}", "--type=ann")
+    anns = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.annotation")
     assert anns.code == 0, anns.stderr
     assert anns.lines, "the critique must be present and loadable"
 

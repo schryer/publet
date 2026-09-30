@@ -14,6 +14,6 @@ Feature: Plumbing commands compose over CID lines
     Then stdout lists P4
 
   Scenario: Filtering by type yields only that type
-    When I run "pub-ls --type=rel"
+    When I run "pub-ls --type=claim.relation"
     Then every line of stdout is a CID
-    And each names an object of type "rel"
+    And each names an object of type "claim.relation"

@@ -39,7 +39,7 @@ def key_object(seed: str, principal: str | None) -> bytes:
 
 @given("an empirical publet naming no method", target_fixture="store")
 def empirical_without_method(tmp_path):
-    data = obj("publet", KA, "2026-09-12T10:00:00Z", [
+    data = obj("claim.prose", KA, "2026-09-12T10:00:00Z", [
         ("class", text("empirical")),
         ("lang", text("en")),
         ("content", text("the rate fell")),
@@ -110,7 +110,7 @@ def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds)
     add(grounds)
     add(relation(author, "2026-09-12T11:00:01Z", "disputes",
                  cid_of(grounds), cid_of(claim)))
-    add(obj("ann", author, "2026-09-12T11:30:00Z", [
+    add(obj("claim.annotation", author, "2026-09-12T11:30:00Z", [
         ("kind", text("verdict")),
         ("target", text(cid_of(claim))),
         ("value", cbor_map([("finding", text("affirm"))])),
@@ -118,7 +118,7 @@ def _disputed_workspace(bin_dir, tmp_path, *, resolution_outcome, cover_grounds)
 
     if resolution_outcome is not None:
         covered = [text(cid_of(grounds))] if cover_grounds else []
-        add(obj("ann", author, "2026-09-12T12:00:00Z", [
+        add(obj("claim.annotation", author, "2026-09-12T12:00:00Z", [
             ("kind", text("resolution")),
             ("target", text(cid_of(claim))),
             ("value", cbor_map([
@@ -174,8 +174,8 @@ def _reproduced_workspace(bin_dir, tmp_path, principal: str):
         reproducer_key = key_object(f"reproducer-{principal}-{i}", principal)
         reproducer = cid_of(reproducer_key)
         add(reproducer_key)
-        add(obj("ann", reproducer, f"2026-09-12T13:0{i}:00Z", [
-            ("kind", text("reproduction")),
+        add(obj("claim.annotation", reproducer, f"2026-09-12T13:0{i}:00Z", [
+            ("kind", text("settled")),
             ("target", text(ws["claim"])),
             ("value", cbor_map([("outcome", text("consistent"))])),
         ]))
@@ -196,8 +196,8 @@ def _one_signer_twice(bin_dir, tmp_path):
     reproducer = cid_of(reproducer_key)
     add(reproducer_key)
     for i in range(2):
-        add(obj("ann", reproducer, f"2026-09-12T14:0{i}:00Z", [
-            ("kind", text("reproduction")),
+        add(obj("claim.annotation", reproducer, f"2026-09-12T14:0{i}:00Z", [
+            ("kind", text("settled")),
             ("target", text(ws["claim"])),
             ("value", cbor_map([("outcome", text("consistent"))])),
         ]))

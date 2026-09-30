@@ -25,11 +25,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # Kinds whose table entry defers to a section have their fields taken from
 # that section's object shape.
 FIELDS = {
-    "assessment": ["verdict", "basis"],
+    "assessment": ["verdict", "grounds"],
     "verdict": ["finding", "aspect", "method", "effort"],
-    "proof-checked": ["system", "version", "artifact", "result"],
-    "reproduction": ["outcome", "independence", "funding", "shared_materials",
-                     "result", "data"],
+    # Section 7.2: one kind for what settles a formal claim (a checker
+    # descriptor in `method`) and an empirical or procedural one.
+    "settled": ["method", "outcome", "deviations", "result", "data",
+                "independence", "funding", "shared_materials",
+                "system", "version", "artifact"],
     "classifies": ["subject"],
     "critique": ["defect", "omitted"],
     # The specification says only "corpus evidence" and never gives a
@@ -45,7 +47,7 @@ FIELDS = {
     "affiliated": ["organization", "role", "period"],
     "personhood": ["scheme", "issuer_set", "scope", "nullifier", "proof",
                    "anonymity"],
-    "assumes-accountability": ["basis"],
+    "assumes-accountability": ["grounds"],
     "timestamped": ["at", "service", "proof"],  # Section 10.5
     "triage": ["finding", "engine"],
     "well-formed": ["test"],
