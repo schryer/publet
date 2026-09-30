@@ -1146,6 +1146,7 @@ dependencies = [
  "publet-merkle",
  "publet-net",
  "publet-store",
+ "serde_json",
  "tempfile",
  "tokio",
 ]

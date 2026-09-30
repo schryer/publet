@@ -144,7 +144,9 @@ pub init                    # create a workspace here
 pub sync --domain=CID       # fetch a domain from a peer by delta
 pub read CID                # the assertion, with the scope it was made under
 pub why CID                 # its standing, and every component of it
-pub compose --class=... --content=... --scope=...
+pub compose --class=... --content=... --scope=... [--data=FILE] [--source=REF]
+pub revise CID [--data=FILE] [--source=REF]   # next version + supersedes, or nothing if unchanged
+pub doc MANIFEST.json       # a document, from a JSON manifest; items may carry a `view`
 pub propose CID             # submit, recording what it was composed against
 pub witness DOMAIN          # the log root you observed
 ```
@@ -162,6 +164,16 @@ on agreement, and those are not the same claim.
 `pub compose` requires `--scope`. An assertion that states its own validity
 conditions does not drift; one that does not is a different assertion every
 time it is read.
+
+Gathering and rendering are separate. A claim about a set of values keeps
+its one-sentence `content` and carries the values in `data` -- a table of
+typed columns, or a file stored as a blob -- with `--source` naming where
+they were read from: a file at a commit, a warehouse query, an export, or
+another claim, which then also becomes a dependency. How to show the values
+is a `view` on the document item citing them, so the same data can be a
+table in one document and a chart in another; the rendering itself is never
+stored. `pub revise` publishes a new version only when something changed,
+so a build that re-gathers the same inputs leaves the lineage alone.
 
 `pub propose` records the generation it was composed against and reports the
 three ways that can be stale: the target already has another successor, a

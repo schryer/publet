@@ -8,7 +8,7 @@
 
 use publet_core::{Cid, Object, cbor::Value};
 
-use crate::{Graph, GraphError, Lineage};
+use crate::{Graph, GraphError, Lineage, View};
 
 /// How a document item refers to what it cites (Section 8).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,6 +101,8 @@ pub struct Item {
     pub role: Role,
     /// Presentational connective tissue. Carries no claims.
     pub gloss: Option<String>,
+    /// How to show the cited object's data here. Carries no claims.
+    pub view: Option<View>,
 }
 
 /// A document manifest (Section 8).
@@ -214,11 +216,17 @@ fn parse_item(entry: &Value) -> Result<Item, GraphError> {
         })?,
     };
 
+    // Section 8: a view is presentation, like a gloss. It is read strictly
+    // all the same -- a view no renderer can parse is a document that
+    // cannot be shown the way its author asked.
+    let view = entry.get("view").map(View::from_value).transpose()?;
+
     Ok(Item {
         reference,
         bind,
         at,
         role,
+        view,
         gloss: entry
             .get("gloss")
             .and_then(Value::as_text)

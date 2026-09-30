@@ -17,7 +17,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SPEC = ROOT.parent / "docs" / "publet-specification" / "index.md"
+# The specification lives in this repository (spec/index.md). The sibling
+# docs checkout is where it used to live, and is kept as a fallback so an
+# older layout still finds it.
+DEFAULT_SPEC = next(
+    (p for p in (ROOT / "spec" / "index.md",
+                 ROOT.parent / "docs" / "publet-specification" / "index.md")
+     if p.exists()),
+    ROOT / "spec" / "index.md",
+)
 
 NORMATIVE = re.compile(r"\b(MUST NOT|MUST|SHALL NOT|SHALL|REQUIRED)\b")
 # Top-level headings are written "## 6. Relations" -- number, period, space --
@@ -115,6 +123,10 @@ def main() -> int:
         print()
 
     if args.report:
+        # A path inside this tree is written relative to it, so the report
+        # does not change with where the checkout happens to live.
+        spec = args.spec.resolve()
+        label = spec.relative_to(ROOT) if spec.is_relative_to(ROOT) else spec
         lines = [
             "# Conformance coverage",
             "",
@@ -123,7 +135,7 @@ def main() -> int:
             "that showed only what passes would say nothing about what is",
             "untested.",
             "",
-            f"- specification: `{args.spec}`",
+            f"- specification: `{label}`",
             f"- sections with normative language: {total}",
             f"- sections with at least one scenario: {len(done)} ({percent}%)",
             "",

@@ -6,10 +6,110 @@
 //! read. The command therefore refuses to build without one rather than
 //! supplying a default that would be a claim the author never made.
 
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_graph::{Class, check};
+use publet_graph::{Class, ProseClaim, check};
+use publet_store::Store;
 
 use crate::workspace::Workspace;
+
+/// The creation instant used when `--created` is not given.
+pub(crate) const DEFAULT_CREATED: &str = "2026-09-12T00:00:00Z";
+
+/// One `--source=`, with the `--source-*` flags that followed it.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct SourceArg {
+    reference: String,
+    revision: Option<String>,
+    locator: Option<String>,
+    query: Option<String>,
+    note: Option<String>,
+}
+
+/// The flags `pub compose` and `pub revise` share.
+///
+/// `pub revise` reads the same flags as `pub compose` and applies only the
+/// ones given, so both commands parse them here: two parsers for one set
+/// of flags is how the two would come to disagree about what one means.
+#[derive(Debug, Default)]
+pub(crate) struct ClaimFlags {
+    pub(crate) class: Option<String>,
+    pub(crate) content: Option<String>,
+    pub(crate) scope: Option<String>,
+    pub(crate) lang: Option<String>,
+    pub(crate) depends: Vec<String>,
+    pub(crate) method: Option<String>,
+    pub(crate) cites: Vec<String>,
+    pub(crate) cite_notes: Vec<String>,
+    pub(crate) sources: Vec<SourceArg>,
+    pub(crate) data: Option<PathBuf>,
+    pub(crate) no_data: bool,
+    pub(crate) created: Option<String>,
+}
+
+impl ClaimFlags {
+    /// Take `arg` if it is one of these flags.
+    ///
+    /// Returns `Ok(false)` for an argument that is not, so the caller can
+    /// accept its own flags or refuse the argument.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message if a `--source-*` flag precedes any `--source`.
+    pub(crate) fn take(&mut self, arg: &str) -> Result<bool, String> {
+        if let Some(v) = arg.strip_prefix("--class=") {
+            self.class = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--content=") {
+            self.content = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--scope=") {
+            self.scope = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--lang=") {
+            self.lang = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--method=") {
+            self.method = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--depends=") {
+            self.depends.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--cite=") {
+            self.cites.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--cite-note=") {
+            self.cite_notes.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--data=") {
+            self.data = Some(PathBuf::from(v));
+        } else if arg == "--no-data" {
+            self.no_data = true;
+        } else if let Some(v) = arg.strip_prefix("--source=") {
+            self.sources.push(SourceArg {
+                reference: v.to_owned(),
+                ..SourceArg::default()
+            });
+        } else if let Some(v) = arg.strip_prefix("--source-revision=") {
+            self.current_source("--source-revision")?.revision = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--source-locator=") {
+            self.current_source("--source-locator")?.locator = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--source-query=") {
+            self.current_source("--source-query")?.query = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--source-note=") {
+            self.current_source("--source-note")?.note = Some(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--created=") {
+            self.created = Some(v.to_owned());
+        } else {
+            return Ok(false);
+        }
+        Ok(true)
+    }
+
+    /// The source the most recent `--source=` started, for a following
+    /// `--source-*` flag to attach to -- the same pairing-by-position
+    /// `pub document` uses for its items, for the same reason: a CID holds
+    /// colons, so one flag cannot carry several fields unambiguously.
+    fn current_source(&mut self, flag: &str) -> Result<&mut SourceArg, String> {
+        self.sources
+            .last_mut()
+            .ok_or_else(|| format!("{flag} given before any --source"))
+    }
+}
 
 /// Compose a claim.
 ///
@@ -21,50 +121,28 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let ws = Workspace::open(&here)?;
     let store = ws.store()?;
 
-    let mut class = None;
-    let mut content = None;
-    let mut scope = None;
-    let mut lang = "en".to_owned();
-    let mut depends: Vec<String> = Vec::new();
-    let mut method: Option<String> = None;
-    let mut created = "2026-09-12T00:00:00Z".to_owned();
-    let mut cites: Vec<String> = Vec::new();
-    let mut cite_notes: Vec<String> = Vec::new();
-
+    let mut flags = ClaimFlags::default();
     for arg in args {
-        if let Some(v) = arg.strip_prefix("--class=") {
-            class = Some(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--content=") {
-            content = Some(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--scope=") {
-            scope = Some(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--lang=") {
-            v.clone_into(&mut lang);
-        } else if let Some(v) = arg.strip_prefix("--method=") {
-            method = Some(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--depends=") {
-            depends.push(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--cite=") {
-            cites.push(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--cite-note=") {
-            cite_notes.push(v.to_owned());
-        } else if let Some(v) = arg.strip_prefix("--created=") {
-            v.clone_into(&mut created);
-        } else {
+        if !flags.take(arg)? {
             return Err(format!("unknown argument: {arg}"));
         }
     }
 
-    check_cite_notes(&cites, &cite_notes)?;
+    check_cite_notes(&flags.cites, &flags.cite_notes)?;
+    if flags.no_data {
+        return Err("--no-data is for `pub revise`: a new claim that carries \
+                    no data simply omits --data"
+            .to_owned());
+    }
 
-    let class_id = class.ok_or(
+    let class_id = flags.class.clone().ok_or(
         "--class is required: formal, empirical, attributive, definitional, \
          normative, expressive, archival, or procedural",
     )?;
     let parsed_class =
         Class::from_id(&class_id).ok_or(format!("unknown claim class: {class_id}"))?;
-    let content = content.ok_or("--content is required")?;
-    let scope = scope.ok_or(
+    let content = flags.content.clone().ok_or("--content is required")?;
+    let scope = flags.scope.clone().ok_or(
         "--scope is required. State the conditions you assert this under, or \
          \"unconditional\" if you really mean that (Section 5.3)",
     )?;
@@ -72,7 +150,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     // Section 5.5: an empirical claim must name a method others can
     // execute. Supplying a placeholder would assert a reproducibility the
     // author never offered, so the command refuses instead.
-    if parsed_class == Class::Empirical && method.is_none() {
+    if parsed_class == Class::Empirical && flags.method.is_none() {
         return Err("--method is required for an empirical claim: the CID of a \
              `procedural` claim describing how the observation may be \
              repeated. A measurement without one is a report of an \
@@ -84,44 +162,39 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         .get("author")
         .ok_or("no author configured; run `pub init`")?;
 
-    let bytes = Object::builder("claim.prose", &author)
-        .created(&created)
-        .field("class", Value::Text(class_id.clone()))
-        .field("lang", Value::Text(lang))
-        .field("content", Value::Text(content))
-        .field("scope", scope_value(&scope))
-        .field(
-            "depends",
-            Value::Array(depends.iter().map(|d| Value::Text(d.clone())).collect()),
-        )
-        .field(
-            "evidence",
-            evidence_for(method.as_deref(), &cites, &cite_notes),
-        )
-        .build()
-        .map_err(|e| e.to_string())?;
+    let (source_entries, source_claims) = source_entries(&store, &flags.sources)?;
+    let mut depends = flags.depends.clone();
+    add_missing(&mut depends, &source_claims);
+    let Value::Array(mut evidence) =
+        evidence_for(flags.method.as_deref(), &flags.cites, &flags.cite_notes)
+    else {
+        return Err("evidence is not a list".to_owned());
+    };
+    evidence.extend(source_entries);
 
-    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let mut body = BTreeMap::new();
+    body.insert("class".to_owned(), Value::Text(class_id.clone()));
+    body.insert(
+        "lang".to_owned(),
+        Value::Text(flags.lang.clone().unwrap_or_else(|| "en".to_owned())),
+    );
+    body.insert("content".to_owned(), Value::Text(content));
+    body.insert("scope".to_owned(), scope_value(&scope));
+    body.insert("depends".to_owned(), text_array(&depends));
+    body.insert("evidence".to_owned(), Value::Array(evidence));
+    if let Some(path) = &flags.data {
+        body.insert(
+            "data".to_owned(),
+            crate::payload::data_from_file(&store, path)?,
+        );
+    }
+
+    let created = flags.created.as_deref().unwrap_or(DEFAULT_CREATED);
+    let (cid, bytes, claim) = build_claim(&author, created, body)?;
     store.put(&cid, &bytes).map_err(|e| e.to_string())?;
 
     println!("{cid}");
-
-    // Structural findings are warnings, not validity rules: the pressure
-    // belongs on the author now, when the fix is cheap.
-    let verified = Object::parse(&bytes)
-        .map_err(|e| e.to_string())?
-        .verify(&cid)
-        .map_err(|e| e.to_string())?;
-    let claim = publet_graph::ProseClaim::from_object(cid.clone(), verified.object())
-        .map_err(|e| e.to_string())?;
-    let findings = check(&claim);
-    if !findings.is_empty() {
-        eprintln!();
-        eprintln!("structural findings (warnings, not errors):");
-        for finding in findings {
-            eprintln!("  {}: {}", finding.test, finding.detail);
-        }
-    }
+    warn_about(&claim);
 
     if parsed_class == Class::Empirical {
         eprintln!();
@@ -132,10 +205,124 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Build a prose claim from a body and read it back through the graph's
+/// own view of one, so that a body the loader would refuse -- a ragged
+/// table, a source claim missing from `depends` -- is refused here before
+/// anything is stored, by the same code that would refuse it later.
+///
+/// # Errors
+///
+/// Returns a message if the object cannot be built or the graph refuses it.
+pub(crate) fn build_claim(
+    author: &str,
+    created: &str,
+    body: BTreeMap<String, Value>,
+) -> Result<(Cid, Vec<u8>, ProseClaim), String> {
+    let mut builder = Object::builder("claim.prose", author).created(created);
+    for (key, value) in body {
+        builder = builder.field(&key, value);
+    }
+    let bytes = builder.build().map_err(|e| e.to_string())?;
+    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let verified = Object::parse(&bytes)
+        .map_err(|e| e.to_string())?
+        .verify(&cid)
+        .map_err(|e| e.to_string())?;
+    let claim = ProseClaim::from_object(cid.clone(), verified.object())
+        .map_err(|e| format!("this claim was refused, so it was not stored: {e}"))?;
+    Ok((cid, bytes, claim))
+}
+
+/// Structural findings and a missing source are warnings, not validity
+/// rules: the pressure belongs on the author now, when the fix is cheap.
+pub(crate) fn warn_about(claim: &ProseClaim) {
+    let findings = check(claim);
+    if !findings.is_empty() {
+        eprintln!();
+        eprintln!("structural findings (warnings, not errors):");
+        for finding in findings {
+            eprintln!("  {}: {}", finding.test, finding.detail);
+        }
+    }
+    if claim.data().is_some() && claim.sources().is_empty() {
+        eprintln!();
+        eprintln!("This claim carries data but names no --source it was read");
+        eprintln!("from. A reader cannot trace a figure without one (Section 5.5).");
+    }
+}
+
+/// The `source` evidence entries for `--source` flags, and which of them
+/// name claims (Section 5.5).
+///
+/// The kind is read off what the reference is rather than asked for: a CID
+/// held here as an object is a `claim`, one held as a blob is a `blob`,
+/// and anything else -- a repository URL, a warehouse table -- is
+/// `external` and will be displayed as unverified. A CID held as neither
+/// is refused, because nothing here could say what it names.
+///
+/// # Errors
+///
+/// Returns a message if a source is a CID this workspace does not hold.
+pub(crate) fn source_entries(
+    store: &Store,
+    sources: &[SourceArg],
+) -> Result<(Vec<Value>, Vec<String>), String> {
+    let mut entries = Vec::new();
+    let mut claims = Vec::new();
+    for source in sources {
+        let kind = match source.reference.parse::<Cid>() {
+            Ok(cid) if store.contains(&cid).map_err(|e| e.to_string())? => {
+                claims.push(source.reference.clone());
+                "claim"
+            }
+            Ok(cid) if store.get_blob(&cid).map_err(|e| e.to_string())?.is_some() => "blob",
+            Ok(_) => {
+                return Err(format!(
+                    "--source={} is a CID held here neither as an object nor \
+                     as a blob, so nothing could verify what it names",
+                    source.reference
+                ));
+            }
+            Err(_) => "external",
+        };
+        let mut entry = BTreeMap::new();
+        entry.insert("kind".to_owned(), Value::Text(kind.to_owned()));
+        entry.insert("role".to_owned(), Value::Text("source".to_owned()));
+        entry.insert("ref".to_owned(), Value::Text(source.reference.clone()));
+        let optional = [
+            ("revision", &source.revision),
+            ("locator", &source.locator),
+            ("query", &source.query),
+            ("note", &source.note),
+        ];
+        for (name, value) in optional {
+            if let Some(value) = value {
+                entry.insert(name.to_owned(), Value::Text(value.clone()));
+            }
+        }
+        entries.push(Value::Map(entry));
+    }
+    Ok((entries, claims))
+}
+
+/// Append each of `extra` not already in `list`, keeping order.
+pub(crate) fn add_missing(list: &mut Vec<String>, extra: &[String]) {
+    for item in extra {
+        if !list.contains(item) {
+            list.push(item.clone());
+        }
+    }
+}
+
+/// An array of text values.
+pub(crate) fn text_array(items: &[String]) -> Value {
+    Value::Array(items.iter().map(|d| Value::Text(d.clone())).collect())
+}
+
 /// A note is paired with the citation at the same position; a citation may
 /// be given without one, but a note cannot outnumber the citations it
 /// annotates -- there would be nothing left to say it about.
-fn check_cite_notes(cites: &[String], cite_notes: &[String]) -> Result<(), String> {
+pub(crate) fn check_cite_notes(cites: &[String], cite_notes: &[String]) -> Result<(), String> {
     if cite_notes.len() > cites.len() {
         return Err(format!(
             "{} --cite-note value(s) given but only {} --cite value(s); \
@@ -159,7 +346,7 @@ fn check_cite_notes(cites: &[String], cite_notes: &[String]) -> Result<(), Strin
 /// different act from citing someone else's, and conflating them here
 /// would let a citation masquerade as one of the roles Section 11.4
 /// weighs more heavily.
-fn evidence_for(method: Option<&str>, cites: &[String], cite_notes: &[String]) -> Value {
+pub(crate) fn evidence_for(method: Option<&str>, cites: &[String], cite_notes: &[String]) -> Value {
     let mut entries = Vec::new();
 
     if let Some(method) = method {
@@ -243,7 +430,7 @@ pub(crate) fn default_policy(author: &Cid) -> Result<Vec<u8>, String> {
     root.insert("weight".to_owned(), Value::Uint(1000));
 
     Object::builder("policy", &author.to_string())
-        .created("2026-09-12T00:00:00Z")
+        .created(DEFAULT_CREATED)
         .field("roots", Value::Array(vec![Value::Map(root)]))
         .field("damping", Value::Uint(850_000))
         .field("iterations", Value::Uint(20))

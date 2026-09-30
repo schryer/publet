@@ -10,6 +10,7 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
 mod assumption;
+mod data;
 mod divergence;
 mod document;
 mod error;
@@ -19,6 +20,7 @@ pub mod personhood;
 mod view;
 
 pub use assumption::{Assumption, Basis, Triage};
+pub use data::{Cell, Column, Data, Source, View, sources};
 pub use divergence::{Divergence, TermConflict, TermPartition, compare, partition};
 pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;

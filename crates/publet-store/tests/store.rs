@@ -322,3 +322,71 @@ fn a_declared_domains_manifest_survives_collection() {
     // And the declaration is still readable afterwards.
     assert_eq!(s.declared().unwrap(), vec![domain.to_string()]);
 }
+
+#[test]
+fn a_blob_is_stored_apart_from_objects_and_verified() {
+    // Section 4.7: a blob is not an object, so it must never appear where
+    // every entry is expected to parse as one.
+    let dir = tempfile::tempdir().unwrap();
+    let s = store(&dir);
+    let (cid, bytes) = object("%PDF-1.7 not an object");
+    s.put_blob(&cid, &bytes).unwrap();
+    assert_eq!(s.get_blob(&cid).unwrap().as_deref(), Some(bytes.as_slice()));
+    assert_eq!(s.blobs().unwrap(), vec![cid.to_string()]);
+    assert!(s.cids().unwrap().is_empty());
+    assert!(s.get(&cid).unwrap().is_none());
+}
+
+#[test]
+fn a_blob_whose_bytes_do_not_match_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let s = store(&dir);
+    let (cid, _) = object("what was cited");
+    let err = s.put_blob(&cid, b"something else").unwrap_err();
+    assert!(matches!(err, StoreError::IdentifierMismatch { .. }));
+    assert!(s.get_blob(&cid).unwrap().is_none());
+}
+
+#[test]
+fn a_tampered_blob_is_refused_on_read_and_found_by_a_scan() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("objects.redb");
+    let (cid, bytes) = object("original blob");
+    {
+        let s = Store::open(&path).unwrap();
+        s.put_blob(&cid, &bytes).unwrap();
+    }
+    {
+        const BLOBS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("blobs");
+        let db = Database::open(&path).unwrap();
+        let tx = db.begin_write().unwrap();
+        {
+            let mut table = tx.open_table(BLOBS).unwrap();
+            table
+                .insert(cid.to_string().as_str(), b"tampered".as_slice())
+                .unwrap();
+        }
+        tx.commit().unwrap();
+    }
+    let s = Store::open(&path).unwrap();
+    assert!(matches!(
+        s.get_blob(&cid),
+        Err(StoreError::IdentifierMismatch { .. })
+    ));
+    let findings = s.scan().unwrap();
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].stored_as, cid.to_string());
+}
+
+#[test]
+fn garbage_collection_leaves_blobs_alone() {
+    // Collection is over objects outside declared sets. Domains never hold
+    // blobs (Section 14.1), so a blob is outside every declared set by
+    // construction, and collecting on that basis would discard every one.
+    let dir = tempfile::tempdir().unwrap();
+    let s = store(&dir);
+    let (cid, bytes) = object("a dataset");
+    s.put_blob(&cid, &bytes).unwrap();
+    s.collect_garbage().unwrap();
+    assert!(s.get_blob(&cid).unwrap().is_some());
+}

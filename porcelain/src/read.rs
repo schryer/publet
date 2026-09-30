@@ -113,6 +113,11 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         println!("   stating the conditions it holds under)");
     }
 
+    if let Some(data) = body.get("data") {
+        print_data(data);
+    }
+    print_sources(body.get("evidence"));
+
     if let Some(Value::Array(depends)) = body.get("depends")
         && !depends.is_empty()
     {
@@ -205,8 +210,76 @@ fn print_document(body: &std::collections::BTreeMap<String, Value>) {
             if let Some(Value::Text(role)) = item.get("role") {
                 println!("      role   {role}");
             }
+            if let Some(Value::Text(renderer)) = item.get("view").and_then(|v| v.get("renderer")) {
+                println!("      view   {renderer}");
+            }
             if let Some(Value::Text(gloss)) = item.get("gloss") {
                 println!("      gloss  {gloss}");
+            }
+        }
+    }
+}
+
+/// Summarize a claim's `data` (Section 5.8): its shape, not its values.
+///
+/// Showing the rows is rendering, and rendering belongs to whatever shows
+/// a document, under that document's view. What a reader of the claim
+/// itself needs is what the values are measured in and how many there
+/// are, so the table's columns and units are listed and the rows counted.
+fn print_data(data: &Value) {
+    println!();
+    if let Some(Value::Array(columns)) = data.get("columns") {
+        let rows = match data.get("rows") {
+            Some(Value::Array(rows)) => rows.len(),
+            _ => 0,
+        };
+        println!(
+            "data      table, {} column(s), {rows} row(s)",
+            columns.len()
+        );
+        for column in columns {
+            let name = column.get("name").and_then(Value::as_text).unwrap_or("");
+            match column.get("unit").and_then(Value::as_text) {
+                Some(unit) => println!("  {name} ({unit})"),
+                None => println!("  {name}"),
+            }
+        }
+    } else if let Some(Value::Text(blob)) = data.get("ref") {
+        let media = data.get("media").and_then(Value::as_text).unwrap_or("");
+        let size = data.get("size").and_then(Value::as_uint).unwrap_or(0);
+        println!("data      file, {media}, {size} bytes");
+        println!("  blob    {blob}");
+    }
+}
+
+/// List where a claim's values were read from (Section 5.5). External
+/// sources lie outside the protocol's integrity guarantees and are marked
+/// unverified, as that section requires.
+fn print_sources(evidence: Option<&Value>) {
+    let Some(Value::Array(entries)) = evidence else {
+        return;
+    };
+    let sources: Vec<&Value> = entries
+        .iter()
+        .filter(|e| e.get("role").and_then(Value::as_text) == Some("source"))
+        .collect();
+    if sources.is_empty() {
+        return;
+    }
+    println!();
+    println!("read from:");
+    for source in sources {
+        let kind = source.get("kind").and_then(Value::as_text).unwrap_or("");
+        let reference = source.get("ref").and_then(Value::as_text).unwrap_or("");
+        let mark = if kind == "external" {
+            "  (unverified)"
+        } else {
+            ""
+        };
+        println!("  {kind:<9}{reference}{mark}");
+        for field in ["revision", "locator", "query", "note"] {
+            if let Some(value) = source.get(field).and_then(Value::as_text) {
+                println!("    {field:<9}{value}");
             }
         }
     }

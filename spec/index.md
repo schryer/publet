@@ -342,6 +342,8 @@ document is its encoding.
 | A line of work outlives its originator | R15, R11 | Curation, stewardship, and delegation attach to lineages, which have no lifespan, rather than to authors, who do. |
 | An author dies or loses their key | R1, R11 | Nothing depends on an author remaining available. Claims stand; others continue the lineage; stewardship is a shortcut, not a dependency. |
 | Automated systems flood the graph | R7, R14 | Unsigned output does not exist; signed output carries a key's consequences; zero-weight keys are inert under every viewpoint. |
+| A published figure cannot be traced to where it was read | R1, R2, R4 | Values travel in a claim's `data` with `source` evidence naming the file at a commit, the query, the export, or the claim they came from; a source claim is also in `depends`, so the chain back to the inputs is a closure (Sections 5.5, 5.8). |
+| The same values must be shown differently in different places | R1, R3 | How to show data is a `view` on the citing document's item, not part of the claim; renderings are rebuilt wherever they are shown and are never objects (Section 8). |
 
 ---
 
@@ -411,7 +413,7 @@ deployments.
 
 Implementations MUST accept objects up to 64 KiB and MAY reject larger.
 Images, datasets, and media are referenced by CID as opaque **blobs** and
-are not objects.
+are not objects (Section 4.7).
 
 ---
 
@@ -435,6 +437,29 @@ names the head of one cited lineage rather than the state of the whole
 work, and an `eval` names its `snapshot` because reproducing the
 evaluation requires it (R8).
 
+### 4.7 Blobs
+
+A **blob** is a byte string named by the CID of those exact bytes
+(Section 4.2), with no header, no canonical form beyond the bytes
+themselves, and no signature. It is the one stored thing that is not an
+object: it asserts nothing and has no author. Whatever is asserted about
+it is asserted by the object that cites it, which is signed, and which
+states what the bytes are (`media`, a media type [RFC6838]) and how many
+there are (`size`, in bytes).
+
+A blob is verified exactly as an object is (R2): an implementation MUST
+verify a blob's bytes against its CID before use, and MUST reject a blob
+whose length differs from the `size` stated by the object citing it. A
+cited blob that is not held is unavailable, not absent from the claim:
+an implementation MUST NOT present a claim as verified while a blob its
+`data` cites is unavailable, for the reason Section 5.4 gives for
+dependencies.
+
+Blobs carry no size ceiling of their own, are never members of a domain
+(Section 14.1), and are fetched separately. Because a blob cannot state its
+own meaning, one blob MAY be cited by any number of objects, each stating
+something different about the same bytes.
+
 ---
 
 ## 5. Prose Claims
@@ -457,12 +482,15 @@ is making the same kind of speech act in each case.
       depends:         [ <CID>, ... ],
       evidence:        [ <evidence>, ... ], // per class
       reproducibility: <repro>,             // per class
-      medium:          <medium>             // for non-text content
+      medium:          <medium>,            // for non-text content
+      data:            <data>               // OPTIONAL, Section 5.8
     } }
 ```
 
 `content` is one assertion, in one language. The size ceiling is structural
-pressure toward atomicity.
+pressure toward atomicity. Where a claim is about a set of values, the
+values are carried in `data` and `content` remains the one sentence stating
+what they are (Section 5.8).
 
 ### 5.2 Claim Classes
 
@@ -532,8 +560,11 @@ its dependency closure is unavailable.
   { kind: "blob" | "claim" | "external",
     ref:  <CID or URI>,
     role: "measurement" | "derivation" | "citation"
-        | "replication" | "method",
-    note: <string> }
+        | "replication" | "method" | "source",
+    note:     <string>,
+    revision: <string>,   // role "source": the version read
+    locator:  <string>,   // role "source": where within `ref`
+    query:    <string> }  // role "source": the query that selected it
 ```
 
 For `empirical` claims, `evidence` MUST be non-empty and MUST include
@@ -542,6 +573,31 @@ describing how the observation may be repeated.
 
 `external` references lie outside the protocol's integrity guarantees and
 MUST be displayed as unverified.
+
+**Source evidence.** An entry with `role: "source"` states where values
+carried in `data` (Section 5.8) were read from. It records provenance, not
+support: a source is not a measurement, does not count toward any
+replication floor, and no quantity of sources substitutes for the evidence
+R9 requires. The shape follows what was read:
+
+- a file in a version-controlled tree: `kind: "external"`, `ref` the
+  repository, `revision` the commit read, `locator` the path within it;
+- a table in a database or warehouse: `kind: "external"`, `ref` the table,
+  `query` the query that selected the rows, and `revision` the snapshot or
+  time read where the store offers one;
+- an exported file: `kind: "blob"`, `ref` the CID of the export as read,
+  which makes the source itself verifiable (Section 4.7);
+- another claim: `kind: "claim"`, `ref` its CID.
+
+A `source` entry of kind `claim` MUST also appear in `depends`, and an
+implementation MUST reject a claim in which it does not. A value derived
+from another claim's values presupposes that claim in exactly the sense
+Section 5.4 describes, and listing it there is what makes the chain from a
+figure back to its inputs walkable by the same closure that walks
+definitions. A claim carrying `data` SHOULD carry at least one `source`
+entry, and implementations SHOULD warn at authoring time where it does not.
+Source entries are ordinarily written by the program that gathered the
+values rather than typed by an author.
 
 Evidence and `depends` entries naming a claim are covered by the citing
 claim's CID (R1, R2), so they necessarily reference objects that already
@@ -619,6 +675,59 @@ was authored under in `ext`.
 Implementations MUST NOT deduplicate by content similarity. Whether two
 phrasings assert the same thing is a claim, and claims are made by signing
 them (R6, R14).
+
+### 5.8 Data
+
+A claim about a set of values -- a budget by line item, a month of
+transactions, a calibration series -- states what the values are in
+`content` and carries the values themselves in `data`, in one of two
+shapes:
+
+```
+  data: { columns: [ { name: <string>, unit: <string> }, ... ],
+          rows:    [ [ <cell>, ... ], ... ] }          // a table
+      | { media: <media type>, ref: <CID of blob>,
+          size:  <unsigned integer> }                  // a file
+```
+
+A table's cells are text, integers, or null. Non-integer quantities are
+decimal strings (Section 4.1), and the unit belongs to the column, so that
+a value is never separated from what it counts. `unit` MAY be omitted for a
+column whose values have none, such as names. Column names MUST be
+non-empty and unique within a table, every row MUST carry exactly as many
+cells as there are columns, and an implementation MUST reject a claim
+whose `data` violates either. A file is a blob (Section 4.7), and `media`
+and `size` are the citing claim's statement of what it is.
+
+`data` carries values and nothing about how to show them: no ordering
+beyond the rows' own, no number formatting, no grouping, no totals row.
+Those are presentation, they belong to the document that shows the data
+(Section 8), and two documents MAY show one claim's data differently. A
+total displayed beside the rows is computed by whatever renders them, and
+is not part of what was asserted.
+
+The claim asserts its `data` as a whole, under its own `class` and
+`scope`: a budget is `normative`, because planned figures are decisions; a
+month of bank transactions is `archival`; a set of measurements is
+`empirical` and needs its method as any other empirical claim does. The
+atomicity tests of Section 5.7 apply to `content`, not to the rows -- a
+table of forty figures is one assertion about what the forty figures are,
+and negating it yields one counter-claim: that they are not. Contesting a
+single value is contesting the claim, with the dispute's `aspect` naming
+the row and column.
+
+**NORM.** Why a set of values was assembled as it was -- which items were
+included, why they are grouped by phase, which exchange rate was applied --
+is itself a claim, and is published as a `normative` or `procedural` claim
+that the data claim names in `depends`, not written into `content` or
+`scope`. The reasoning can then be disputed or revised on its own lineage
+without touching the values, and the values can be revised without
+reopening the reasoning.
+
+A new version of a data claim is a new object plus `supersedes`, as with
+any claim (R1). An author SHOULD publish one only when the values or their
+sources change: re-rendering the same values is not a revision, and a
+lineage that grows on every build obscures the revisions that matter.
 
 ---
 
@@ -997,6 +1106,8 @@ not to gate"), and MUST NOT silently substitute a different target.
                                      at:   <CID>,   // if bind = lineage
                                      role: "assert" | "quote" | "contrast"
                                          | "background" | "counterpoint",
+                                     view: { renderer: <string>,
+                                             options:  <map> },
                                      gloss: <string> } ] } ] } }
 ```
 
@@ -1004,6 +1115,21 @@ A document contains no assertions of its own. `gloss` is presentational
 connective tissue and MUST NOT carry claims; clients SHOULD render glosses
 distinctly. `role` makes a document's *use* of a claim explicit —
 including a claim as `counterpoint` is not endorsing it.
+
+`view` says how this document shows the cited object's `data`
+(Section 5.8) at this point: `renderer` names a presentation, such as a
+table or a chart, and `options` are that renderer's settings -- which
+columns, in what order, grouped how, with what totals and number format.
+Renderer names and their options are not registered; they are agreements
+between a document's author and the clients that render it. Like `gloss`,
+a view is presentational and MUST NOT carry claims: a renderer MUST NOT
+display a value that is neither in the cited object nor computed from it,
+and SHOULD mark computed values, such as totals, as computed. A client
+that does not recognize a renderer, or cannot apply its options, MUST
+still display the cited object, and MUST NOT omit the item. Because the
+view lives in the citing document and not in the cited claim, the same
+data MAY be a full table in one document and a two-column summary or a
+chart in another, and none of those renderings is itself an object.
 
 `bind` declares what the author meant to cite (R15). With `bind: "object"`
 — the default — `ref` is a claim CID and the citation is permanently
@@ -2197,6 +2323,8 @@ annotation kinds.
 - [RFC2119] Bradner, S., BCP 14, RFC 2119, March 1997.
 - [RFC8174] Leiba, B., BCP 14, RFC 8174, May 2017.
 - [RFC8949] Bormann, C. and P. Hoffman, "CBOR", STD 94, RFC 8949, 2020.
+- [RFC6838] Freed, N., Klensin, J., and T. Hansen, "Media Type
+  Specifications and Registration Procedures", BCP 13, RFC 6838, 2013.
 - [RFC3339] Klyne, G. and C. Newman, RFC 3339, July 2002.
 - [RFC5646] Phillips, A. and M. Davis, BCP 47, RFC 5646, September 2009.
 - [UAX15] Unicode Consortium, "Unicode Normalization Forms", UAX #15.
@@ -2417,6 +2545,27 @@ is the ordinary case, never an error.
 **Document** — a work citing sources and ordering references to them,
 asserting nothing of its own. The citing side of the relationship a publet
 is the cited side of (Section 8).
+
+**Data** — the optional `data` field of a prose claim: a table of typed
+columns and rows, or a file carried as a blob. The claim's `content` says
+what the values are; `data` carries them (Section 5.8).
+
+**Blob** — a byte string named by the CID of its bytes. Unsigned and not
+an object; what it is, and how large, is stated by the object citing it,
+and it is verified against its CID before use like anything else
+(Section 4.7).
+
+**Source** — an evidence entry with `role: "source"`, stating where values
+in `data` were read from: a file at a commit, a warehouse table and query,
+an exported blob, or another claim (Section 5.5). Provenance, not support.
+
+**View** — the optional presentation a document item gives the data it
+cites: a renderer name and its options. Presentational like a gloss, and
+carrying no claims (Section 8).
+
+**Rendering** — what a view produces when a client applies it: a table on
+a page, a chart, a CSV download. Never an object and never a publet; it is
+rebuilt from the cited data wherever it is shown (Sections 5.8, 8).
 
 **CID** — content identifier. The multihash of an object's canonical
 serialization. A reference is always a CID, and retrieved bytes are

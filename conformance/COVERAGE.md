@@ -5,9 +5,9 @@ suite exercises. Gaps are listed rather than hidden: a report
 that showed only what passes would say nothing about what is
 untested.
 
-- specification: `/home/david/git/docs/publet-specification/index.md`
-- sections with normative language: 49
-- sections with at least one scenario: 47 (95%)
+- specification: `spec/index.md`
+- sections with normative language: 53
+- sections with at least one scenario: 49 (92%)
 
 ## Covered
 
@@ -46,18 +46,20 @@ untested.
 | 4.3 | 5 | plumbing/verify.feature |
 | 4.4 | 2 | conformance/signatures.feature |
 | 4.5 | 1 | conformance/object_size.feature |
+| 4.7 | 3 | conformance/blobs.feature |
 | 5.1 | 4 | conformance/immutability.feature, porcelain/compose.feature |
 | 5.2 | 2 | conformance/assessment.feature, conformance/class_rules.feature, conformance/usage.feature |
 | 5.4 | 2 | conformance/evidence_required.feature |
-| 5.5 | 2 | conformance/evidence_required.feature |
+| 5.5 | 4 | conformance/evidence_required.feature, conformance/sources.feature |
 | 5.7 | 2 | conformance/atomicity.feature |
-| 6 | 6 | conformance/acyclicity.feature |
+| 5.8 | 3 | conformance/data.feature |
+| 6 | 7 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |
-| 7.2 | 1 | conformance/human_signatory.feature |
+| 7.2 | 2 | conformance/human_signatory.feature |
 | 7.3 | 2 | conformance/redundancy.feature |
 | 7.4 | 4 | conformance/assumption.feature |
-| 8 | 5 | conformance/documents.feature, conformance/forks.feature |
+| 8 | 8 | conformance/documents.feature, conformance/forks.feature, porcelain/doc.feature |
 | 9.2 | 3 | plumbing/divergence.feature |
 | 9.3 | 1 | conformance/anchors.feature |
 
@@ -66,4 +68,6 @@ untested.
 | Section | Statements |
 |---|---|
 | 6.2 | 1 |
+| 7 | 2 |
 | 7.5 | 4 |
+| 9.1 | 1 |

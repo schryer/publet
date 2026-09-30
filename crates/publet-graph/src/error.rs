@@ -72,6 +72,18 @@ pub enum GraphError {
         lineage: String,
     },
 
+    /// A `source` evidence entry named a claim the citing claim does not
+    /// list in `depends` (Section 5.5).
+    #[error(
+        "source {claim} is a claim, so it must also be listed in `depends`; \
+         a value read from another claim presupposes it, and `depends` is \
+         what makes the chain back to the inputs walkable"
+    )]
+    SourceNotInDepends {
+        /// The claim named as a source.
+        claim: String,
+    },
+
     /// An empirical claim named no method.
     #[error(
         "an `empirical` claim must carry an evidence entry with role `method`; \
