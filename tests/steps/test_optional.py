@@ -288,12 +288,12 @@ def still_the_author(runner, store):
     # Vouching moves no authorship. The publet is still listed under the
     # key that signed it, and listing by the assumer's key returns nothing:
     # the assumer has staked their standing, not taken the byline.
-    by_assumed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet",
+    by_assumed = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
                             f"--author={store['assumed']}")
     assert by_assumed.code == 0, by_assumed.stderr
     assert by_assumed.stdout.split() == [store["publet"]], by_assumed.stdout
 
-    by_assumer = runner.run("pub-ls", f"--dir={store['dir']}", "--type=publet",
+    by_assumer = runner.run("pub-ls", f"--dir={store['dir']}", "--type=claim.prose",
                             f"--author={store['assumer']}")
     assert by_assumer.code == 0, by_assumer.stderr
     assert by_assumer.stdout.strip() == "", by_assumer.stdout
@@ -316,9 +316,9 @@ def no_identity_recorded(runner, store):
     assert out.code == 0, out.stderr
     rows = [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
     assert len(rows) == 1, rows
-    # Two keys and a basis. A field for who holds the assumed key is the one
-    # thing the record must never carry.
-    assert set(rows[0]) == {"assumer", "assumed", "basis"}, rows[0]
+    # Two keys and the grounds. A field for who holds the assumed key is the
+    # one thing the record must never carry.
+    assert set(rows[0]) == {"assumer", "assumed", "grounds"}, rows[0]
 
 
 @given("a claim with a standing", target_fixture="workspace")

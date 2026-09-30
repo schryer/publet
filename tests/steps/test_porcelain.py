@@ -93,7 +93,7 @@ def fifty_affirmations(pub):
                   if l.startswith("author=")][0]
     value = cbor_map([("finding", text("affirm"))])
     for i in range(50):
-        ann = obj("ann", author_cid, f"2026-09-12T12:{i:02d}:00Z", [
+        ann = obj("claim.annotation", author_cid, f"2026-09-12T12:{i:02d}:00Z", [
             ("kind", text("verdict")),
             ("target", text(pub.claim)),
             ("value", value),
@@ -122,15 +122,15 @@ def _publet(author, created, cls, content, depends=()):
     # Section 5.5: an empirical claim must name a method others can execute.
     if cls == "empirical":
         body.append(("evidence", _arr([cbor_map([
-            ("kind", text("publet")),
+            ("kind", text("claim")),
             ("role", text("method")),
             ("ref", text(cid_of(b"a protocol"))),
         ])])))
-    return obj("publet", author, created, body)
+    return obj("claim.prose", author, created, body)
 
 
 def _relation(author, created, kind, frm, to):
-    return obj("rel", author, created, [
+    return obj("claim.relation", author, created, [
         ("kind", text(kind)), ("from", text(frm)), ("to", text(to)),
     ])
 
@@ -191,7 +191,7 @@ def dispute_already_resolved(bin_dir: Path, tmp_path: Path):
         p.add(data)
     p.add(_relation(a, "2026-09-12T11:00:01Z", "disputes",
                     cid_of(grounds), cid_of(claim)))
-    p.add(obj("ann", a, "2026-09-12T11:30:00Z", [
+    p.add(obj("claim.annotation", a, "2026-09-12T11:30:00Z", [
         ("kind", text("resolution")),
         ("target", text(cid_of(claim))),
         ("value", cbor_map([("outcome", text("sustained"))])),
@@ -246,7 +246,7 @@ def workspace_with_relation(bin_dir: Path, tmp_path: Path):
              "--content=alpha: the first thing").stdout.decode().strip()
     b = p.run("compose", "--class=definitional", "--scope=unconditional",
              "--content=beta: the second thing").stdout.decode().strip()
-    rel = p.run("relate", "--kind=depends", f"--from={a}", f"--to={b}",
+    rel = p.run("relate", "--scope=unconditional", "--kind=depends", f"--from={a}", f"--to={b}",
                "--aspect=construction")
     assert rel.returncode == 0, text_of(rel)
     p.relation = rel.stdout.decode().strip()
@@ -264,7 +264,7 @@ def workspace_with_annotation(bin_dir: Path, tmp_path: Path):
     assert p.run("init").returncode == 0
     a = p.run("compose", "--class=definitional", "--scope=unconditional",
              "--content=gamma: the third thing").stdout.decode().strip()
-    ann = p.run("annotate", "--kind=usage", f"--target={a}",
+    ann = p.run("annotate", "--scope=unconditional", "--kind=usage", f"--target={a}",
                "--source=an external reference", "--locator=section 2")
     assert ann.returncode == 0, text_of(ann)
     p.annotation = ann.stdout.decode().strip()

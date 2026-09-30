@@ -26,7 +26,7 @@ def composed_definition(runner, tmp_path):
 
 @when("I record a verdict on it", target_fixture="result")
 def record_verdict(runner, defn):
-    return runner.run("pub", "annotate", "--kind=verdict",
+    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=verdict",
                       f"--target={defn['cid']}", "--finding=affirm")
 
 
@@ -34,7 +34,7 @@ def record_verdict(runner, defn):
 def cite_two(runner, defn):
     last = None
     for source in (FIRST, SECOND):
-        last = runner.run("pub", "annotate", "--kind=usage",
+        last = runner.run("pub", "annotate", "--scope=unconditional", "--kind=usage",
                           f"--target={defn['cid']}", f"--source={source}",
                           "--locator=sense 1")
         assert last.code == 0, last.stderr
@@ -45,7 +45,7 @@ def cite_two(runner, defn):
 def cite_twice(runner, defn):
     last = None
     for locator in ("sense 1", "sense 2"):
-        last = runner.run("pub", "annotate", "--kind=usage",
+        last = runner.run("pub", "annotate", "--scope=unconditional", "--kind=usage",
                           f"--target={defn['cid']}", f"--source={FIRST}",
                           f"--locator={locator}")
         assert last.code == 0, last.stderr
@@ -80,7 +80,7 @@ def no_citations(runner, defn):
 def no_text_reproduced(runner, defn):
     # The point of a citation is that it names a location. If the defined
     # text travelled with it, four sources agreeing would mean four copies.
-    out = runner.run("pub-ls", f"--dir={defn['dir']}", "--type=ann")
+    out = runner.run("pub-ls", f"--dir={defn['dir']}", "--type=claim.annotation")
     body = _why(runner, defn)
     usage_block = body.split("usage", 1)[1]
     assert "merkle tree:" not in usage_block.lower(), usage_block

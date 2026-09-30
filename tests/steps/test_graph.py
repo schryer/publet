@@ -179,5 +179,11 @@ def lines_are_cids(result):
 
 @then(parsers.parse('each names an object of type "{kind}"'))
 def each_of_type(runner, store, result, kind: str):
-    listed = runner.run("pub-ls", f"--dir={store['dir']}", f"--type={kind}")
-    assert set(result.lines) == set(listed.lines)
+    # Read each object back rather than comparing the listing with itself:
+    # an empty listing would otherwise pass, and did while the fixture's
+    # type names no longer matched any object.
+    assert result.lines, "the filter listed nothing"
+    for cid in result.lines:
+        shown = runner.run("pub", "read", f"--dir={store['dir']}", cid)
+        assert shown.code == 0, shown.stderr
+        assert f"type      {kind}" in shown.stdout, shown.stdout

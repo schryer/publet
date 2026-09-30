@@ -12,7 +12,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 scenarios("../features/conformance/assessment.feature")
 
 CONTENT = "hash function: a function mapping data of arbitrary size to fixed-size values"
-BASIS = "omits collision resistance, so it misleads in a security context"
+GROUNDS = "omits collision resistance, so it misleads in a security context"
 
 
 @given("a workspace with a scoped definition", target_fixture="defn")
@@ -34,14 +34,14 @@ def _weights(body: str) -> list[str]:
 
 @when(parsers.parse('I assess it as "{verdict}"'), target_fixture="result")
 def assess(runner, defn, verdict: str):
-    return runner.run("pub", "annotate", "--kind=assessment",
+    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=assessment",
                       f"--target={defn['cid']}", f"--verdict={verdict}",
-                      f"--basis={BASIS}")
+                      f"--grounds={GROUNDS}")
 
 
-@when("I assess it with no basis", target_fixture="result")
+@when("I assess it with no grounds", target_fixture="result")
 def assess_no_basis(runner, defn):
-    return runner.run("pub", "annotate", "--kind=assessment",
+    return runner.run("pub", "annotate", "--scope=unconditional", "--kind=assessment",
                       f"--target={defn['cid']}", "--verdict=sound-in-scope")
 
 
@@ -49,7 +49,7 @@ def assess_no_basis(runner, defn):
 def shows_judgement(runner, defn):
     body = runner.run("pub", "why", defn["cid"]).stdout
     assert "sound-in-scope" in body, body
-    assert BASIS in body, body
+    assert GROUNDS in body, body
 
 
 @then("asking why still reports the class not truth-apt")
