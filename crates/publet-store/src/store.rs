@@ -24,6 +24,10 @@ use crate::StoreError;
 
 /// Objects, keyed by identifier.
 const OBJECTS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("objects");
+/// Blobs, keyed by identifier (Section 4.7). Kept apart from objects
+/// because a blob is not one: it has no header to parse, and everything
+/// that walks the object table expects every entry to have one.
+const BLOBS: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("blobs");
 /// Domain manifests the node has declared it serves.
 const DECLARED: TableDefinition<'_, &str, &[u8]> = TableDefinition::new("declared");
 /// Membership of each declared domain, as newline-separated identifiers.
@@ -70,6 +74,7 @@ impl Store {
         let tx = db.begin_write()?;
         {
             let _ = tx.open_table(OBJECTS)?;
+            let _ = tx.open_table(BLOBS)?;
             let _ = tx.open_table(DECLARED)?;
             let _ = tx.open_table(MEMBERS)?;
             let _ = tx.open_table(TOMBSTONES)?;
@@ -100,6 +105,75 @@ impl Store {
         }
         tx.commit()?;
         Ok(())
+    }
+
+    /// Store a blob, verifying its bytes against `cid` (Section 4.7).
+    ///
+    /// A blob is verified exactly as an object is (R2); what differs is
+    /// only that there is nothing to parse, because a blob states nothing
+    /// about itself -- the object citing it does.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::IdentifierMismatch`] if the bytes do not hash
+    /// to `cid`.
+    pub fn put_blob(&self, cid: &Cid, bytes: &[u8]) -> Result<(), StoreError> {
+        if !cid.verifies(bytes) {
+            return Err(StoreError::IdentifierMismatch {
+                claimed: cid.to_string(),
+                actual: Cid::of(bytes, cid.alg()).to_string(),
+            });
+        }
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(BLOBS)?;
+            table.insert(cid.to_string().as_str(), bytes)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Retrieve a blob, re-verifying it against `cid` on the way out.
+    ///
+    /// Verified on read as well as on write, because a blob is the one
+    /// thing a reader cannot check by parsing: bytes changed underneath the
+    /// store would otherwise be handed on as though they were what the
+    /// citing claim's author signed a reference to.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::IdentifierMismatch`] if the held bytes no
+    /// longer match, or [`StoreError::Database`] on a read failure.
+    pub fn get_blob(&self, cid: &Cid) -> Result<Option<Vec<u8>>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(BLOBS)?;
+        let Some(held) = table.get(cid.to_string().as_str())? else {
+            return Ok(None);
+        };
+        let bytes = held.value().to_vec();
+        if !cid.verifies(&bytes) {
+            return Err(StoreError::IdentifierMismatch {
+                claimed: cid.to_string(),
+                actual: Cid::of(&bytes, cid.alg()).to_string(),
+            });
+        }
+        Ok(Some(bytes))
+    }
+
+    /// Every blob identifier held, in sorted order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::Database`] on a read failure.
+    pub fn blobs(&self) -> Result<Vec<String>, StoreError> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(BLOBS)?;
+        let mut out = Vec::new();
+        for entry in table.iter()? {
+            let (key, _) = entry?;
+            out.push(key.value().to_owned());
+        }
+        Ok(out)
     }
 
     /// Retrieve an object.
@@ -528,7 +602,8 @@ impl Store {
         Ok(candidates)
     }
 
-    /// Re-hash every stored object and report those that no longer match.
+    /// Re-hash every stored object and blob and report those that no
+    /// longer match.
     ///
     /// The store verifies on write, so a mismatch found here means the
     /// bytes changed underneath it -- disk corruption, or tampering with
@@ -538,8 +613,17 @@ impl Store {
     ///
     /// Returns [`StoreError::Database`] on a read failure.
     pub fn scan(&self) -> Result<Vec<Corruption>, StoreError> {
+        let mut out = self.scan_table(OBJECTS)?;
+        out.extend(self.scan_table(BLOBS)?);
+        Ok(out)
+    }
+
+    fn scan_table(
+        &self,
+        definition: TableDefinition<'_, &str, &[u8]>,
+    ) -> Result<Vec<Corruption>, StoreError> {
         let tx = self.db.begin_read()?;
-        let table = tx.open_table(OBJECTS)?;
+        let table = tx.open_table(definition)?;
         let mut out = Vec::new();
         for entry in table.iter()? {
             let (key, value) = entry?;

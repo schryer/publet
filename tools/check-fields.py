@@ -55,6 +55,19 @@ FIELDS = {
 }
 
 
+# Body fields outside annotation values: the object-shape blocks for prose
+# claims (Sections 5.5, 5.8) and document items (Section 8). Keyed by where
+# the fields live rather than by an annotation kind, and reported the same
+# way.
+BODY_FIELDS = {
+    "claim.prose.data (table)": ["columns", "rows", "name", "unit"],
+    "claim.prose.data (file)": ["media", "ref", "size"],
+    "evidence (source)": ["source", "revision", "locator", "query"],
+    "doc.items": ["ref", "bind", "at", "role", "view", "gloss"],
+    "doc.items.view": ["renderer", "options"],
+}
+
+
 def sources() -> str:
     """Every Rust source in the workspace.
 
@@ -93,12 +106,25 @@ def main() -> int:
         print(f"{mark} {kind:<{width}}  {detail}")
 
     print()
+    body_width = max(len(k) for k in BODY_FIELDS)
+    missing_body = []
+    for where, fields in BODY_FIELDS.items():
+        absent = [f for f in fields if f not in literals]
+        missing_body.extend(f"{where}.{f}" for f in absent)
+        mark = "  " if not absent else "!!"
+        detail = "fields absent: " + ", ".join(absent) if absent else ""
+        print(f"{mark} {where:<{body_width}}  {detail}")
+
+    print()
     print(f"annotation kinds never read: {len(missing_kinds)}/{len(FIELDS)}")
     print(f"declared fields never read:  {len(missing_fields)}")
     if missing_kinds:
         print("  kinds : " + ", ".join(missing_kinds))
     if missing_fields:
         print("  fields: " + ", ".join(missing_fields))
+    print(f"body fields never read:      {len(missing_body)}")
+    if missing_body:
+        print("  fields: " + ", ".join(missing_body))
 
     # Reports, never fails: this is a map of what is left, not a gate.
     return 0

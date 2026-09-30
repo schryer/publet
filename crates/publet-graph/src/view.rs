@@ -8,6 +8,7 @@
 use publet_core::{Cid, Object, cbor::Value};
 
 use crate::GraphError;
+use crate::data::{Data, Source};
 
 /// A claim class (Section 5.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -116,6 +117,8 @@ pub struct ProseClaim {
     lang: String,
     content: String,
     depends: Vec<Cid>,
+    data: Option<Data>,
+    sources: Vec<Source>,
 }
 
 impl ProseClaim {
@@ -169,13 +172,41 @@ impl ProseClaim {
             return Err(GraphError::EmpiricalWithoutMethod);
         }
 
+        let data = body.get("data").map(Data::from_value).transpose()?;
+        let sources = crate::data::sources(body.get("evidence"))?;
+        // Section 5.5: a value read from another claim presupposes it, and
+        // listing it in `depends` is what lets the closure that walks
+        // definitions also walk a figure back to its inputs.
+        for source in &sources {
+            if source.kind == "claim" && !depends.iter().any(|d| d.to_string() == source.reference)
+            {
+                return Err(GraphError::SourceNotInDepends {
+                    claim: source.reference.clone(),
+                });
+            }
+        }
+
         Ok(Self {
             cid,
             class,
             lang: text(body.get("lang"), "lang")?,
             content: text(body.get("content"), "content")?,
             depends,
+            data,
+            sources,
         })
+    }
+
+    /// The values this claim is about, if it carries any (Section 5.8).
+    #[must_use]
+    pub fn data(&self) -> Option<&Data> {
+        self.data.as_ref()
+    }
+
+    /// Where those values were read from (Section 5.5).
+    #[must_use]
+    pub fn sources(&self) -> &[Source] {
+        &self.sources
     }
 
     /// This claim's identifier.

@@ -18,10 +18,12 @@ mod annotate;
 mod compose;
 mod document;
 mod domain;
+mod payload;
 mod policy;
 mod propose;
 mod read;
 mod relate;
+mod revise;
 mod sign;
 mod why;
 mod workspace;
@@ -40,6 +42,8 @@ fn usage() -> ExitCode {
     eprintln!("  why CID              show its standing and every component of it");
     eprintln!("  compose              build a claim and add it to the workspace");
     eprintln!("  document             build a document ordering references to claims");
+    eprintln!("  doc MANIFEST         build a document from a JSON manifest");
+    eprintln!("  revise CID           publish the next version and its supersedes edge");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, or sign a stored object");
@@ -67,6 +71,8 @@ async fn main() -> ExitCode {
         "why" => why::run(&rest),
         "compose" => compose::run(&rest),
         "document" => document::run(&rest),
+        "doc" => document::run_manifest(&rest),
+        "revise" => revise::run(&rest),
         "relate" => relate::run(&rest),
         "annotate" => annotate::run(&rest),
         "sign" => sign::run(&rest),

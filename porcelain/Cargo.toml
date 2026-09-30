@@ -21,6 +21,7 @@ publet-store.workspace = true
 publet-net.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 getrandom = "0.2"
+serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"
