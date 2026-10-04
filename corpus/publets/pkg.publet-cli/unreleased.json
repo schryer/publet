@@ -1,9 +1,4 @@
 {
   "comment": "Changes to publet-cli not yet released. Add one row per change a PR makes: category is changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `make release-pr` moves them into the package publet.",
-  "changes": [
-    {
-      "category": "fixed",
-      "change": "pub --version reports the release when installed with cargo install --git --tag, whose checkout carries no tags; it called itself an unreleased build."
-    }
-  ]
+  "changes": []
 }
