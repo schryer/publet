@@ -4,59 +4,25 @@ on:
   push: { branches: [main] }
   pull_request:
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-
 jobs:
-  # Cheap, platform-independent gates. Fail fast before the matrix spends time.
-  gates:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      # No toolchain action: rust-toolchain.toml is the single source of the
-      # version, and rustup honours it on the first cargo invocation.
-      - run: cargo --version && rustc --version
-      - run: make fmt-check
-      - run: make guard-floats
-      - run: make guard-deps
-      - run: make lint
-      - run: make doc
-
-  # R8 requires bit-identical results everywhere, so determinism is verified
-  # across targets rather than on one machine.
-  test:
-    needs: gates
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-      - run: cargo test --workspace --all-features
-
-  functional:
-    needs: gates
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.14' }
-      - run: sudo apt-get update && sudo apt-get install -y jq
-      - run: python -m venv .venv && .venv/bin/pip install --require-hashes -r tests/requirements.lock
-      - run: make functional
-      # Needs a built pub-eval, so it runs here rather than in the cheap
-      # gates job. The matrix workflow checks the same digest on the other
-      # three architectures.
-      - run: make guard-eval
-      - run: make conformance
-      - run: make coverage
-      - name: Fail if the conformance report drifted
-        run: git diff --exit-code conformance/COVERAGE.md
+  # pubkit's shared Rust CI, with publet's own gates and checks named:
+  #
+  # - gates: the no-float, dependency-direction and rule guards beside fmt,
+  #   clippy and docs -- cheap, so they fail fast before the matrix.
+  # - test: R8 requires bit-identical results everywhere, so determinism is
+  #   verified across Linux, macOS and Windows, not on one machine.
+  # - functional: the Gherkin suite, then the evaluation digest (which needs
+  #   a built pub-eval), the conformance scenarios, and the coverage report,
+  #   which must be committed up to date.
+  ci:
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.2.1
+    with:
+      gates: fmt-check guard-floats guard-deps lint doc guard-rules
+      test-args: --workspace --all-features
+      apt-packages: jq
+      functional: functional guard-eval conformance coverage-check
 
   audit:
-    needs: gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -68,7 +34,7 @@ jobs:
   # published; on main, a published version is tagged and released. CI signs
   # nothing; the release was signed when the package publet was published.
   release:
-    needs: [test, functional, audit]
+    needs: [ci, audit]
     uses: schryer/pubrel/.github/workflows/release.yml@v0.1.0
     with: { pub-version: v0.1.1, pubrel-version: v0.1.0 }
     permissions:

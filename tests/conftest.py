@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from pubkit.plugin import Completed
 
 # The suite imports its own helpers from `support/`; it never imports the
 # implementation. Adding the suite root to the path keeps that explicit.
@@ -39,28 +40,6 @@ def bin_dir() -> Path:
     if not path.is_dir():
         pytest.fail(f"PUBLET_BIN_DIR does not exist: {path}")
     return path
-
-
-@dataclass(frozen=True)
-class Completed:
-    """The observable result of running a command."""
-
-    argv: list[str]
-    code: int
-    out: bytes
-    err: bytes
-
-    @property
-    def stdout(self) -> str:
-        return self.out.decode("utf-8", "replace")
-
-    @property
-    def stderr(self) -> str:
-        return self.err.decode("utf-8", "replace")
-
-    @property
-    def lines(self) -> list[str]:
-        return self.stdout.splitlines()
 
 
 @dataclass
@@ -109,49 +88,12 @@ def has_jq() -> bool:
     return shutil.which("jq") is not None
 
 
-def pytest_configure(config: pytest.Config) -> None:
-    """Register the @must-N.N tags the feature files carry.
-
-    Section tags are the mechanism by which the suite claims coverage of a
-    normative statement (see tools/must-coverage.py). Registering them from
-    the feature files rather than by hand keeps --strict-markers meaningful
-    while letting a new tag arrive with the scenario that needs it.
-    """
-    features = Path(__file__).parent / "features"
-    seen: set[str] = set()
-    for path in features.rglob("*.feature"):
-        for line in path.read_text().splitlines():
-            stripped = line.strip()
-            if not stripped.startswith("@"):
-                continue
-            for tag in stripped.split():
-                if tag.startswith("@must-"):
-                    seen.add(tag[1:])
-    for tag in sorted(seen):
-        config.addinivalue_line(
-            "markers", f"{tag}: covers a normative statement in that section"
-        )
-
-
 # --- steps shared across feature files -------------------------------------
 #
 # pytest-bdd resolves step definitions per module, so anything used by more
 # than one feature lives here rather than being duplicated or imported.
 
 from pytest_bdd import parsers, then  # noqa: E402
-
-
-@then(parsers.parse("the exit code is {code:d}"))
-def exit_code_is(result: Completed, code: int) -> None:
-    assert result.code == code, (
-        f"expected exit {code}, got {result.code}\n"
-        f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
-    )
-
-
-@then("stdout is empty")
-def stdout_is_empty(result: Completed) -> None:
-    assert result.out == b"", f"expected no stdout, got {result.out!r}"
 
 
 # --- fixtures and steps shared across feature files -------------------------
@@ -257,23 +199,6 @@ def _code(result) -> int:
     know which.
     """
     return getattr(result, "returncode", None) or getattr(result, "code", 0)
-
-
-def _text(result) -> str:
-    out, err = result.stdout, result.stderr
-    if isinstance(out, bytes):
-        return (out + err).decode("utf-8", "replace")
-    return out + err
-
-
-@then("it fails")
-def it_fails(result) -> None:
-    assert _code(result) != 0, _text(result)
-
-
-@then("it succeeds")
-def it_succeeds(result) -> None:
-    assert _code(result) == 0, _text(result)
 
 
 @then("both runs produce identical output")

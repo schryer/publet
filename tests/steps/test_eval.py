@@ -165,11 +165,6 @@ def one_signer_counts_once(runner, result):
     assert json.loads(result.stdout)["affirm"] == json.loads(single.stdout)["affirm"]
 
 
-@then("it fails")
-def evaluation_fails(result):
-    assert result.code != 0, result.stdout
-
-
 @then("it says a policy must declare at least one root")
 def says_roots_required(result):
     assert "at least one root" in result.stderr, result.stderr
