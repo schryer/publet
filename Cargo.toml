@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*", "bin/*", "porcelain"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.98"
 license = "Apache-2.0"
@@ -16,15 +16,15 @@ repository = "https://github.com/schryer/publet"
 # README for the audit that established each piece had no coupling to
 # publet's own types before the move.
 graphset = { git = "https://github.com/schryer/graphset", rev = "91a095fcc44dc041f3c24f7806c777bfd56d72b2", version = "0.1.0" }
-publet-core = { path = "crates/publet-core", version = "0.0.1" }
-publet-graph = { path = "crates/publet-graph", version = "0.0.1" }
-publet-lint = { path = "crates/publet-lint", version = "0.0.1" }
-publet-merkle = { path = "crates/publet-merkle", version = "0.0.1" }
-publet-eval = { path = "crates/publet-eval", version = "0.0.1" }
-publet-domain = { path = "crates/publet-domain", version = "0.0.1" }
-publet-store = { path = "crates/publet-store", version = "0.0.1" }
-publet-net = { path = "crates/publet-net", version = "0.0.1" }
-publet-settle = { path = "crates/publet-settle", version = "0.0.1" }
+publet-core = { path = "crates/publet-core", version = "0.1.0" }
+publet-graph = { path = "crates/publet-graph", version = "0.1.0" }
+publet-lint = { path = "crates/publet-lint", version = "0.1.0" }
+publet-merkle = { path = "crates/publet-merkle", version = "0.1.0" }
+publet-eval = { path = "crates/publet-eval", version = "0.1.0" }
+publet-domain = { path = "crates/publet-domain", version = "0.1.0" }
+publet-store = { path = "crates/publet-store", version = "0.1.0" }
+publet-net = { path = "crates/publet-net", version = "0.1.0" }
+publet-settle = { path = "crates/publet-settle", version = "0.1.0" }
 thiserror = "2"
 
 # Applied to every crate via `[lints] workspace = true`. Handbook chapter 2:
