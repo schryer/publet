@@ -121,7 +121,12 @@ async fn main() -> ExitCode {
 fn print_version() {
     let version = env!("CARGO_PKG_VERSION");
     let describe = env!("PUBLET_DESCRIBE");
-    if describe.is_empty() || describe == format!("v{version}") {
+    // In cargo's checkout of an installed ref there are no tags, only the
+    // commit (and never `-dirty`): the version is the release installed.
+    let installed = env!("PUBLET_INSTALLED") == "1"
+        && !describe.starts_with('v')
+        && !describe.ends_with("-dirty");
+    if describe.is_empty() || installed || describe == format!("v{version}") {
         println!("pub {version}");
         let package = env!("PUBLET_PACKAGE");
         if !package.is_empty() {
