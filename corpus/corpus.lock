@@ -3,8 +3,8 @@
   "corpus": {
     "domain": "pub:sha2-256:rybbfx3egcx7r6oq3owtfn2za646fo723b55gqahpkynyltgzlqa",
     "generation": {
-      "cid": "pub:sha2-256:acpzdlsfrln2nug7mg6rgmftbwi65v4fhkeqnmdkfzqcxih3fxtq",
-      "index": 1
+      "cid": "pub:sha2-256:auyx2sqvyv3nkqxrejmq3jznlvk4snwvhn2p7qkb4nr4gqorqa3q",
+      "index": 2
     },
     "imports": {
       "base:env.myst-classicthesis": "pub:sha2-256:n3th3i4biov6naimk3crznlozoqjjh6xplkriic43phj5awtooia",
@@ -17,7 +17,8 @@
       "base:tool.typst": "pub:sha2-256:qfjdd53v6utzgdsjdc4p3wtihakwgdiaa5ahtdx4lylfncb7gw2q",
       "base:tool.typst#identity": "pub:sha2-256:apqtzy55um3znj2qzoji7pwe5r5fdqlxg3ltfrlaxny32rvacoma",
       "base:xdoc.jtex": "pub:sha2-256:3tzwtaqixkbuc4a2k5ftkicu367qlg5zs3acoj7mr35rxfrdbm5a",
-      "base:xdoc.myst-pdf": "pub:sha2-256:npgvztebsabi5zdkc7rmpw66tj6bz3kpz5pp652cyf24gefvemga"
+      "base:xdoc.myst-pdf": "pub:sha2-256:npgvztebsabi5zdkc7rmpw66tj6bz3kpz5pp652cyf24gefvemga",
+      "base:xdoc.publet-readme": "pub:sha2-256:7xsbbpg4rvu6pbmnyypq7z6x2zaovhi4rtamktw4t4zmsoydfeoq"
     },
     "key": "pub:sha2-256:m2smuezcqpjeyy6iofa2pjl47lgbwu254hohndyhs2do34fcrcma",
     "parents": [
@@ -31,6 +32,9 @@
   },
   "publets": [
     {"slug": "namespace-capture", "kind": "doc", "tag": "PUB-NSCAPT-09-2026", "source": "publets/namespace-capture", "cid": "pub:sha2-256:g4rwhj6btdro4tc5dz57k4temdpvoeybbmeqcjbhg22s2ukz6ylq", "genesis": "pub:sha2-256:xmtbbhosermgsgrkmhynzzjg3pojxnte73nv6uolbiammq4cgylq", "deps": ["render.myst-classicthesis"]},
+    {"slug": "pkg.publet-cli", "kind": "doc", "tag": "PKG-PUBCLI-10-2026", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:p3njoj6ah2grighjlddv7grnsh4voxalhscqqv7z7ds7gukvyika", "genesis": "pub:sha2-256:p3njoj6ah2grighjlddv7grnsh4voxalhscqqv7z7ds7gukvyika", "deps": ["pkg.publet-cli#identity", "pkg.publet-cli#release"]},
+    {"slug": "pkg.publet-cli#identity", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:grequkzffpt3ycvwikle2ywgielhni35wap2xyjyvcpqeclwg26a", "genesis": "pub:sha2-256:grequkzffpt3ycvwikle2ywgielhni35wap2xyjyvcpqeclwg26a", "deps": []},
+    {"slug": "pkg.publet-cli#release", "kind": "claim", "source": "publets/pkg.publet-cli", "cid": "pub:sha2-256:c5jjfbytdnkiqy2w2zpl6yxme43surb6kwr7henet4mvszzap7iq", "genesis": "pub:sha2-256:c5jjfbytdnkiqy2w2zpl6yxme43surb6kwr7henet4mvszzap7iq", "deps": ["pkg.publet-cli#identity"]},
     {"slug": "render.myst-classicthesis", "kind": "doc", "tag": "RENDER-MYSTCT-10-2026", "source": "publets/render.myst-classicthesis", "cid": "pub:sha2-256:julbe3z57q6adsqu5fdgpuv6avprkx2aoubz5gewlo3uunriefwq", "genesis": "pub:sha2-256:l24kcfcgdqvtokcaqtqgfptmvi5kha3lon4awua3xxu2kywgbtqa", "deps": ["render.myst-classicthesis#compile-pdf", "render.myst-classicthesis#export-typst", "render.myst-classicthesis#method", "render.myst-classicthesis#write-myst", "tool.classicthesis-jtex"]},
     {"slug": "render.myst-classicthesis#compile-pdf", "kind": "claim", "source": "publets/render.myst-classicthesis", "cid": "pub:sha2-256:4jysuobdmlgh3mjyiv4t5qxjtu3j53boeqs4wdm6mjbwthlj54vq", "genesis": "pub:sha2-256:wpkoidcnhwgf4espqws36o2svsbnurhqz4qngqbs65kowenzsmeq", "deps": []},
     {"slug": "render.myst-classicthesis#export-typst", "kind": "claim", "source": "publets/render.myst-classicthesis", "cid": "pub:sha2-256:pvcaewbmcz7ouxd7z546z2zf3mzqfyk57nxmxivpq4b7twn5uwha", "genesis": "pub:sha2-256:luouz6c7nx5cm5slnonmljbxijgurafa3imdbbjoltb32cddpuzq", "deps": []},
