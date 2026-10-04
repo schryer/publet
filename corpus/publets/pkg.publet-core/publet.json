@@ -1,0 +1,99 @@
+{
+  "claims": {
+    "identity": {
+      "class": "archival",
+      "content": "publet-core 0.1.1 is released as publet-core-v0.1.1 from commit 1ecf8bbd3b66e476d0c14463f899d1286136e056.",
+      "data": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "version"
+          },
+          {
+            "name": "check"
+          },
+          {
+            "name": "expect"
+          },
+          {
+            "name": "tag"
+          },
+          {
+            "name": "commit"
+          }
+        ],
+        "rows": [
+          [
+            "publet-core",
+            "0.1.1",
+            "",
+            "",
+            "publet-core-v0.1.1",
+            "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+          ]
+        ]
+      },
+      "scope": "the published release publet-core-v0.1.1 of publet-core",
+      "sources": [
+        {
+          "ref": "publet-core",
+          "revision": "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+        }
+      ]
+    },
+    "release": {
+      "class": "archival",
+      "content": "publet-core 0.1.1 was released on 2026-10-04 from commit 1ecf8bbd3b66e476d0c14463f899d1286136e056 with these changes.",
+      "data": {
+        "columns": [
+          {
+            "name": "category"
+          },
+          {
+            "name": "change"
+          }
+        ],
+        "rows": [
+          [
+            "added",
+            "The protocol floor as a crate of its own: objects and their verification type state, the canonical CBOR profile, content identifiers, and Ed25519 detached signatures (Sections 4.1-4.5)."
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release publet-core-v0.1.1 of publet-core",
+      "sources": [
+        {
+          "ref": "publet-core",
+          "revision": "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+        }
+      ]
+    }
+  },
+  "created": "2026-10-04T00:00:00Z",
+  "sections": [
+    {
+      "heading": "Identity",
+      "items": [
+        {
+          "ref": "#identity"
+        }
+      ]
+    },
+    {
+      "heading": "Release",
+      "items": [
+        {
+          "ref": "#release"
+        }
+      ]
+    }
+  ],
+  "slug": "pkg.publet-core",
+  "tag": "PKG-PUBCOR-10-2026",
+  "title": "publet-core"
+}
