@@ -96,8 +96,15 @@ def workspace_version(cargo_toml: str) -> str:
 
 
 def set_workspace_version(cargo_toml: str, version: str) -> str:
+    """Set the workspace version, and the version every internal path
+    dependency in `[workspace.dependencies]` requires -- they move together,
+    or the workspace no longer resolves."""
+    old = workspace_version(cargo_toml)
     head, _, rest = cargo_toml.partition("[workspace.package]")
     rest = re.sub(r'^version\s*=\s*"[^"]+"', f'version = "{version}"', rest, count=1, flags=re.M)
+    rest = re.sub(r'^(\S+\s*=\s*\{[^}\n]*path\s*=\s*"crates/[^"]+"[^}\n]*version\s*=\s*)"'
+                  + re.escape(old) + '"',
+                  lambda m: f'{m.group(1)}"{version}"', rest, flags=re.M)
     return head + "[workspace.package]" + rest
 
 
@@ -274,6 +281,9 @@ def cmd_prepare(open_pr: bool) -> None:
     print(f"releasing publet-cli {old} -> {new} from {commit[:12]}")
 
     git("checkout", "-b", f"release/v{new}")
+    print(f"on release/v{new}; if anything below fails, abandon it with "
+          f"`git checkout -- . && git clean -fd corpus && git checkout main && "
+          f"git branch -D release/v{new}`")
     source_path = PKG_DIR / "publet.json"
     source_path.write_text(json.dumps(package_source(new, date, commit, rows), indent=2) + "\n")
     write_unreleased([])
@@ -386,9 +396,15 @@ def cmd_selftest() -> None:
             pass
         else:
             raise AssertionError(f"bump accepted {bad}")
-    toml = '[workspace]\nmembers = []\n\n[workspace.package]\nversion = "0.0.1"\nedition = "2024"\n'
+    toml = ('[workspace]\nmembers = []\n\n[workspace.package]\nversion = "0.0.1"\n'
+            'edition = "2024"\n\n[workspace.dependencies]\n'
+            'graphset = { git = "https://example.org/g", rev = "abc", version = "0.1.0" }\n'
+            'publet-core = { path = "crates/publet-core", version = "0.0.1" }\n')
     assert workspace_version(toml) == "0.0.1"
-    assert workspace_version(set_workspace_version(toml, "0.1.0")) == "0.1.0"
+    bumped = set_workspace_version(toml, "0.1.0")
+    assert workspace_version(bumped) == "0.1.0"
+    assert 'publet-core = { path = "crates/publet-core", version = "0.1.0" }' in bumped
+    assert 'graphset = { git = "https://example.org/g", rev = "abc", version = "0.1.0" }' in bumped
     assert changes('{"changes": [{"category": "added", "change": "x"}]}')[0]["category"] == "added"
     try:
         changes('{"changes": [{"category": "nope", "change": "x"}]}')
