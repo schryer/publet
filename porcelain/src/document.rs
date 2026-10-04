@@ -166,8 +166,21 @@ pub(crate) fn body_from_manifest(
     path: &Path,
 ) -> Result<(BTreeMap<String, Value>, Option<String>), String> {
     let json = crate::payload::read_json(path)?;
-    let Value::Map(mut manifest) = crate::payload::to_value(&json, "manifest")? else {
-        return Err(format!("{}: a manifest is a JSON object", path.display()));
+    body_from_json(&json).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// Read a manifest already parsed from JSON into a document body, and the
+/// `created` it names -- what `pub build` uses once it has replaced the
+/// names in a source file with the identifiers they resolve to.
+///
+/// # Errors
+///
+/// As [`body_from_manifest`], less the file handling.
+pub(crate) fn body_from_json(
+    json: &serde_json::Value,
+) -> Result<(BTreeMap<String, Value>, Option<String>), String> {
+    let Value::Map(mut manifest) = crate::payload::to_value(json, "manifest")? else {
+        return Err("a manifest is a JSON object".to_owned());
     };
     // An unknown key is refused rather than ignored: a misspelled `gloss`
     // silently dropped is a document missing what its author wrote.

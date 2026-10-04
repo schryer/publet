@@ -769,7 +769,7 @@ lineage or a presupposition that a cycle would make incoherent.
 
 | Kind | Asserts | Class | Notes |
 |---|---|---|---|
-| `supersedes` | `from` replaces `to` | `performative` | Felicitous only when signed by a key that signed `to`; otherwise a proposal, which clients MUST distinguish. Successors MAY branch. Acyclic. Constitutes lineage (Section 6.1). |
+| `supersedes` | `from` replaces `to` | `performative` | Felicitous only when signed by a key that signed `to`, or by a key holding an immediate `lineage` delegation from it (Section 10.6); otherwise a proposal, which clients MUST distinguish. Successors MAY branch. Acyclic. Constitutes lineage (Section 6.1). |
 | `translates` | `from` translates `to` | `empirical` | Carries `method` (`human`/`machine`/`machine-post-edited`) and `fidelity` (`literal`/`idiomatic`/`adapted`). |
 | `implements` | `from` implements the interface `to` | `empirical` | Acyclic. `from` and `to` need not be signed claim objects (Section 6.2). |
 | `depends` | `from` presupposes `to` | `definitional` | Acyclic; implementations MUST reject cycle-closing edges. |
@@ -966,6 +966,10 @@ and what happened when they did. One kind carries both:
                            shared_materials: [ <CID>, ... ] } }
 ```
 
+Rendering a document by a render pipeline (Section 8) is a settlement of
+the pipeline's procedural claim in exactly this sense: the outputs, by
+identifier, are what was observed.
+
 `method` names what was executed. For an `empirical` or `procedural`
 claim it is the CID of the procedural claim followed. For a `formal`
 claim it is a checker descriptor -- the tool, its version, and the CID it
@@ -1130,6 +1134,40 @@ still display the cited object, and MUST NOT omit the item. Because the
 view lives in the citing document and not in the cited claim, the same
 data MAY be a full table in one document and a two-column summary or a
 chart in another, and none of those renderings is itself an object.
+
+**Non-normative.** A document MAY say how it is itself rendered by citing,
+as `background`, a **render pipeline**: a publet bundling a `procedural`
+claim whose `depends` lists its steps in order (Section 5.7), each step
+naming the identity claims of the programs it runs. Citing a procedure as
+background asserts nothing, so the document stays free of assertions; the
+pipeline never cites the documents it renders, so no cycle arises; and
+because the citation is a CID, the rendering a reader is shown can be
+checked against the exact method, tools, and versions its author named.
+The rendering itself remains no object, as above.
+
+Such a document SHOULD cite the pipeline by lineage (`bind: "lineage"`),
+so that revising the pipeline -- a new tool version, a reworded step --
+is not a reason to revise every document it renders: the document records
+the version its author read in `at`, and a client renders with the
+lineage's current head. When a rendering is accepted, its lineage is pinned
+as a `settled` annotation on the pipeline's procedural claim (Section
+7.2): `result` names a claim stating which document was rendered and which
+outputs, by identifier, each step produced with which tool versions, and
+`data` names the accepted output kept as a blob. Two settlements whose
+outputs carry identical identifiers are an equivalence anyone can check by
+rendering again; no one need assert it.
+
+A pipeline MAY in turn cite, as `background`, an **environment**: a publet
+stating how to provision the pipeline's toolchain into a local directory --
+procedural steps whose fetched artifacts are pinned by identifier -- and
+the **host requirements** it cannot provision itself, each marked as needed
+to provision or at run time. An environment is keyed by its own identifier,
+not by any document, so few are needed and every pipeline citing one
+shares it; running only what it provisioned is what makes a rendering
+depend on recorded inputs rather than on the machine. *Future work:* an
+environment could equally be provided as a container image pinned by
+digest, which suits a deployed rendering service; the publet that states
+the toolchain would not change.
 
 `bind` declares what the author meant to cite (R15). With `bind: "object"`
 — the default — `ref` is a claim CID and the citation is permanently
@@ -2566,6 +2604,18 @@ carrying no claims (Section 8).
 **Rendering** — what a view produces when a client applies it: a table on
 a page, a chart, a CSV download. Never an object and never a publet; it is
 rebuilt from the cited data wherever it is shown (Sections 5.8, 8).
+
+**Render pipeline** — a publet whose `procedural` claims state how a
+document is turned into a rendering: the steps, the programs each runs, and
+the versions it was stated against. A document names the pipeline it is
+rendered by as a `background` item; the pipeline never names the documents
+(Section 8).
+
+**Draft** and **publish** — workspace notions, not protocol objects. A
+draft is built and rendered locally and is never signed or distributed;
+publishing is the deliberate act of signing, distributing, and pinning
+what was accepted. The protocol only ever sees what is published, so a
+corpus's history records decisions, not experiments.
 
 **CID** — content identifier. The multihash of an object's canonical
 serialization. A reference is always a CID, and retrieved bytes are

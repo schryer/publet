@@ -274,7 +274,12 @@ fn flags_other_than_created(flags: &ClaimFlags) -> bool {
 ///
 /// Unconditional in scope: what it asserts is that one object replaces
 /// another, and the conditions each was asserted under are in each.
-fn supersedes(author: &str, created: &str, new: &Cid, old: &Cid) -> Result<Vec<u8>, String> {
+pub(crate) fn supersedes(
+    author: &str,
+    created: &str,
+    new: &Cid,
+    old: &Cid,
+) -> Result<Vec<u8>, String> {
     Object::builder("claim.relation", author)
         .created(created)
         .field("kind", Value::Text("supersedes".to_owned()))

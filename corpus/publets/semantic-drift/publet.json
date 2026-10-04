@@ -1,0 +1,40 @@
+{
+  "slug": "semantic-drift",
+  "tag": "PUB-SEMDRI-09-2026",
+  "supersedes": "pub:sha2-256:vdu3xellu35kcdoh7p2qauedwifk75dhfrmwhwkq7wujgvygugba",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "Semantic Drift",
+  "sections": [
+    {
+      "heading": "Definition",
+      "items": [
+        {
+          "ref": "pub:sha2-256:fbclzjiumgxa3tcg6wkosstckf3zntem5nlj43metjeuamflbbmq",
+          "role": "assert",
+          "gloss": "the concept, defined"
+        }
+      ]
+    },
+    {
+      "heading": "Documented Case",
+      "items": [
+        {
+          "ref": "pub:sha2-256:ctewxqxz3r7wev6q45dk35tuiveu7im4w4ucwgogh2mzgugybonq",
+          "role": "assert",
+          "gloss": "the scientific/colloquial equivocation on \"theory\" in public debate over evolution"
+        }
+      ]
+    },
+    {
+      "heading": "Colophon",
+      "items": [
+        {
+          "ref": "render.myst-classicthesis",
+          "role": "background",
+          "gloss": "rendered by",
+          "bind": "lineage"
+        }
+      ]
+    }
+  ]
+}

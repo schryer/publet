@@ -1,0 +1,40 @@
+{
+  "slug": "namespace-capture",
+  "tag": "PUB-NSCAPT-09-2026",
+  "supersedes": "pub:sha2-256:xmtbbhosermgsgrkmhynzzjg3pojxnte73nv6uolbiammq4cgylq",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "Namespace Capture",
+  "sections": [
+    {
+      "heading": "Definition",
+      "items": [
+        {
+          "ref": "pub:sha2-256:6mkky5apmllactdltc7fwd375gbburafbeu7o4k53bmdfeqrqpja",
+          "role": "assert",
+          "gloss": "the concept, defined"
+        }
+      ]
+    },
+    {
+      "heading": "Documented Case",
+      "items": [
+        {
+          "ref": "pub:sha2-256:h5f6gu7d4i7eabwoqzoztdgmf4sutpefrtkynzkvqbmcsrx3wixq",
+          "role": "assert",
+          "gloss": "Birsan 2021, dependency confusion"
+        }
+      ]
+    },
+    {
+      "heading": "Colophon",
+      "items": [
+        {
+          "ref": "render.myst-classicthesis",
+          "role": "background",
+          "gloss": "rendered by",
+          "bind": "lineage"
+        }
+      ]
+    }
+  ]
+}

@@ -17,15 +17,27 @@ use crate::workspace::Workspace;
 /// store, and every other directory-reading command already works that
 /// way.
 ///
+/// The argument may also be an object file itself, such as
+/// `objects/pub_sha2-256_….cbor`. Its identifier is then computed from
+/// its bytes rather than taken on trust, and a filename naming a
+/// different identifier is reported: the name says what the file was,
+/// the bytes say what it is.
+///
+/// `--json` prints the whole object instead of the summary: every header
+/// and body field, decoded, with the identifier and the mode the read used.
+///
 /// # Errors
 ///
 /// Returns a message if the workspace, store, or object is unavailable.
 pub(crate) fn run(args: &[String]) -> Result<(), String> {
     let mut dir: Option<std::path::PathBuf> = None;
     let mut wanted: Option<&String> = None;
+    let mut json = false;
     for arg in args {
         if let Some(v) = arg.strip_prefix("--dir=") {
             dir = Some(std::path::PathBuf::from(v));
+        } else if arg == "--json" {
+            json = true;
         } else if arg.starts_with("--") {
             return Err(format!("unknown argument: {arg}"));
         } else {
@@ -33,33 +45,26 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         }
     }
 
-    let target: Cid = wanted
-        .ok_or("a CID is required")?
-        .parse()
-        .map_err(|_| "the argument must be a CID".to_owned())?;
-
-    let (bytes, mode) = if let Some(path) = &dir {
-        let graph = publet_graph::load::from_dir(path).map_err(|e| e.to_string())?;
-        let object = graph
-            .object(&target)
-            .ok_or_else(|| format!("not in {}: {target}", path.display()))?;
-        (object.bytes().to_vec(), None)
+    let wanted = wanted.ok_or("a CID, or an object file, is required")?;
+    let (target, bytes, mode) = if let Ok(target) = wanted.parse::<Cid>() {
+        let (bytes, mode) = fetch(&target, dir.as_deref())?;
+        (target, bytes, mode)
+    } else if std::path::Path::new(wanted).is_file() {
+        let (target, bytes) = from_file(std::path::Path::new(wanted))?;
+        (target, bytes, None)
     } else {
-        let here = std::env::current_dir().map_err(|e| e.to_string())?;
-        let ws = Workspace::open(&here)?;
-        let store = ws.store()?;
-        let mode = Workspace::mode_for(&store, &target);
-        let bytes = store
-            .get(&target)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("not in your replica: {target}"))?;
-        (bytes, Some(mode))
+        return Err(format!(
+            "{wanted} is neither a CID nor a file holding an object"
+        ));
     };
 
     let object = publet_core::Object::parse(&bytes)
         .map_err(|e| e.to_string())?
         .verify(&target)
         .map_err(|e| e.to_string())?;
+    if json {
+        return print_json(&target, &bytes, mode);
+    }
     let object = object.object();
     let body = object.body();
 
@@ -140,6 +145,107 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
 }
 
 /// Print a `rel` object's kind, endpoints, and any qualifiers it carries.
+/// An object's bytes by identifier: from `dir` when given, otherwise from
+/// the workspace store, with the mode that read used (Section 14.3).
+fn fetch(
+    target: &Cid,
+    dir: Option<&std::path::Path>,
+) -> Result<(Vec<u8>, Option<crate::workspace::Mode>), String> {
+    if let Some(path) = dir {
+        let graph = publet_graph::load::from_dir(path).map_err(|e| e.to_string())?;
+        let object = graph
+            .object(target)
+            .ok_or_else(|| format!("not in {}: {target}", path.display()))?;
+        return Ok((object.bytes().to_vec(), None));
+    }
+    let here = std::env::current_dir().map_err(|e| e.to_string())?;
+    let ws = Workspace::open(&here)?;
+    let store = ws.store()?;
+    let mode = Workspace::mode_for(&store, target);
+    let bytes = store
+        .get(target)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("not in your replica: {target}"))?;
+    Ok((bytes, Some(mode)))
+}
+
+/// An object file's bytes and the identifier they hash to (Section 4.2).
+///
+/// A filename spelling a different identifier is reported rather than
+/// refused: the reader asked for this file, and what it holds is still
+/// shown -- under the identifier its bytes actually have.
+fn from_file(path: &std::path::Path) -> Result<(Cid, Vec<u8>), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let cid = Cid::of(&bytes, publet_core::HashAlg::Sha2_256);
+    let named = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .and_then(|s| s.replace('_', ":").parse::<Cid>().ok());
+    if let Some(named) = named
+        && named != cid
+    {
+        eprintln!(
+            "warning: {} is named for {named}, but its bytes hash to {cid}; \
+             the file was altered or misnamed",
+            path.display()
+        );
+    }
+    Ok((cid, bytes))
+}
+
+/// The whole object as JSON: `{cid, mode, object}`, where `object` is
+/// every field of the canonical CBOR, decoded. `mode` is `local` or
+/// `query` for a read from the workspace and `null` for a file or `--dir`,
+/// which are neither (Section 14.3).
+fn print_json(
+    target: &Cid,
+    bytes: &[u8],
+    mode: Option<crate::workspace::Mode>,
+) -> Result<(), String> {
+    let decoded = publet_core::cbor::decode(bytes).map_err(|e| e.to_string())?;
+    let out = serde_json::json!({
+        "cid": target.to_string(),
+        "mode": mode.map(crate::workspace::Mode::label),
+        "object": to_json(&decoded),
+    });
+    let text = serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?;
+    println!("{text}");
+    Ok(())
+}
+
+/// A CBOR value as JSON. Integers stay integers -- a negative one is
+/// `-1 - n`, as CBOR stores it -- and a byte string, which JSON has no
+/// form for, becomes `{"$bytes": HEX}`, so it can never be mistaken for
+/// text. There are no floats to convert: the profile has none (Section 4.1).
+fn to_json(value: &Value) -> serde_json::Value {
+    match value {
+        Value::Uint(n) => (*n).into(),
+        Value::Nint(n) => i64::try_from(*n)
+            .ok()
+            .and_then(i64::checked_neg)
+            .and_then(|n| n.checked_sub(1))
+            .map_or_else(
+                || serde_json::Value::String(format!("-{}", u128::from(*n) + 1)),
+                Into::into,
+            ),
+        Value::Bytes(b) => {
+            let hex = b.iter().fold(String::new(), |mut acc, byte| {
+                use std::fmt::Write as _;
+                let _ = write!(acc, "{byte:02x}");
+                acc
+            });
+            serde_json::json!({ "$bytes": hex })
+        }
+        Value::Text(t) => t.clone().into(),
+        Value::Array(items) => items.iter().map(to_json).collect::<Vec<_>>().into(),
+        Value::Map(map) => {
+            serde_json::Value::Object(map.iter().map(|(k, v)| (k.clone(), to_json(v))).collect())
+        }
+        Value::Bool(b) => (*b).into(),
+        _ => serde_json::Value::Null,
+    }
+}
+
 fn print_relation(body: &std::collections::BTreeMap<String, Value>) {
     if let Some(Value::Text(kind)) = body.get("kind") {
         println!("kind      {kind}");
@@ -310,5 +416,26 @@ fn print_annotation(body: &std::collections::BTreeMap<String, Value>) {
                 println!("  {k}  {}", joined.join(", "));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod json_tests {
+    use super::*;
+
+    #[test]
+    fn values_convert_without_losing_what_they_are() {
+        assert_eq!(to_json(&Value::Uint(7)), serde_json::json!(7));
+        assert_eq!(to_json(&Value::Nint(0)), serde_json::json!(-1));
+        assert_eq!(to_json(&Value::Nint(19)), serde_json::json!(-20));
+        assert_eq!(
+            to_json(&Value::Nint(u64::MAX)),
+            serde_json::json!("-18446744073709551616")
+        );
+        assert_eq!(
+            to_json(&Value::Bytes(vec![0, 255])),
+            serde_json::json!({ "$bytes": "00ff" })
+        );
+        assert_eq!(to_json(&Value::Null), serde_json::Value::Null);
     }
 }

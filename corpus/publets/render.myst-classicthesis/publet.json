@@ -1,0 +1,207 @@
+{
+  "slug": "render.myst-classicthesis",
+  "tag": "RENDER-MYSTCT-10-2026",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "Rendering a publet with MyST and ClassicThesis",
+  "claims": {
+    "method": {
+      "class": "procedural",
+      "scope": "publets in this corpus rendered to PDF with the ClassicThesis template",
+      "content": "To render a publet as a ClassicThesis PDF, carry out its three steps in order: write its MyST project, export the project to Typst, and compile the Typst source to PDF.",
+      "depends": [
+        "#write-myst",
+        "#export-typst",
+        "#compile-pdf"
+      ]
+    },
+    "write-myst": {
+      "class": "procedural",
+      "scope": "publets in this corpus rendered to PDF with the ClassicThesis template",
+      "content": "Write the publet's MyST project with pub, naming the ClassicThesis jtex template to export through.",
+      "depends": [
+        "~base:tool.pub#identity",
+        "tool.classicthesis-jtex#template",
+        "tool.classicthesis-jtex#manifest"
+      ],
+      "data": {
+        "columns": [
+          {
+            "name": "program"
+          },
+          {
+            "name": "requires"
+          },
+          {
+            "name": "args"
+          },
+          {
+            "name": "cwd"
+          },
+          {
+            "name": "outputs"
+          }
+        ],
+        "rows": [
+          [
+            "pub",
+            "0.0",
+            "myst {doc} --lock={lock} --out={out} --template={repo}/templates/classicthesis-typst --export=classicthesis/main.typ",
+            "{ws}",
+            "{out}/myst.yml {out}/index.md"
+          ]
+        ]
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "corpus/publets/render.myst-classicthesis/publet.json"
+        }
+      ]
+    },
+    "export-typst": {
+      "class": "procedural",
+      "scope": "publets in this corpus rendered to PDF with the ClassicThesis template",
+      "content": "Export the MyST project to Typst source with curvenote, in the project's directory.",
+      "depends": [
+        "~base:tool.curvenote#identity"
+      ],
+      "data": {
+        "columns": [
+          {
+            "name": "program"
+          },
+          {
+            "name": "requires"
+          },
+          {
+            "name": "args"
+          },
+          {
+            "name": "cwd"
+          },
+          {
+            "name": "outputs"
+          }
+        ],
+        "rows": [
+          [
+            "curvenote",
+            "0.17",
+            "build --typst",
+            "{out}",
+            "classicthesis/main.typ"
+          ]
+        ]
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "corpus/publets/render.myst-classicthesis/publet.json"
+        }
+      ]
+    },
+    "compile-pdf": {
+      "class": "procedural",
+      "scope": "publets in this corpus rendered to PDF with the ClassicThesis template",
+      "content": "Compile the exported Typst source to PDF with typst, which fetches the classicthesis package the template imports.",
+      "depends": [
+        "~base:tool.typst#identity",
+        "~base:tool.classicthesis-pkg#identity"
+      ],
+      "data": {
+        "columns": [
+          {
+            "name": "program"
+          },
+          {
+            "name": "requires"
+          },
+          {
+            "name": "args"
+          },
+          {
+            "name": "cwd"
+          },
+          {
+            "name": "outputs"
+          }
+        ],
+        "rows": [
+          [
+            "typst",
+            "0.15",
+            "compile --creation-timestamp {epoch} --font-path {env}/fonts --ignore-system-fonts --package-path {env}/typst-packages classicthesis/main.typ classicthesis/main.pdf",
+            "{out}",
+            "classicthesis/main.pdf"
+          ]
+        ]
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "corpus/publets/render.myst-classicthesis/publet.json"
+        }
+      ]
+    }
+  },
+  "sections": [
+    {
+      "heading": "Method",
+      "items": [
+        {
+          "ref": "#method"
+        }
+      ]
+    },
+    {
+      "heading": "Steps",
+      "items": [
+        {
+          "ref": "#write-myst"
+        },
+        {
+          "ref": "#export-typst"
+        },
+        {
+          "ref": "#compile-pdf"
+        }
+      ]
+    },
+    {
+      "heading": "Components",
+      "items": [
+        {
+          "ref": "base:tool.pub",
+          "role": "background"
+        },
+        {
+          "ref": "tool.classicthesis-jtex",
+          "role": "background"
+        },
+        {
+          "ref": "base:tool.classicthesis-pkg",
+          "role": "background"
+        },
+        {
+          "ref": "base:tool.curvenote",
+          "role": "background"
+        },
+        {
+          "ref": "base:tool.typst",
+          "role": "background"
+        }
+      ]
+    },
+    {
+      "heading": "Environment",
+      "items": [
+        {
+          "ref": "base:env.myst-classicthesis",
+          "role": "background",
+          "bind": "lineage",
+          "gloss": "the pinned toolchain this pipeline runs in"
+        }
+      ]
+    }
+  ]
+}

@@ -28,6 +28,25 @@ pub(crate) struct SourceArg {
     note: Option<String>,
 }
 
+impl SourceArg {
+    /// A source given other than by flags, as `pub build` reads one.
+    pub(crate) fn new(
+        reference: String,
+        revision: Option<String>,
+        locator: Option<String>,
+        query: Option<String>,
+        note: Option<String>,
+    ) -> Self {
+        Self {
+            reference,
+            revision,
+            locator,
+            query,
+            note,
+        }
+    }
+}
+
 /// The flags `pub compose` and `pub revise` share.
 ///
 /// `pub revise` reads the same flags as `pub compose` and applies only the
