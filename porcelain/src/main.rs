@@ -92,7 +92,7 @@ async fn main() -> ExitCode {
         "delegate" => corpus::delegate(&rest),
         "myst" => render::run_myst(&rest),
         "--version" | "version" => {
-            println!("pub {}", env!("CARGO_PKG_VERSION"));
+            print_version();
             return ExitCode::SUCCESS;
         }
         "relate" => relate::run(&rest),
@@ -112,6 +112,26 @@ async fn main() -> ExitCode {
             eprintln!("{message}");
             ExitCode::from(EXIT_VIOLATION)
         }
+    }
+}
+
+/// `pub X.Y.Z` only for a clean build at that version's release tag (or
+/// one with no git to ask); any other build says it is unreleased, so an
+/// identity claim stating a release can never be satisfied by it.
+fn print_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let describe = env!("PUBLET_DESCRIBE");
+    if describe.is_empty() || describe == format!("v{version}") {
+        println!("pub {version}");
+        let package = env!("PUBLET_PACKAGE");
+        if !package.is_empty() {
+            println!("package  pkg.publet-cli#identity — {package}");
+        }
+    } else if describe.starts_with('v') {
+        let after = describe.split('-').next().unwrap_or(describe);
+        println!("pub unreleased build after {after} ({describe})");
+    } else {
+        println!("pub unreleased build ({describe}; no release precedes it)");
     }
 }
 

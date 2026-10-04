@@ -10,7 +10,8 @@ CARGO := cargo
 
 .PHONY: help bootstrap lock fmt fmt-check lint test doc functional matrix coverage \
         conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules deny check build clean
+        guard-deps guard-floats guard-eval guard-rules guard-release deny check build clean \
+        release-check release-pr
 
 help: ## Show available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -67,10 +68,20 @@ guard-eval: ## Enforce that evaluation output has not changed (R8)
 guard-rules: ## Enforce that every operating rule is traceable to its code
 	./tools/check-rules.py
 
+guard-release: ## Check the version-bump arithmetic and changelog parsing
+	./tools/release.py selftest
+
+release-check: build ## Check this branch records its changes, or is a correct release (BASE=origin/main)
+	./tools/release.py check $(or $(BASE),origin/main)
+
+release-pr: ## Cut a release: publish the package publet and open a release PR
+	$(CARGO) build -p publet-cli
+	./tools/release.py prepare
+
 deny: ## Licence and advisory audit
 	$(CARGO) deny check
 
-check: fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage deny ## Everything CI runs
+check: fmt-check lint guard-floats guard-deps guard-eval guard-rules guard-release test doc functional coverage deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean
