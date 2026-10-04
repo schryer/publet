@@ -267,6 +267,18 @@ the package publet `pkg.publet-cli` [PKG-PUBCLI-10-2026] in `corpus/`. Its
 `release` claim lists what changed. The publet's lineage is the release
 history, and `CHANGELOG.md` is generated from it.
 
+Two crates are released on version tracks of their own, each with its own
+package publet, changelog beside its manifest, and tags:
+
+| Crate | Package publet | Tags |
+|---|---|---|
+| `publet-core`: objects, canonical CBOR, identifiers, signatures | `pkg.publet-core` [PKG-PUBCOR-10-2026] | `publet-core-vX.Y.Z` |
+| `publet-algorithms`: the generic algorithms, nothing publet-specific | `pkg.publet-algorithms` [PKG-PUBALG-10-2026] | `publet-algorithms-vX.Y.Z` |
+
+The workspace pins the versions it uses. A change to either crate is
+recorded for that crate and for `publet-cli`, which compiles it in:
+`pubrel add --package NAME CATEGORY "what changed"`.
+
 The version follows mechanically from what changed since the last release:
 
 | Category | Meaning | Bump |
