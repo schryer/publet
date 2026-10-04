@@ -151,6 +151,71 @@ fn build_objects(author: &str, a: &Args, members: &[String], size: u64) -> Resul
     })
 }
 
+/// An object's identifier and bytes.
+pub(crate) type Signed = (Cid, Vec<u8>);
+
+/// A domain manifest and its genesis generation over `members`, for a
+/// caller that has its own label, bound, and members rather than flags --
+/// `pub build` in a corpus, on the corpus's first generation.
+///
+/// # Errors
+///
+/// Returns a message if the objects cannot be built.
+pub(crate) fn manifest_and_genesis(
+    author: &str,
+    label: &str,
+    bound: u64,
+    created: &str,
+    members: &[String],
+    size: u64,
+) -> Result<(Signed, Signed), String> {
+    let args = Args {
+        dir: std::path::PathBuf::new(),
+        label: label.to_owned(),
+        bound,
+        created: created.to_owned(),
+        also: Vec::new(),
+    };
+    let built = build_objects(author, &args, members, size)?;
+    Ok((built.domain, built.generation))
+}
+
+/// The generation record after `parent`: `index`, the membership root of
+/// `members`, and the members `added` since. Nothing is ever removed from a
+/// corpus -- objects are immutable and a corpus only grows -- so `removed`
+/// is empty, and a membership that lost a member is refused by the caller.
+///
+/// # Errors
+///
+/// Returns a message if the root cannot be addressed or the object built.
+pub(crate) fn next_generation(
+    author: &str,
+    created: &str,
+    domain: &Cid,
+    index: u64,
+    parent: &Cid,
+    members: &[String],
+    added: &[String],
+) -> Result<(Cid, Vec<u8>), String> {
+    let root = Membership::new(members.iter().cloned()).root();
+    let snapshot = Cid::from_digest(HashAlg::Sha2_256, &root)
+        .ok_or("could not address the membership root as a CID")?;
+    let bytes = Object::builder("generation", author)
+        .created(created)
+        .field("domain", Value::Text(domain.to_string()))
+        .field("index", Value::Uint(index))
+        .field("parent", Value::Text(parent.to_string()))
+        .field("snapshot", Value::Text(snapshot.to_string()))
+        .field(
+            "added",
+            Value::Array(added.iter().map(|m| Value::Text(m.clone())).collect()),
+        )
+        .field("removed", Value::Array(Vec::new()))
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+}
+
 /// Build and store a domain's manifest and genesis generation.
 ///
 /// # Errors

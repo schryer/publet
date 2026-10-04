@@ -1,0 +1,40 @@
+{
+  "slug": "translation-desynchronization",
+  "tag": "PUB-TRDSYN-09-2026",
+  "supersedes": "pub:sha2-256:6sf2t2oesv6txxstdnm3iq4h3cba774snq4b62fsgbcat5i7ocya",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "Translation Desynchronization",
+  "sections": [
+    {
+      "heading": "Definition",
+      "items": [
+        {
+          "ref": "pub:sha2-256:7oxmte5jd6hjkecughukoulo5op7vd4rh2gmf7usv3n5hl7c35wq",
+          "role": "assert",
+          "gloss": "the concept, defined"
+        }
+      ]
+    },
+    {
+      "heading": "Documented Case",
+      "items": [
+        {
+          "ref": "pub:sha2-256:glmmoyxtufg5kfl4npy6b6fyjonjxokaxmkx5btg64yjin62fxwq",
+          "role": "assert",
+          "gloss": "cross-lingual factual inconsistency across Wikipedia language editions"
+        }
+      ]
+    },
+    {
+      "heading": "Colophon",
+      "items": [
+        {
+          "ref": "render.myst-classicthesis",
+          "role": "background",
+          "gloss": "rendered by",
+          "bind": "lineage"
+        }
+      ]
+    }
+  ]
+}

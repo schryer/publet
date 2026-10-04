@@ -92,21 +92,7 @@ pub fn evidence_for(graph: &Graph, target: &Cid) -> Evidence {
         }
     }
 
-    // Retraction is authoritative only from a key that signed the target.
-    if let Some(object) = graph.object(target) {
-        let author = object.author().to_string();
-        for from in graph.incoming(RelationKind::Retracts, target) {
-            let Ok(cid) = from.parse::<Cid>() else {
-                continue;
-            };
-            if graph
-                .object(&cid)
-                .is_some_and(|r| r.author().to_string() == author)
-            {
-                evidence.retracted = true;
-            }
-        }
-    }
+    evidence.retracted = graph.is_retracted(target);
 
     evidence
 }

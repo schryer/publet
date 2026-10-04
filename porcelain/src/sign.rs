@@ -195,6 +195,34 @@ fn read_key_file(path: &std::path::Path) -> Result<[u8; 32], String> {
         .ok_or_else(|| format!("{} is malformed", path.display()))
 }
 
+/// A detached `sig` object (Section 4.4) over `target_bytes`, made with
+/// this workspace's secret key, not yet stored.
+///
+/// # Errors
+///
+/// Returns a message if there is no key here or signing fails.
+pub(crate) fn signature(
+    here: &std::path::Path,
+    author: &str,
+    created: &str,
+    purpose: &str,
+    target: &Cid,
+    target_bytes: &[u8],
+) -> Result<(Cid, Vec<u8>), String> {
+    let seed = read_key_file(&key_path(here))?;
+    let value = publet_core::sign(SigAlg::Ed25519, &seed, purpose, target_bytes)
+        .map_err(|e| e.to_string())?;
+    let bytes = Object::builder("sig", author)
+        .created(created)
+        .field("target", Value::Text(target.to_string()))
+        .field("alg", Value::Text("ed25519".to_owned()))
+        .field("value", Value::Bytes(value))
+        .field("purpose", Value::Text(purpose.to_owned()))
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok((Cid::of(&bytes, HashAlg::Sha2_256), bytes))
+}
+
 fn sign_target(
     ws: &Workspace,
     here: &std::path::Path,
@@ -220,20 +248,7 @@ fn sign_target(
     let author = ws
         .get("author")
         .ok_or("no author configured; run `pub sign --generate-key` first")?;
-    let seed = read_key_file(&key_path(here))?;
-
-    let signature = publet_core::sign(SigAlg::Ed25519, &seed, purpose, &target_bytes)
-        .map_err(|e| e.to_string())?;
-
-    let bytes = Object::builder("sig", &author)
-        .created(created)
-        .field("target", Value::Text(target_cid.to_string()))
-        .field("alg", Value::Text("ed25519".to_owned()))
-        .field("value", Value::Bytes(signature))
-        .field("purpose", Value::Text(purpose.to_owned()))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let cid = Cid::of(&bytes, HashAlg::Sha2_256);
+    let (cid, bytes) = signature(here, &author, created, purpose, &target_cid, &target_bytes)?;
     store.put(&cid, &bytes).map_err(|e| e.to_string())?;
 
     println!("{cid}");

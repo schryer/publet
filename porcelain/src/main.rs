@@ -15,14 +15,18 @@
 //! have them.
 
 mod annotate;
+mod build;
 mod compose;
+mod corpus;
 mod document;
 mod domain;
+mod env;
 mod payload;
 mod policy;
 mod propose;
 mod read;
 mod relate;
+mod render;
 mod revise;
 mod sign;
 mod why;
@@ -44,6 +48,13 @@ fn usage() -> ExitCode {
     eprintln!("  document             build a document ordering references to claims");
     eprintln!("  doc MANIFEST         build a document from a JSON manifest");
     eprintln!("  revise CID           publish the next version and its supersedes edge");
+    eprintln!("  build [DIR]          compile named publet sources (in a corpus: drafts only)");
+    eprintln!("  publish SLUG...|--all  sign, export, and record drafts; pin their renderings");
+    eprintln!("  render SLUG|CID      check, then run, the render pipeline a publet names");
+    eprintln!("  corpus init|status|upgrade|map   a corpus, its parents, and its network");
+    eprintln!("  delegate --to=KEY    authorize another key to continue this key's lineages");
+    eprintln!("  env build|status|path SLUG   provision the pinned toolchain a pipeline runs in");
+    eprintln!("  myst SLUG|CID        write a MyST project for a document");
     eprintln!("  relate               author a relation between two objects");
     eprintln!("  annotate             say something about an object without touching it");
     eprintln!("  sign                 generate a signing key, or sign a stored object");
@@ -73,6 +84,17 @@ async fn main() -> ExitCode {
         "document" => document::run(&rest),
         "doc" => document::run_manifest(&rest),
         "revise" => revise::run(&rest),
+        "build" => build::run(&rest),
+        "publish" => corpus::publish(&rest),
+        "render" => render::run(&rest),
+        "corpus" => corpus::run(&rest),
+        "env" => env::run(&rest),
+        "delegate" => corpus::delegate(&rest),
+        "myst" => render::run_myst(&rest),
+        "--version" | "version" => {
+            println!("pub {}", env!("CARGO_PKG_VERSION"));
+            return ExitCode::SUCCESS;
+        }
         "relate" => relate::run(&rest),
         "annotate" => annotate::run(&rest),
         "sign" => sign::run(&rest),

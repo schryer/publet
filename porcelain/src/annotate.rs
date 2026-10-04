@@ -62,7 +62,7 @@ const ROLES: [&str; 5] = [
 /// is not always six letters. The check is only about shape; who is
 /// entitled to pick a given tag is a question this format has nothing to
 /// say about (Section 9.1 again -- nobody is).
-fn check_tag_format(tag: &str) -> Result<(), String> {
+pub(crate) fn check_tag_format(tag: &str) -> Result<(), String> {
     let bad = || {
         format!(
             "--tag={tag} does not match <domain>-<name>-MM-YYYY: 3-6 letters, \

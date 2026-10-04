@@ -7,7 +7,7 @@ untested.
 
 - specification: `spec/index.md`
 - sections with normative language: 53
-- sections with at least one scenario: 49 (92%)
+- sections with at least one scenario: 50 (94%)
 
 ## Covered
 
@@ -31,7 +31,7 @@ untested.
 | 13.2 | 4 | plumbing/cat.feature, scenarios/store.feature |
 | 13.3 | 1 | conformance/index_node.feature |
 | 13.4 | 3 | conformance/archive.feature |
-| 14.1 | 3 | plumbing/merkle.feature |
+| 14.1 | 3 | plumbing/merkle.feature, porcelain/corpus.feature |
 | 14.1.1 | 6 | conformance/consistency.feature, conformance/generations.feature |
 | 14.3.1 | 2 | conformance/consistency.feature |
 | 14.3.2 | 5 | conformance/no_have_want.feature, scenarios/privacy_modes.feature |
@@ -56,10 +56,11 @@ untested.
 | 6 | 7 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |
-| 7.2 | 2 | conformance/human_signatory.feature |
+| 7.2 | 2 | conformance/human_signatory.feature, porcelain/publish.feature |
 | 7.3 | 2 | conformance/redundancy.feature |
 | 7.4 | 4 | conformance/assumption.feature |
-| 8 | 8 | conformance/documents.feature, conformance/forks.feature, porcelain/doc.feature |
+| 8 | 8 | conformance/documents.feature, conformance/forks.feature, porcelain/doc.feature, porcelain/env.feature, porcelain/render.feature |
+| 9.1 | 1 | porcelain/build.feature |
 | 9.2 | 3 | plumbing/divergence.feature |
 | 9.3 | 1 | conformance/anchors.feature |
 
@@ -70,4 +71,3 @@ untested.
 | 6.2 | 1 |
 | 7 | 2 |
 | 7.5 | 4 |
-| 9.1 | 1 |

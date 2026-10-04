@@ -19,6 +19,13 @@ frontmatter.typ
 LICENSE
 myst-imports.typ
 _build/
+render-record.json
+render.json
+# A corpus's working store and secret key; objects/ is its durable form.
+/corpus/.publet/
+# `pub render` output; the publet's source is publet.json beside it.
+/corpus/publets/*/index.md
+/corpus/publets/*/myst.yml
 
 *.pdf
 !*/*/versions/*.pdf

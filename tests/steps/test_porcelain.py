@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from support.objects import author_key, cbor_map, cid_of, head, obj, text, uint
+from support.objects import author_key, cbor_map, cid_of, head, obj, publet, text, uint
 
 scenarios("../features/porcelain/init.feature")
 scenarios("../features/porcelain/read.feature")
@@ -488,3 +488,63 @@ def weight_shown_instead(result):
     line = [l for l in body.splitlines() if l.strip().startswith("affirm")]
     assert line, body
     assert "." in line[0], line
+
+
+# --- reading an object file ---------------------------------------------------
+
+
+@given(parsers.parse("an object file holding the cohort claim, named for {naming}"))
+def object_file(pub, naming: str):
+    data = publet(author_key("K_a"), "2026-09-12T10:00:00Z", "empirical", COHORT)
+    pub.file_cid = cid_of(data)
+    named = pub.file_cid if naming == "its identifier" else cid_of(b"something else")
+    pub.object_file = pub.cwd / "files" / (named.replace(":", "_") + ".cbor")
+    pub.object_file.parent.mkdir()
+    pub.object_file.write_bytes(data)
+
+
+@when("I read the object file from a directory with no workspace", target_fixture="result")
+def read_object_file(pub):
+    elsewhere = pub.cwd / "elsewhere"
+    elsewhere.mkdir()
+    return subprocess.run([str(pub.bin), "read", str(pub.object_file)],
+                          capture_output=True, cwd=elsewhere, check=False)
+
+
+@then("the identifier shown is the one its bytes hash to")
+def identifier_computed(pub, result):
+    assert result.stdout.decode().splitlines()[0] == pub.file_cid
+
+
+@then("no mode is reported")
+def no_mode(result):
+    out = text_of(result)
+    assert "[local]" not in out and "[query]" not in out, out
+
+
+@then("it warns that the file was altered or misnamed")
+def warns_misnamed(result):
+    assert "altered or misnamed" in result.stderr.decode()
+
+
+@when("I read the claim as JSON", target_fixture="result")
+def read_claim_json(pub):
+    return pub.run("read", "--json", pub.claim)
+
+
+@then(parsers.parse('the JSON names the claim\'s identifier and the mode "{mode}"'))
+def json_identity(pub, result, mode: str):
+    import json
+    doc = json.loads(result.stdout)
+    assert doc["cid"] == pub.claim
+    assert doc["mode"] == mode
+
+
+@then("the JSON object holds every header field and the claim's scope")
+def json_fields(result):
+    import json
+    obj = json.loads(result.stdout)["object"]
+    assert {"pub", "type", "created", "author", "body"} <= set(obj)
+    assert obj["type"] == "claim.prose"
+    assert "2031 cohort" in obj["body"]["content"]
+    assert obj["body"]["scope"]["domain"] == "adults 40-65, single-centre, unblinded"

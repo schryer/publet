@@ -1,0 +1,108 @@
+{
+  "slug": "tool.classicthesis-jtex",
+  "tag": "TOOL-CLSJTX-10-2026",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "ClassicThesis jtex template",
+  "claims": {
+    "identity": {
+      "class": "archival",
+      "content": "The ClassicThesis jtex template is this repository's thin wrapper adapting @preview/classicthesis so MyST can export through it.",
+      "scope": "the toolchain installed on the machine that renders the publet corpus, as recorded on 2026-10-04",
+      "depends": [
+        "~base:tool.classicthesis-pkg#identity"
+      ],
+      "data": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "version"
+          }
+        ],
+        "rows": [
+          [
+            "classicthesis-typst",
+            "0.1.0"
+          ]
+        ]
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "templates/classicthesis-typst"
+        }
+      ]
+    },
+    "template": {
+      "class": "archival",
+      "content": "templates/classicthesis-typst/template.typ is the template body of the ClassicThesis jtex template.",
+      "scope": "the toolchain installed on the machine that renders the publet corpus, as recorded on 2026-10-04",
+      "depends": [
+        "#identity"
+      ],
+      "data": {
+        "media": "text/plain",
+        "file": "../../../templates/classicthesis-typst/template.typ"
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "templates/classicthesis-typst/template.typ"
+        }
+      ]
+    },
+    "manifest": {
+      "class": "archival",
+      "content": "templates/classicthesis-typst/template.yml is the jtex manifest of the ClassicThesis template.",
+      "scope": "the toolchain installed on the machine that renders the publet corpus, as recorded on 2026-10-04",
+      "depends": [
+        "#identity"
+      ],
+      "data": {
+        "media": "application/yaml",
+        "file": "../../../templates/classicthesis-typst/template.yml"
+      },
+      "sources": [
+        {
+          "ref": "https://github.com/schryer/publet",
+          "locator": "templates/classicthesis-typst/template.yml"
+        }
+      ]
+    }
+  },
+  "sections": [
+    {
+      "heading": "Identity",
+      "items": [
+        {
+          "ref": "#identity"
+        }
+      ]
+    },
+    {
+      "heading": "Files",
+      "items": [
+        {
+          "ref": "#template"
+        },
+        {
+          "ref": "#manifest"
+        }
+      ]
+    },
+    {
+      "heading": "Help",
+      "items": [
+        {
+          "ref": "base:xdoc.jtex",
+          "role": "background"
+        },
+        {
+          "ref": "base:xdoc.myst-pdf",
+          "role": "background"
+        }
+      ]
+    }
+  ]
+}

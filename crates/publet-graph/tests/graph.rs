@@ -81,6 +81,32 @@ fn verdict(author_key: &str, target: &Cid, aspect: Option<&str>) -> (Cid, Vec<u8
     )
 }
 
+/// A `claim.annotation` of the given `kind`, targeting `target`, whose
+/// `value` map holds the given string fields -- the shape `usage`,
+/// `tagged` and `classifies` annotations share.
+fn annotation(
+    author_key: &str,
+    created: &str,
+    kind: &str,
+    target: &Cid,
+    value_fields: &[(&str, &str)],
+) -> (Cid, Vec<u8>) {
+    let mut value = std::collections::BTreeMap::new();
+    for (k, v) in value_fields {
+        value.insert((*k).to_owned(), Value::Text((*v).to_owned()));
+    }
+    build(
+        "claim.annotation",
+        author_key,
+        created,
+        &[
+            ("kind", Value::Text(kind.into())),
+            ("target", Value::Text(target.to_string())),
+            ("value", Value::Map(value)),
+        ],
+    )
+}
+
 #[test]
 fn appendix_a_lineage_and_translation() {
     let ka = author("K_a");
@@ -563,4 +589,399 @@ fn a_verdict_on_a_reported_observation_is_permitted() {
         graph.insert(cid, object).unwrap();
     }
     graph.validate().unwrap();
+}
+
+/// `is_retracted` is felicitous only when the `retracts` relation's `from`
+/// endpoint shares an author with the object it names (Section 6.2) --
+/// checked directly here, and through each query method below.
+#[test]
+fn is_retracted_reports_felicitous_retraction_only() {
+    let kc = author("K_c");
+    let ke = author("K_e");
+    let mut graph = Graph::new();
+
+    let (target, target_b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    // The `from` endpoint: a second object signed by the same key as the
+    // target, which is what the felicity condition actually checks.
+    let (own_act, own_act_b) = claim(&kc, "2026-09-12T10:01:00Z", "empirical", "a note", &[]);
+    let (retraction, retraction_b) =
+        relation(&kc, "2026-09-12T10:02:00Z", "retracts", &own_act, &target);
+    for (cid, bytes) in [
+        (&target, &target_b),
+        (&own_act, &own_act_b),
+        (&retraction, &retraction_b),
+    ] {
+        add(&mut graph, cid, bytes).unwrap();
+    }
+    assert!(graph.is_retracted(&target));
+
+    let (other_target, other_target_b) = claim(
+        &kc,
+        "2026-09-12T10:03:00Z",
+        "empirical",
+        "another reading",
+        &[],
+    );
+    // A third party's own object as `from` never carries the target's
+    // author, so the relation can be filed but never takes effect.
+    let (foreign_act, foreign_act_b) = claim(
+        &ke,
+        "2026-09-12T10:04:00Z",
+        "empirical",
+        "a stranger's note",
+        &[],
+    );
+    let (foreign_retraction, foreign_retraction_b) = relation(
+        &ke,
+        "2026-09-12T10:05:00Z",
+        "retracts",
+        &foreign_act,
+        &other_target,
+    );
+    for (cid, bytes) in [
+        (&other_target, &other_target_b),
+        (&foreign_act, &foreign_act_b),
+        (&foreign_retraction, &foreign_retraction_b),
+    ] {
+        add(&mut graph, cid, bytes).unwrap();
+    }
+    assert!(!graph.is_retracted(&other_target));
+}
+
+/// `tags_of` (Section 9.1) excludes a tag felicitously retracted, and
+/// keeps a tag whose retraction was filed by an unrelated key.
+#[test]
+fn tags_of_excludes_only_felicitously_retracted_tags() {
+    let kc = author("K_c");
+    let ke = author("K_e");
+    let mut graph = Graph::new();
+
+    let (target, target_b) = claim(&kc, "2026-09-12T10:00:00Z", "empirical", "a reading", &[]);
+    add(&mut graph, &target, &target_b).unwrap();
+
+    let (old_tag, old_tag_b) = annotation(
+        &kc,
+        "2026-09-12T10:01:00Z",
+        "tagged",
+        &target,
+        &[("tag", "old-tag")],
+    );
+    let (new_tag, new_tag_b) = annotation(
+        &kc,
+        "2026-09-12T10:02:00Z",
+        "tagged",
+        &target,
+        &[("tag", "new-tag")],
+    );
+    // K_c's own tag, which K_e will (unsuccessfully) try to retract.
+    let (stray_tag, stray_tag_b) = annotation(
+        &kc,
+        "2026-09-12T10:03:00Z",
+        "tagged",
+        &target,
+        &[("tag", "stray-tag")],
+    );
+    let (own_act, own_act_b) = claim(&kc, "2026-09-12T10:04:00Z", "empirical", "a note", &[]);
+    let (retract_old, retract_old_b) =
+        relation(&kc, "2026-09-12T10:05:00Z", "retracts", &own_act, &old_tag);
+    // K_e cannot retract K_c's tag: only the annotation's own author can.
+    let (foreign_act, foreign_act_b) = claim(
+        &ke,
+        "2026-09-12T10:06:00Z",
+        "empirical",
+        "a stranger's note",
+        &[],
+    );
+    let (retract_stray, retract_stray_b) = relation(
+        &ke,
+        "2026-09-12T10:07:00Z",
+        "retracts",
+        &foreign_act,
+        &stray_tag,
+    );
+
+    for (cid, bytes) in [
+        (&old_tag, &old_tag_b),
+        (&new_tag, &new_tag_b),
+        (&stray_tag, &stray_tag_b),
+        (&own_act, &own_act_b),
+        (&retract_old, &retract_old_b),
+        (&foreign_act, &foreign_act_b),
+        (&retract_stray, &retract_stray_b),
+    ] {
+        add(&mut graph, cid, bytes).unwrap();
+    }
+
+    let mut tags = graph.tags_of(&target);
+    tags.sort();
+    assert_eq!(tags, vec!["new-tag".to_owned(), "stray-tag".to_owned()]);
+}
+
+/// `usage_of` (Section 5.2) excludes a citation felicitously retracted.
+#[test]
+fn usage_of_excludes_retracted_citations() {
+    let kc = author("K_c");
+    let mut graph = Graph::new();
+
+    let (target, target_b) = claim(&kc, "2026-09-12T10:00:00Z", "definitional", "a term", &[]);
+    add(&mut graph, &target, &target_b).unwrap();
+
+    let (old_usage, old_usage_b) = annotation(
+        &kc,
+        "2026-09-12T10:01:00Z",
+        "usage",
+        &target,
+        &[("source", "Old Source"), ("locator", "p.1")],
+    );
+    let (new_usage, new_usage_b) = annotation(
+        &kc,
+        "2026-09-12T10:02:00Z",
+        "usage",
+        &target,
+        &[("source", "New Source"), ("locator", "p.2")],
+    );
+    let (own_act, own_act_b) = claim(&kc, "2026-09-12T10:03:00Z", "empirical", "a note", &[]);
+    let (retract_old, retract_old_b) = relation(
+        &kc,
+        "2026-09-12T10:04:00Z",
+        "retracts",
+        &own_act,
+        &old_usage,
+    );
+
+    for (cid, bytes) in [
+        (&old_usage, &old_usage_b),
+        (&new_usage, &new_usage_b),
+        (&own_act, &own_act_b),
+        (&retract_old, &retract_old_b),
+    ] {
+        add(&mut graph, cid, bytes).unwrap();
+    }
+
+    assert_eq!(
+        graph.usage_of(&target),
+        vec![("New Source".to_owned(), "p.2".to_owned())]
+    );
+}
+
+/// `subjects_of` and `classified_under` (Section 9.1) both exclude a
+/// `classifies` membership felicitously retracted.
+#[test]
+fn classification_queries_exclude_retracted_memberships() {
+    let kc = author("K_c");
+    let mut graph = Graph::new();
+
+    let (retracted_member, retracted_member_b) =
+        claim(&kc, "2026-09-12T10:00:00Z", "empirical", "item a", &[]);
+    let (current_member, current_member_b) =
+        claim(&kc, "2026-09-12T10:01:00Z", "empirical", "item b", &[]);
+    let subject = Cid::of(b"a shared subject", HashAlg::Sha2_256);
+    add(&mut graph, &retracted_member, &retracted_member_b).unwrap();
+    add(&mut graph, &current_member, &current_member_b).unwrap();
+
+    let (retracted_class, retracted_class_b) = annotation(
+        &kc,
+        "2026-09-12T10:02:00Z",
+        "classifies",
+        &retracted_member,
+        &[("subject", &subject.to_string())],
+    );
+    let (current_class, current_class_b) = annotation(
+        &kc,
+        "2026-09-12T10:03:00Z",
+        "classifies",
+        &current_member,
+        &[("subject", &subject.to_string())],
+    );
+    let (own_act, own_act_b) = claim(&kc, "2026-09-12T10:04:00Z", "empirical", "a note", &[]);
+    let (retraction, retraction_b) = relation(
+        &kc,
+        "2026-09-12T10:05:00Z",
+        "retracts",
+        &own_act,
+        &retracted_class,
+    );
+
+    for (cid, bytes) in [
+        (&retracted_class, &retracted_class_b),
+        (&current_class, &current_class_b),
+        (&own_act, &own_act_b),
+        (&retraction, &retraction_b),
+    ] {
+        add(&mut graph, cid, bytes).unwrap();
+    }
+
+    assert!(graph.subjects_of(&retracted_member).is_empty());
+    assert_eq!(
+        graph.subjects_of(&current_member),
+        vec![subject.to_string()]
+    );
+    assert_eq!(
+        graph.classified_under(&subject),
+        vec![current_member.to_string()]
+    );
+}
+
+/// A `delegates` relation from `from_key` to `to_key`, with the given
+/// `aspect` and optional `effective`.
+fn delegation(
+    author_key: &str,
+    from_key: &str,
+    to_key: &str,
+    aspect: &str,
+    effective: Option<&str>,
+) -> (Cid, Vec<u8>) {
+    let mut fields = vec![
+        ("kind", Value::Text("delegates".into())),
+        ("from", Value::Text(from_key.into())),
+        ("to", Value::Text(to_key.into())),
+        ("aspect", Value::Text(aspect.into())),
+    ];
+    if let Some(e) = effective {
+        fields.push(("effective", Value::Text(e.into())));
+    }
+    build(
+        "claim.relation",
+        author_key,
+        "2026-10-04T00:00:00Z",
+        &fields,
+    )
+}
+
+/// Section 6 with Section 10.6: a `supersedes` is a revision when its
+/// author signed the target or holds an immediate `lineage` delegation
+/// from that key, and a proposal otherwise.
+#[test]
+fn supersedes_is_felicitous_from_the_author_or_a_lineage_delegate() {
+    let ka = author("K_a");
+    let kb = author("K_b");
+    let mut g = Graph::new();
+    let (old, old_bytes) = claim(
+        &ka,
+        "2026-10-01T00:00:00Z",
+        "definitional",
+        "x: a thing",
+        &[],
+    );
+    add(&mut g, &old, &old_bytes).unwrap();
+
+    let (own_version, own_bytes) = claim(
+        &ka,
+        "2026-10-02T00:00:00Z",
+        "definitional",
+        "x: a thing, v2",
+        &[],
+    );
+    add(&mut g, &own_version, &own_bytes).unwrap();
+    let (own_rel, own_rel_bytes) = relation(
+        &ka,
+        "2026-10-02T00:00:00Z",
+        "supersedes",
+        &own_version,
+        &old,
+    );
+    add(&mut g, &own_rel, &own_rel_bytes).unwrap();
+    assert!(
+        g.supersedes_is_felicitous(&own_rel),
+        "the original author revises"
+    );
+
+    let (other_version, other_bytes) = claim(
+        &kb,
+        "2026-10-03T00:00:00Z",
+        "definitional",
+        "x: a thing, v3",
+        &[],
+    );
+    add(&mut g, &other_version, &other_bytes).unwrap();
+    let (other_rel, other_rel_bytes) = relation(
+        &kb,
+        "2026-10-03T00:00:00Z",
+        "supersedes",
+        &other_version,
+        &old,
+    );
+    add(&mut g, &other_rel, &other_rel_bytes).unwrap();
+    assert!(
+        !g.supersedes_is_felicitous(&other_rel),
+        "another key only proposes"
+    );
+
+    let (del, del_bytes) = delegation(&ka, &ka, &kb, "lineage", Some("immediate"));
+    add(&mut g, &del, &del_bytes).unwrap();
+    assert!(
+        g.supersedes_is_felicitous(&other_rel),
+        "a lineage delegate revises"
+    );
+    assert!(
+        !g.supersedes_is_felicitous(&del),
+        "only supersedes relations qualify"
+    );
+}
+
+#[test]
+fn only_an_immediate_lineage_delegation_from_the_delegator_counts() {
+    let ka = author("K_a");
+    let kb = author("K_b");
+    let kc = author("K_c");
+    let delegator: Cid = ka.parse().unwrap();
+    let delegate: Cid = kb.parse().unwrap();
+    let mut g = Graph::new();
+
+    let (other, otherb) = delegation(&ka, &ka, &kb, "stewardship", None);
+    add(&mut g, &other, &otherb).unwrap();
+    let (dormant, dormantb) = delegation(&ka, &ka, &kb, "lineage", Some("on-dormancy"));
+    add(&mut g, &dormant, &dormantb).unwrap();
+    let (forged, forgedb) = delegation(&kc, &ka, &kb, "lineage", None);
+    add(&mut g, &forged, &forgedb).unwrap();
+    assert!(!g.delegates_lineage(&delegator, &delegate));
+
+    let (real, realb) = delegation(&ka, &ka, &kb, "lineage", None);
+    add(&mut g, &real, &realb).unwrap();
+    assert!(g.delegates_lineage(&delegator, &delegate));
+
+    // Withdrawn by the delegating key, it no longer counts.
+    let (note, noteb) = claim(&ka, "2026-10-05T00:00:00Z", "attributive", "withdrawn", &[]);
+    add(&mut g, &note, &noteb).unwrap();
+    let (ret, retb) = relation(&ka, "2026-10-05T00:00:00Z", "retracts", &note, &real);
+    add(&mut g, &ret, &retb).unwrap();
+    assert!(!g.delegates_lineage(&delegator, &delegate));
+}
+
+/// Section 6 with Section 10.6: a delegate's successor is part of the
+/// authoritative lineage, and so is its head.
+#[test]
+fn a_lineage_delegate_extends_the_authoritative_lineage() {
+    let ka = author("K_a");
+    let kb = author("K_b");
+    let mut g = Graph::new();
+    let (original, original_bytes) = claim(
+        &ka,
+        "2026-10-01T00:00:00Z",
+        "definitional",
+        "y: a thing",
+        &[],
+    );
+    add(&mut g, &original, &original_bytes).unwrap();
+    let (next, next_bytes) = claim(
+        &kb,
+        "2026-10-02T00:00:00Z",
+        "definitional",
+        "y: a thing, v2",
+        &[],
+    );
+    add(&mut g, &next, &next_bytes).unwrap();
+    let (edge, edge_bytes) = relation(&kb, "2026-10-02T00:00:00Z", "supersedes", &next, &original);
+    add(&mut g, &edge, &edge_bytes).unwrap();
+    assert_eq!(
+        g.lineage(&original, Lineage::Authoritative).heads,
+        vec![original.clone()]
+    );
+
+    let (del, del_bytes) = delegation(&ka, &ka, &kb, "lineage", None);
+    add(&mut g, &del, &del_bytes).unwrap();
+    assert_eq!(
+        g.lineage(&original, Lineage::Authoritative).heads,
+        vec![next]
+    );
 }

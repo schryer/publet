@@ -1,0 +1,45 @@
+{
+  "slug": "split-brain-forking",
+  "tag": "PUB-SPLBRN-09-2026",
+  "supersedes": "pub:sha2-256:nbl2yfsybrzve7yaeevvvywvahyk5gd2yoqrurydwx6kw6zsdnfa",
+  "created": "2026-10-04T00:00:00Z",
+  "title": "Split-Brain Forking",
+  "sections": [
+    {
+      "heading": "Definition",
+      "items": [
+        {
+          "ref": "pub:sha2-256:tqdxdknxbv6xfhco2euugvwiixwo674vyx5ezujbpcm3e2jtqufa",
+          "role": "assert",
+          "gloss": "the concept, defined"
+        }
+      ]
+    },
+    {
+      "heading": "Documented Case",
+      "items": [
+        {
+          "ref": "pub:sha2-256:deqlmuqgnld5sm227mw7hjmoukp4zgn446xwai6h6vgvuxc3d42a",
+          "role": "assert",
+          "gloss": "the 2002 Spanish Wikipedia fork: its founding"
+        },
+        {
+          "ref": "pub:sha2-256:wuydae7jndz5plqcfqtpcrw2cajjksoxbb2fqldoa4mpzdnurrqq",
+          "role": "assert",
+          "gloss": "its two-decade divergent outcome"
+        }
+      ]
+    },
+    {
+      "heading": "Colophon",
+      "items": [
+        {
+          "ref": "render.myst-classicthesis",
+          "role": "background",
+          "gloss": "rendered by",
+          "bind": "lineage"
+        }
+      ]
+    }
+  ]
+}

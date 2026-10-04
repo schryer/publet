@@ -86,16 +86,28 @@ pub(crate) fn read_json(path: &Path) -> Result<serde_json::Value, String> {
 /// size differs.
 pub(crate) fn data_from_file(store: &Store, path: &Path) -> Result<Value, String> {
     let json = read_json(path)?;
-    let mut value = to_value(&json, "data")?;
+    data_from_json(store, &json, path.parent()).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// The `data` field from JSON already in hand, in the shapes
+/// [`data_from_file`] accepts; a relative `file` is read from `base`.
+///
+/// # Errors
+///
+/// As [`data_from_file`], less the file handling.
+pub(crate) fn data_from_json(
+    store: &Store,
+    json: &serde_json::Value,
+    base: Option<&Path>,
+) -> Result<Value, String> {
+    let mut value = to_value(json, "data")?;
     let Value::Map(map) = &mut value else {
-        return Err(format!("{}: data must be a JSON object", path.display()));
+        return Err("data must be a JSON object".to_owned());
     };
 
     if let Some(file) = map.remove("file") {
         let file = file.as_text().ok_or("data.file must be a path")?.to_owned();
-        let file_path = path
-            .parent()
-            .map_or_else(|| Path::new(&file).to_path_buf(), |dir| dir.join(&file));
+        let file_path = base.map_or_else(|| Path::new(&file).to_path_buf(), |dir| dir.join(&file));
         let bytes = std::fs::read(&file_path)
             .map_err(|e| format!("cannot read {}: {e}", file_path.display()))?;
         let cid = Cid::of(&bytes, HashAlg::Sha2_256);

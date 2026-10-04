@@ -147,6 +147,16 @@ pub why CID                 # its standing, and every component of it
 pub compose --class=... --content=... --scope=... [--data=FILE] [--source=REF]
 pub revise CID [--data=FILE] [--source=REF]   # next version + supersedes, or nothing if unchanged
 pub doc MANIFEST.json       # a document, from a JSON manifest; items may carry a `view`
+pub build [DIR] [--sign]    # compile named publet sources (in a corpus: unsigned drafts only)
+pub render SLUG [--check]   # run the render pipeline a publet names, once it checks out
+pub publish SLUG... | --all # sign, export, and record drafts; pin their accepted renderings
+pub myst SLUG --out=DIR --template=PATH   # a MyST project for a document
+pub corpus init [--parent=ALIAS=PATH]     # make this directory a corpus
+pub corpus status | upgrade [ALIAS]       # is a parent newer than the pin; re-pin
+pub corpus map [--format=mermaid|dot|json] # the publet network across corpora
+pub corpus renderings [--prune]           # pinned renderings; drop inactive kept outputs
+pub env build|status|path SLUG            # provision the toolchain a pipeline runs in
+pub delegate --to=KEY                     # let another key continue this key's lineages
 pub propose CID             # submit, recording what it was composed against
 pub witness DOMAIN          # the log root you observed
 ```
@@ -174,6 +184,71 @@ is a `view` on the document item citing them, so the same data can be a
 table in one document and a chart in another; the rendering itself is never
 stored. `pub revise` publishes a new version only when something changed,
 so a build that re-gathers the same inputs leaves the lineage alone.
+
+People link by name and objects link by identifier. `pub build` reads one
+`publet.json` per publet, each referring to the others by a short slug
+(`tool.typst`, `tool.typst#identity`, `#usage`), publishes children before
+the parents whose identifiers cover theirs, files each publet's Section 9.1
+tag on its lineage's genesis, and writes `publets.lock`, the one place a
+slug and an identifier appear side by side. **No slug enters any object**:
+a name written into an object's bytes could never be withdrawn, which is
+the namespace-capture problem Section 9.1 exists to avoid. Unchanged
+sources publish nothing, and nothing is stored unless the whole tree is
+admissible.
+
+A publet names how it is rendered: its `Colophon` cites a render-pipeline
+publet whose steps are procedural claims carrying the commands to run, each
+depending on the identity claim of every program it runs -- name, version,
+and how to check it -- and those publets cite wrapper publets for the
+external documentation of each tool. `pub render` runs nothing until every
+object in the pipeline is signed by a key the policy trusts, every program
+reports the version its claim states, and every repository file the
+pipeline cites still hashes to its blob; a failure names the publet that
+disagrees with the machine. Commands run without a shell. Every rendered
+reference reads `Title [TAG] — identifier`: the name to read, and the
+identifier to check, because a name alone can be captured. This
+repository's own publets and their render pipeline are under
+`corpus/publets/`; the general toolchain publets they build on are in
+`publet-corpus`.
+
+**Corpora.** A corpus is a workspace whose objects form a Section 14.1
+domain: `corpus.json` names it and its parents, `publets/` holds its
+sources, and `pub build` there exports every object to `objects/` -- the
+committed form -- and advances the corpus's generation whenever its
+membership changes. A project corpus names a more general parent's publet as
+`alias:slug` (never by a bare slug a parent could later shadow), is pinned
+to the parent generation it built against, and copies in what it reaches at
+identical identifiers, so it stands alone. `pub corpus status` says when a
+parent has moved on; upgrading is the child's choice. Each corpus has its
+own key; a parent hands curation of a lineage to a child's key with
+`pub delegate`, without which the child's new versions are proposals
+(Sections 6, 10.6). This repository's own publets live in `corpus/`, built
+on `publet-corpus`.
+
+**Build freely, publish deliberately.** In a corpus, `pub build` and
+`pub render` are a workshop: drafts are unsigned, stay in the workspace,
+and leave no history, so experimenting costs nothing. `pub publish` is the
+one act that records anything: it signs and exports the named publets (and
+any draft they need), advances the generation, and pins the accepted
+rendering -- document, pipeline, exact toolchain, output identifiers -- as
+a `settled` annotation, keeping the output as a blob. Publishing a
+rendering identical to the one already pinned files nothing. Documents
+cite their pipeline by lineage and pipelines state version constraints
+(`requires`) against tool lineages (`~ref`), so a tool upgrade revises the
+tool's identity claim and nothing else.
+
+**Environments.** A pipeline names the environment it runs in: a publet
+listing its **host requirements** (what the machine must already have to
+bootstrap it, such as cargo, npm, node, curl) and the steps that provision
+the pinned toolchain -- tools, packages, fonts -- into
+`~/.cache/publet/env/<identifier>/`, with every download checked against
+the identifier it is pinned to. `pub env build` provisions it once;
+`pub render` then runs only what it holds, so the output depends on the
+publet, not on the machine. Environments are keyed by toolchain, not by
+document, so a handful serve everything. `pub env path` prints the
+directory, for using the same tools by hand. A container image pinned by
+digest is noted as a future way to provide an environment -- for a deployed
+service -- and is not built.
 
 `pub propose` records the generation it was composed against and reports the
 three ways that can be stale: the target already has another successor, a

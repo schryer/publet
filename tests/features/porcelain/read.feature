@@ -24,3 +24,24 @@ Feature: An assertion is shown with the scope it was made under
     Given a workspace with a claim and a usage annotation on it
     When I read the annotation
     Then its kind, target, and value fields are shown
+
+  Scenario: An object file is read without any workspace, under the identifier its bytes hash to
+    Given an object file holding the cohort claim, named for its identifier
+    When I read the object file from a directory with no workspace
+    Then it succeeds
+    And the content is shown
+    And the identifier shown is the one its bytes hash to
+    And no mode is reported
+
+  Scenario: An object file named for another identifier is read, and the mismatch reported
+    Given an object file holding the cohort claim, named for a different identifier
+    When I read the object file from a directory with no workspace
+    Then it succeeds
+    And the identifier shown is the one its bytes hash to
+    And it warns that the file was altered or misnamed
+
+  Scenario: The whole object can be read as JSON
+    When I read the claim as JSON
+    Then it succeeds
+    And the JSON names the claim's identifier and the mode "local"
+    And the JSON object holds every header field and the claim's scope

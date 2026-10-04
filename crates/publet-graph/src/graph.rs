@@ -170,9 +170,13 @@ impl Graph {
             .get(&(kind, from.to_owned(), to.to_owned()))
             .is_some_and(|cids| {
                 cids.iter().any(|c| {
-                    self.relations
-                        .get(c)
-                        .is_some_and(|r| r.author() == target.author())
+                    self.relations.get(c).is_some_and(|r| {
+                        r.author() == target.author()
+                            // Section 10.6: a `lineage` delegate continues
+                            // the delegator's lineages with its authority.
+                            || (kind == RelationKind::Supersedes
+                                && self.delegates_lineage(target.author(), r.author()))
+                    })
                 })
             })
     }
@@ -308,6 +312,71 @@ impl Graph {
         self.anchors.get(&cid.to_string())
     }
 
+    /// Whether a `retracts` relation felicitously applies to `cid` (Section
+    /// 6: retraction is authoritative only from a key that signed the
+    /// target). Retraction never deletes (R12); this only says whether one
+    /// such relation currently applies, so a reader can tell current
+    /// standing from history rather than seeing everything ever filed.
+    #[must_use]
+    pub fn is_retracted(&self, cid: &Cid) -> bool {
+        let Some(target) = self.object(cid) else {
+            return false;
+        };
+        let author = target.author().to_string();
+        self.incoming(RelationKind::Retracts, cid)
+            .into_iter()
+            .any(|from| {
+                from.parse::<Cid>()
+                    .ok()
+                    .and_then(|c| self.object(&c))
+                    .is_some_and(|r| r.author().to_string() == author)
+            })
+    }
+
+    /// Whether the `supersedes` relation `relation` is felicitous: a
+    /// revision rather than a proposal to replace (Section 6).
+    ///
+    /// It is when its author signed the object it supersedes, or holds an
+    /// immediate `lineage` delegation from that key (Section 10.6:
+    /// delegation "transfers the capacity to continue -- to supersede").
+    /// The delegation must itself be authored by the delegating key and
+    /// not retracted. An `on-dormancy` delegation is not counted: whether
+    /// the stated silence has elapsed is a fact about time this graph does
+    /// not hold. Delegations are not followed transitively.
+    #[must_use]
+    pub fn supersedes_is_felicitous(&self, relation: &Cid) -> bool {
+        let Some(rel) = self.relations.get(&relation.to_string()) else {
+            return false;
+        };
+        if rel.kind() != RelationKind::Supersedes {
+            return false;
+        }
+        let Some(target) = self.object(rel.to()) else {
+            return false;
+        };
+        let original = target.author();
+        rel.author() == original || self.delegates_lineage(original, rel.author())
+    }
+
+    /// Whether `from` has delegated the `lineage` aspect to `to`,
+    /// immediately, by a relation `from` itself authored and has not
+    /// retracted (Section 10.6).
+    #[must_use]
+    pub fn delegates_lineage(&self, from: &Cid, to: &Cid) -> bool {
+        self.relations.values().any(|r| {
+            r.kind() == RelationKind::Delegates
+                && r.from() == from
+                && r.to() == to
+                && r.author() == from
+                && self.object(r.cid()).is_some_and(|o| {
+                    let field = |k: &str| o.body().get(k).and_then(Value::as_text);
+                    field("aspect") == Some("lineage")
+                        && field("effective").is_none_or(|e| e == "immediate")
+                })
+                && !self.is_retracted(r.cid())
+        })
+    }
+
     /// Documents whose citations substantially overlap another's without
     /// declaring `derived-from` (Section 8).
     ///
@@ -428,9 +497,9 @@ impl Graph {
     /// Anyone MAY tag any object (R6), so this can return more than one
     /// string; which a reader sees is resolved per viewpoint, never by
     /// precedence. Returned sorted and deduplicated -- two keys filing the
-    /// same tag string is agreement, not two tags. A tag's own standing
-    /// (whether it has since been retracted) is not resolved here, the
-    /// same way `usage_of` and `subjects_of` do not resolve theirs.
+    /// same tag string is agreement, not two tags. A tag felicitously
+    /// retracted (Section 6) is excluded, the same way `usage_of` and
+    /// `subjects_of` exclude theirs -- see [`Self::is_retracted`].
     #[must_use]
     pub fn tags_of(&self, target: &Cid) -> Vec<String> {
         let mut out = Vec::new();
@@ -450,6 +519,9 @@ impl Graph {
             {
                 continue;
             }
+            if self.is_retracted(&cid) {
+                continue;
+            }
             let Some(value) = body.get("value") else {
                 continue;
             };
@@ -467,7 +539,9 @@ impl Graph {
     ///
     /// Each is a source and a locator naming where the sense was found. The
     /// citation is a pointer rather than a quotation, which is what lets a
-    /// reader check it without the corpus reproducing what it cites.
+    /// reader check it without the corpus reproducing what it cites. A
+    /// citation felicitously retracted (Section 6) is excluded --
+    /// see [`Self::is_retracted`].
     #[must_use]
     pub fn usage_of(&self, target: &Cid) -> Vec<(String, String)> {
         let mut out = Vec::new();
@@ -485,6 +559,9 @@ impl Graph {
             if body.get("kind").and_then(Value::as_text) != Some("usage")
                 || body.get("target").and_then(Value::as_text) != Some(&target.to_string())
             {
+                continue;
+            }
+            if self.is_retracted(&cid) {
                 continue;
             }
             let Some(value) = body.get("value") else {
@@ -511,7 +588,8 @@ impl Graph {
     /// competing taxonomies coexist as sets of `classifies` annotations by
     /// different keys and a viewpoint selects among them. Returned sorted
     /// and deduplicated: two keys classifying one object under one subject
-    /// is agreement, not two memberships.
+    /// is agreement, not two memberships. A membership felicitously
+    /// retracted (Section 6) is excluded -- see [`Self::is_retracted`].
     #[must_use]
     pub fn subjects_of(&self, target: &Cid) -> Vec<String> {
         let mut out = self.classification(|t, _| t == &target.to_string(), |_, s| s.to_owned());
@@ -560,6 +638,9 @@ impl Graph {
             else {
                 continue;
             };
+            if self.is_retracted(&cid) {
+                continue;
+            }
             let (target, subject) = (target.to_owned(), subject.to_owned());
             if keep(&target, &subject) {
                 out.push(project(&target, &subject));
