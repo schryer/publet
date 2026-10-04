@@ -5,7 +5,8 @@
 //! releases"). So `pub --version` claims a version only when built exactly
 //! at that version's tag from a clean tree -- anything else says it is an
 //! unreleased build -- and names the package publet the release recorded.
-//! Without git (a source archive), the version stands as written.
+//! Without git (a source archive), or in the checkout `cargo install --git
+//! --tag` builds from, the version stands as written.
 
 use std::path::Path;
 use std::process::Command;
@@ -33,6 +34,16 @@ fn main() {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .unwrap_or_default();
     println!("cargo:rustc-env=PUBLET_DESCRIBE={describe}");
+
+    // `cargo install --git ... --tag vX.Y.Z` builds in a checkout cargo
+    // made of exactly the ref the installer named, and fetches no tags, so
+    // `git describe` finds none. There, the manifest version is the
+    // release; a working clone always has its tags to say otherwise.
+    let installed = Path::new(&manifest)
+        .components()
+        .any(|c| c.as_os_str() == "checkouts")
+        && manifest.contains(".cargo");
+    println!("cargo:rustc-env=PUBLET_INSTALLED={}", u8::from(installed));
 
     // The lock writes one row per line; the package identity's is the one
     // naming its slug.
