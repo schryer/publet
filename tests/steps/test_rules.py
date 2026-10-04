@@ -271,12 +271,6 @@ def key_read_fails(runner, store):
     # what is observable here is that nothing treats it as a human principal.
 
 
-@then("it fails")
-def command_fails(result):
-    code = result.returncode if hasattr(result, "returncode") else result.code
-    assert code != 0, _out(result)
-
-
 @then(parsers.parse('the result is "{outcome}"'))
 def standing_result_is(result, outcome: str):
     body = _out(result)

@@ -151,11 +151,6 @@ def separator_prevents_collision(two_results):
     assert not second.startswith(first)
 
 
-@then("it fails")
-def it_fails(result):
-    assert result.code != 0, result.stdout
-
-
 @then("the two identifiers differ")
 def identifiers_differ(two_results):
     first, second = two_results

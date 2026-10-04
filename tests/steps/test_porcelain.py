@@ -422,16 +422,6 @@ def held_objects_are_local(pub):
     assert "[query]" not in text_of(out)
 
 
-@then("it fails")
-def it_fails(result):
-    assert result.returncode != 0, text_of(result)
-
-
-@then("it succeeds")
-def it_succeeds(result):
-    assert result.returncode == 0, text_of(result)
-
-
 @then("it says a scope is required")
 def says_scope_required(result):
     assert "--scope is required" in text_of(result)

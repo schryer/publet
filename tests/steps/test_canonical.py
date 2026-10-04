@@ -90,11 +90,6 @@ def verify_against_other_cid(runner, payload: bytes, other_payload: bytes):
 
 # --- Then ------------------------------------------------------------------
 
-@then(parsers.parse('stderr mentions "{fragment}"'))
-def stderr_mentions(result, fragment: str):
-    assert fragment in result.stderr, f"{fragment!r} not in stderr: {result.stderr!r}"
-
-
 @then("stdout is byte-identical to the input")
 def stdout_matches_input(result, payload: bytes):
     assert result.out == payload
