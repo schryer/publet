@@ -256,6 +256,42 @@ dependency has been superseded, or a dispute answers a resolved question.
 None of them is a refusal. Nothing here is overwritten, so a stale basis
 cannot clobber anything -- it is disclosed, not enforced.
 
+## Versions and releases
+
+A release of `pub` and the plumbing commands is a **version of a publet**:
+the package publet `pkg.publet-cli` [PKG-PUBCLI-10-2026] in `corpus/`. Its
+`identity` claim states the version, the `vX.Y.Z` tag, and the commit; its
+`release` claim lists what changed. The publet's lineage is the release
+history, and `CHANGELOG.md` is generated from it.
+
+The version follows mechanically from what changed since the last release:
+
+| Category | Meaning | Bump |
+|---|---|---|
+| `changed`, `removed` | an already-published interface changed: commands, flags, output, exit codes, file formats, object shapes | major |
+| `added` | a new feature | minor |
+| `fixed`, `security` | the same functionality | patch |
+
+Every pull request that changes code adds a row to
+`corpus/publets/pkg.publet-cli/unreleased.json` -- unpublished workshop
+data, like a draft -- and CI refuses one that does not. `make release-pr`
+moves those rows into the package publet, sets the version the categories
+require, publishes the package publet with your key, and opens a release
+pull request; CI checks the bump is the one the changes require. Merging
+it tags `vX.Y.Z` and creates the GitHub release.
+
+Install a published version -- crates.io is not used, because the
+workspace depends on `graphset` by git revision:
+
+```sh
+cargo install --locked --git https://github.com/schryer/publet --tag v0.1.0 publet-cli
+```
+
+`pub --version` prints `pub X.Y.Z` and the package publet's identifier only
+for a clean build at that release's tag; any other build reports itself as
+unreleased, so a render pipeline requiring a released `pub` (`requires
+^0.1`) cannot be satisfied by a development build.
+
 ## Serving and syncing
 
 ```sh

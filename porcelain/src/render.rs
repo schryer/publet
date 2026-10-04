@@ -1060,11 +1060,22 @@ fn commands_of(step: &ProseClaim) -> Result<Vec<CommandSpec>, String> {
         .collect())
 }
 
-/// Whether `version` satisfies `requires`, written either as a prefix --
+/// Whether `version` satisfies `requires`, written as a compatible range
+/// `^X.Y`, as a prefix --
 /// `0.15` accepts `0.15` and `0.15.2`, not `0.150` -- or as a minimum,
 /// `1.80+`, which accepts any version not below it, compared numerically
 /// part by part.
 pub(crate) fn satisfies(version: &str, requires: &str) -> bool {
+    // `^X.Y`: compatible -- the same major part, and not below `X.Y`. Under
+    // the project's versioning rules only a major bump changes an interface.
+    if let Some(base) = requires.strip_prefix('^') {
+        let parts =
+            |v: &str| -> Option<Vec<u64>> { v.split('.').map(|p| p.parse::<u64>().ok()).collect() };
+        return match (parts(version), parts(base)) {
+            (Some(have), Some(need)) => have.first() == need.first() && have >= need,
+            _ => false,
+        };
+    }
     if let Some(minimum) = requires.strip_suffix('+') {
         let parts =
             |v: &str| -> Option<Vec<u64>> { v.split('.').map(|p| p.parse::<u64>().ok()).collect() };
@@ -1623,6 +1634,11 @@ mod tests {
         assert!(satisfies("22.22.1", "22+"));
         assert!(!satisfies("1.79.0", "1.80+"));
         assert!(!satisfies("abc", "1+"));
+        assert!(satisfies("0.1.0", "^0.1"));
+        assert!(satisfies("0.3.2", "^0.1"));
+        assert!(!satisfies("1.0.0", "^0.1"));
+        assert!(!satisfies("0.0.9", "^0.1"));
+        assert!(satisfies("2.4.0", "^2.1"));
     }
 
     #[test]
