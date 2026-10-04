@@ -6,8 +6,8 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "scope": "the published release v0.1.0 of publet-cli",
-      "content": "publet-cli 0.1.0 is the pub command released as v0.1.0 from commit c0dbb9eb49118f62a79dcbfb88c2d3fc721f745a.",
+      "scope": "the published release v0.1.1 of publet-cli",
+      "content": "publet-cli 0.1.1 is the pub command released as v0.1.1 from commit 8f3df3aa5810ee60105cf755ccd64d4a96532319.",
       "data": {
         "columns": [
           {
@@ -32,25 +32,25 @@
         "rows": [
           [
             "pub",
-            "0.1.0",
+            "0.1.1",
             "pub --version",
-            "pub 0.1.0",
-            "v0.1.0",
-            "c0dbb9eb49118f62a79dcbfb88c2d3fc721f745a"
+            "pub 0.1.1",
+            "v0.1.1",
+            "8f3df3aa5810ee60105cf755ccd64d4a96532319"
           ]
         ]
       },
       "sources": [
         {
           "ref": "https://github.com/schryer/publet",
-          "revision": "c0dbb9eb49118f62a79dcbfb88c2d3fc721f745a"
+          "revision": "8f3df3aa5810ee60105cf755ccd64d4a96532319"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "scope": "the published release v0.1.0 of publet-cli",
-      "content": "publet-cli 0.1.0 was released on 2026-10-04 from commit c0dbb9eb49118f62a79dcbfb88c2d3fc721f745a with these changes.",
+      "scope": "the published release v0.1.1 of publet-cli",
+      "content": "publet-cli 0.1.1 was released on 2026-10-04 from commit 8f3df3aa5810ee60105cf755ccd64d4a96532319 with these changes.",
       "depends": [
         "#identity"
       ],
@@ -65,43 +65,15 @@
         ],
         "rows": [
           [
-            "added",
-            "Plumbing commands over content-addressed objects: pub-canon, pub-cid, pub-cat, pub-ls, pub-edges, pub-lineage, pub-closure, pub-eval, pub-sign, pub-verify, pub-store, pub-serve, pub-sync and the rest of bin/."
-          ],
-          [
-            "added",
-            "The pub command: init, sync, read, why, compose, document, doc, revise, relate, annotate, sign, policy, propose, witness, and domain."
-          ],
-          [
-            "added",
-            "pub build compiles publet.json sources that link by slug into objects and a lock mapping each slug to its tag and identifier."
-          ],
-          [
-            "added",
-            "Corpora: pub corpus init, status, upgrade, map, and renderings; parents named as alias:slug and pinned by generation; pub delegate."
-          ],
-          [
-            "added",
-            "Build freely, publish deliberately: pub build and pub render make unsigned local drafts; pub publish signs, exports, advances the generation, and pins the accepted rendering."
-          ],
-          [
-            "added",
-            "Render pipelines and environment publets: pub render runs only inside a provisioned, pinned toolchain (pub env build, status, path), with byte-identical output across runs."
-          ],
-          [
-            "added",
-            "pub read takes an object file as well as an identifier, and --json prints the whole decoded object."
-          ],
-          [
-            "added",
-            "Releases are recorded by the package publet pkg.publet-cli; pub --version reports whether a build is a release and names the package publet it was built from; ^X.Y version requirements."
+            "fixed",
+            "pub --version reports the release when installed with cargo install --git --tag, whose checkout carries no tags; it called itself an unreleased build."
           ]
         ]
       },
       "sources": [
         {
           "ref": "https://github.com/schryer/publet",
-          "revision": "c0dbb9eb49118f62a79dcbfb88c2d3fc721f745a"
+          "revision": "8f3df3aa5810ee60105cf755ccd64d4a96532319"
         }
       ]
     }
