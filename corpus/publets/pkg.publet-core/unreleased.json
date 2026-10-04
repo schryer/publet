@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "category": "added",
+      "change": "The protocol floor as a crate of its own: objects and their verification type state, the canonical CBOR profile, content identifiers, and Ed25519 detached signatures (Sections 4.1-4.5)."
+    }
+  ],
+  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
+}

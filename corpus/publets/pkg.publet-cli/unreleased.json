@@ -11,6 +11,10 @@
     {
       "category": "internal",
       "change": "Version requirement matching (^X.Y, X.Y+, prefixes) moved from pub render into publet-algorithms' version module, with Version parsing and bump arithmetic; pub render and pub env behave as before."
+    },
+    {
+      "category": "internal",
+      "change": "publet-core and publet-algorithms are released on version tracks of their own; publet-core's manifest states its version instead of inheriting the workspace's."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

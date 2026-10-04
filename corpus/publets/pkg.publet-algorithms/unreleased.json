@@ -1,0 +1,9 @@
+{
+  "changes": [
+    {
+      "category": "added",
+      "change": "The generic algorithms publet is built on, depending on nothing publet-specific: an RFC 6962 Merkle log with inclusion and consistency proofs and a checkpoint schedule; sorted-set membership with absence proofs; recursive content trees; Fixed6 exact fixed-point arithmetic; deterministic personalized PageRank; graph traversals (reachability, closure, root, topological order); and version arithmetic and requirement matching."
+    }
+  ],
+  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
+}
