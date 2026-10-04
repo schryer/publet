@@ -1,0 +1,10 @@
+{
+  "name": "publet-cli",
+  "package": "pkg.publet-cli",
+  "tag": "PKG-PUBCLI-10-2026",
+  "corpus": "corpus",
+  "manifest": { "kind": "cargo-workspace", "path": "Cargo.toml" },
+  "code": ["crates/", "bin/", "porcelain/", "Cargo.toml", "Cargo.lock"],
+  "command": { "name": "pub", "check": "pub --version" },
+  "install": "cargo install --locked --git https://github.com/schryer/publet --tag {tag} publet-cli"
+}

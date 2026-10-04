@@ -280,11 +280,20 @@ require, publishes the package publet with your key, and opens a release
 pull request; CI checks the bump is the one the changes require. Merging
 it tags `vX.Y.Z` and creates the GitHub release.
 
+The rules, the release commands, and the CI workflow are
+[`pubrel`](https://github.com/schryer/pubrel)'s, shared by every package;
+`release.json` tells it where this package's corpus, manifest and code are.
+Cutting a release needs `pubrel` and a released `pub` installed:
+
+```sh
+cargo install --locked --git https://github.com/schryer/pubrel --tag v0.1.0 pubrel
+```
+
 Install a published version -- crates.io is not used, because the
 workspace depends on `graphset` by git revision:
 
 ```sh
-cargo install --locked --git https://github.com/schryer/publet --tag v0.1.0 publet-cli
+cargo install --locked --git https://github.com/schryer/publet --tag v0.1.1 publet-cli
 ```
 
 `pub --version` prints `pub X.Y.Z` and the package publet's identifier only
