@@ -9,7 +9,7 @@
 //! unmodified) and this tool is a read of it, not an alternative to it.
 //! `impl` blocks and inline `mod { ... }` blocks additionally become
 //! *branches*: their own hash commits to their signature plus every
-//! nested item's own hash, via [`graphset::tree::Node`], so
+//! nested item's own hash, via [`publet_algorithms::tree::Node`], so
 //! `Membership::prove` is addressable as its own node distinct from
 //! `Membership` as a whole. A function nested inside another function's
 //! body is not walked in this first pass -- real in this codebase, rare,
@@ -121,7 +121,7 @@ fn collect_calls(block: &syn::Block) -> (Vec<String>, Vec<String>) {
     )
 }
 
-/// One node on its way to becoming a `graphset::tree::Node`, still
+/// One node on its way to becoming a `publet_algorithms::tree::Node`, still
 /// carrying its file position.
 struct Draft {
     name: String,
@@ -156,15 +156,18 @@ impl Draft {
     /// This node's own hash, computed by borrowing rather than
     /// consuming -- `emit` needs both the hash and, for a branch, the
     /// still-intact `children` list to recurse into afterward.
-    fn hash(&self, text: &str) -> graphset::log::Hash {
+    fn hash(&self, text: &str) -> publet_algorithms::log::Hash {
         self.to_node(text).hash()
     }
 
-    fn to_node(&self, text: &str) -> graphset::tree::Node {
+    fn to_node(&self, text: &str) -> publet_algorithms::tree::Node {
         if self.children.is_empty() {
-            graphset::tree::Node::leaf(text.as_bytes().get(self.start..self.end).unwrap_or(&[]))
+            publet_algorithms::tree::Node::leaf(
+                text.as_bytes().get(self.start..self.end).unwrap_or(&[]),
+            )
         } else {
-            let mut node = graphset::tree::Node::branch(format!("{}:{}", self.kind, self.name));
+            let mut node =
+                publet_algorithms::tree::Node::branch(format!("{}:{}", self.kind, self.name));
             for child in &self.children {
                 node = node.with_child(child.name.clone(), child.to_node(text));
             }

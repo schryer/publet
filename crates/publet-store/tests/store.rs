@@ -7,8 +7,8 @@
     clippy::integer_division
 )]
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_merkle::membership::Membership;
 use publet_store::{Store, StoreError};
 use redb::{Database, TableDefinition};
 

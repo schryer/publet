@@ -5,8 +5,8 @@
 use std::io::{BufRead as _, Read as _};
 use std::process::ExitCode;
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg};
-use publet_merkle::membership::Membership;
 
 const EXIT_USAGE: u8 = 2;
 const EXIT_IO: u8 = 4;
@@ -48,7 +48,7 @@ fn main() -> ExitCode {
             return ExitCode::from(EXIT_IO);
         }
     } else {
-        let hex = publet_merkle::log::to_hex(&root);
+        let hex = publet_algorithms::log::to_hex(&root);
         println!("{hex}");
     }
     ExitCode::SUCCESS

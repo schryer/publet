@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
-use publet_merkle::membership::Membership;
 use publet_net::{Client, ClientError, Node, router};
 use publet_store::Store;
 

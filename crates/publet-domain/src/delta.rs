@@ -11,7 +11,7 @@
 
 use std::collections::BTreeSet;
 
-use publet_merkle::membership::Membership;
+use publet_algorithms::membership::Membership;
 use thiserror::Error;
 
 use crate::Generation;
@@ -91,8 +91,8 @@ pub fn apply(
 
 /// Render a root for comparison and display.
 #[must_use]
-pub fn hex(root: &publet_merkle::log::Hash) -> String {
-    publet_merkle::log::to_hex(root)
+pub fn hex(root: &publet_algorithms::log::Hash) -> String {
+    publet_algorithms::log::to_hex(root)
 }
 
 /// Checkpoint origins for a client at `current` advancing to `head`.

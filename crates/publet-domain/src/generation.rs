@@ -9,8 +9,8 @@
 
 use std::collections::BTreeSet;
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, Object, cbor::Value};
-use publet_merkle::membership::Membership;
 use thiserror::Error;
 
 /// Why an object accounts for a member leaving a generation.
@@ -232,7 +232,7 @@ impl Generation {
         previous: &Membership,
         next: &Membership,
     ) -> Result<(), GenerationError> {
-        let (implied_added, implied_removed) = publet_merkle::membership::diff(previous, next);
+        let (implied_added, implied_removed) = publet_algorithms::membership::diff(previous, next);
 
         let declared_added: BTreeSet<String> = self.added.iter().map(ToString::to_string).collect();
         let declared_removed: BTreeSet<String> =

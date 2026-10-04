@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 publet-core.workspace = true
-publet-merkle.workspace = true
+publet-algorithms.workspace = true
 
 [lints]
 workspace = true

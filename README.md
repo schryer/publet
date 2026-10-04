@@ -292,8 +292,8 @@ Cutting a release needs `pubrel` and a released `pub` installed:
 cargo install --locked --git https://github.com/schryer/pubrel --tag v0.1.0 pubrel
 ```
 
-Install a published version -- crates.io is not used, because the
-workspace depends on `graphset` by git revision:
+Install a published version -- from git, until the workspace's crates are
+published on crates.io:
 
 ```sh
 cargo install --locked --git https://github.com/schryer/publet --tag v0.1.1 publet-cli

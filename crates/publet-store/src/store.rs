@@ -13,8 +13,8 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg, Object};
-use publet_merkle::membership::Membership;
 use redb::{
     Database, ReadableDatabase as _, ReadableTable as _, ReadableTableMetadata as _,
     TableDefinition,

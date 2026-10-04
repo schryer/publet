@@ -1,7 +1,7 @@
 //! Adapts this workspace's [`Policy`] (Cid-typed trust roots) to
-//! `graphset`'s generic personalized-`PageRank` propagation.
+//! `publet-algorithms`' generic personalized-`PageRank` propagation.
 //!
-//! The propagation algorithm itself moved to `graphset` after an audit
+//! The propagation algorithm itself lives in `publet-algorithms`: an audit
 //! found it never touched `Cid` or any other publet-specific type --
 //! `Policy::roots[i].key` was read as a string and never used as anything
 //! more. What stays here is the boundary: converting a `Policy` into the
@@ -15,11 +15,11 @@
 //! Per-key normalization (every node's total conferred weight is fixed
 //! regardless of how many nodes it points to) is what makes a disconnected
 //! adversary subgraph worth zero at every size (R7); that property lives
-//! in `graphset::propagate` now, and is exercised from here.
+//! in `publet_algorithms::propagate` now, and is exercised from here.
 
-use graphset::propagate::{Params, Seed};
+use publet_algorithms::propagate::{Params, Seed};
 
-pub use graphset::propagate::{TrustEdge, Weights};
+pub use publet_algorithms::propagate::{TrustEdge, Weights};
 
 use crate::Policy;
 
@@ -47,7 +47,7 @@ fn seeds(policy: &Policy) -> Vec<Seed> {
 /// `edges` need not be sorted; they are grouped deterministically here.
 #[must_use]
 pub fn propagate(policy: &Policy, edges: &[TrustEdge]) -> Weights {
-    graphset::propagate::propagate(&params(policy), &seeds(policy), edges)
+    publet_algorithms::propagate::propagate(&params(policy), &seeds(policy), edges)
 }
 
 /// Propagate trust for a target belonging to the given subjects.
@@ -58,7 +58,7 @@ pub fn propagate(policy: &Policy, edges: &[TrustEdge]) -> Weights {
 /// terminology" has not said anything about a claim that is not one.
 #[must_use]
 pub fn propagate_within(policy: &Policy, edges: &[TrustEdge], subjects: &[String]) -> Weights {
-    graphset::propagate::propagate_within(&params(policy), &seeds(policy), edges, subjects)
+    publet_algorithms::propagate::propagate_within(&params(policy), &seeds(policy), edges, subjects)
 }
 
 /// Keys reachable from the roots, for independence checks.
@@ -70,5 +70,5 @@ pub fn reachable_within(
     distance: u32,
 ) -> std::collections::BTreeSet<String> {
     let _ = policy;
-    graphset::propagate::reachable_within(edges, start, distance)
+    publet_algorithms::propagate::reachable_within(edges, start, distance)
 }

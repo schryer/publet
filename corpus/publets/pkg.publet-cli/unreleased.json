@@ -1,4 +1,9 @@
 {
-  "comment": "Changes to publet-cli not yet released. Add one row per change a PR makes: category is changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `make release-pr` moves them into the package publet.",
-  "changes": []
+  "changes": [
+    {
+      "category": "internal",
+      "change": "graphset's code moved into the workspace as the publet-algorithms crate, and publet-merkle's re-exports were replaced by it; nothing pub does changed (every scenario passes, and the evaluation digest is unchanged)."
+    }
+  ],
+  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
 }

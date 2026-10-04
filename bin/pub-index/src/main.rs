@@ -14,10 +14,10 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg};
 use publet_eval::{Policy, class_of, evaluate, evidence_for, propagate, trust_edges};
 use publet_graph::load;
-use publet_merkle::membership::Membership;
 
 const EXIT_VIOLATION: u8 = 1;
 const EXIT_USAGE: u8 = 2;
