@@ -6,7 +6,7 @@
 use std::io::Read as _;
 use std::process::ExitCode;
 
-use publet_merkle::membership::{Membership, Proof, verify};
+use publet_algorithms::membership::{Membership, Proof, verify};
 
 const EXIT_VIOLATION: u8 = 1;
 const EXIT_USAGE: u8 = 2;
@@ -59,7 +59,7 @@ fn main() -> ExitCode {
         return ExitCode::from(EXIT_VIOLATION);
     }
 
-    let hex = publet_merkle::log::to_hex(&members.root());
+    let hex = publet_algorithms::log::to_hex(&members.root());
     println!(
         r#"{{"member":"{member}","finding":"{kind}","root":"{hex}","size":{}}}"#,
         members.len()

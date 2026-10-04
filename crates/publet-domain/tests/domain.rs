@@ -1,12 +1,12 @@
 //! Generation validity, delta self-verification, and checkpoint bounds.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing)]
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
 use publet_domain::{
     DeltaError, Generation, GenerationError, Manifest, ManifestError, RemovalCause, apply,
     checkpoints, fetches_required,
 };
-use publet_merkle::membership::Membership;
 
 fn cid(seed: &str) -> Cid {
     Cid::of(seed.as_bytes(), HashAlg::Sha2_256)

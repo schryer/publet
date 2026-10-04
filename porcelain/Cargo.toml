@@ -16,7 +16,7 @@ publet-core.workspace = true
 publet-graph.workspace = true
 publet-eval.workspace = true
 publet-domain.workspace = true
-publet-merkle.workspace = true
+publet-algorithms.workspace = true
 publet-store.workspace = true
 publet-net.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }

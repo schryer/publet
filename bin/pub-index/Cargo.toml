@@ -15,7 +15,7 @@ path = "src/main.rs"
 publet-core.workspace = true
 publet-graph.workspace = true
 publet-eval.workspace = true
-publet-merkle.workspace = true
+publet-algorithms.workspace = true
 
 [lints]
 workspace = true

@@ -11,7 +11,7 @@
 
 use std::collections::BTreeSet;
 
-use publet_merkle::membership::Membership;
+use publet_algorithms::membership::Membership;
 use thiserror::Error;
 
 use crate::Generation;
@@ -91,37 +91,10 @@ pub fn apply(
 
 /// Render a root for comparison and display.
 #[must_use]
-pub fn hex(root: &publet_merkle::log::Hash) -> String {
-    publet_merkle::log::to_hex(root)
+pub fn hex(root: &publet_algorithms::log::Hash) -> String {
+    publet_algorithms::log::to_hex(root)
 }
 
-/// Checkpoint origins for a client at `current` advancing to `head`.
-///
-/// Exponentially spaced, so a client far behind is covered in O(log n)
-/// fetches rather than one per generation.
-#[must_use]
-pub fn checkpoints(head: u64) -> Vec<u64> {
-    let mut out = Vec::new();
-    let mut step = 1u64;
-    while step <= head {
-        out.push(head - step);
-        step = step.saturating_mul(2);
-    }
-    out.sort_unstable();
-    out.dedup();
-    out
-}
-
-/// How many fetches a client at `current` needs to reach `head`.
-///
-/// With checkpoints at every power of two behind the head, a client greedily
-/// takes the largest jump that does not overshoot. The distance is therefore
-/// covered in one fetch per set bit -- `count_ones`, which is bounded by
-/// `log2(distance) + 1` and never exceeds 64.
-#[must_use]
-pub fn fetches_required(current: u64, head: u64) -> u32 {
-    if current >= head {
-        return 0;
-    }
-    (head - current).count_ones()
-}
+/// The checkpoint schedule a delta client catches up by: the generic
+/// power-of-two schedule over generation numbers.
+pub use publet_algorithms::log::{checkpoints, fetches_required};

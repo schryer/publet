@@ -15,8 +15,8 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
+use publet_algorithms::membership::{Membership, verify as verify_membership};
 use publet_core::{Cid, HashAlg};
-use publet_merkle::membership::{Membership, verify as verify_membership};
 use publet_store::Store;
 
 /// State shared by the handlers.
@@ -204,12 +204,12 @@ async fn proof(
     let proof = membership.prove(&member);
     let holds = verify_membership(&member, &proof, &membership.root());
     let finding = match proof {
-        publet_merkle::membership::Proof::Present { .. } => "present",
-        publet_merkle::membership::Proof::Absent { .. } => "absent",
+        publet_algorithms::membership::Proof::Present { .. } => "present",
+        publet_algorithms::membership::Proof::Absent { .. } => "absent",
         _ => "unknown",
     };
     Ok(format!(
         r#"{{"member":"{member}","finding":"{finding}","verified":{holds},"root":"{}"}}"#,
-        publet_merkle::log::to_hex(&membership.root())
+        publet_algorithms::log::to_hex(&membership.root())
     ))
 }

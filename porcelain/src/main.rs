@@ -281,7 +281,7 @@ fn witness(args: &[String]) -> Result<(), String> {
         .members_of(&domain)
         .map_err(|e| e.to_string())?
         .ok_or("that domain is not declared in this workspace")?;
-    let root = publet_merkle::membership::Membership::new(members).root();
+    let root = publet_algorithms::membership::Membership::new(members).root();
     let head = store
         .head_generation(&domain)
         .map_err(|e| e.to_string())?
@@ -289,7 +289,7 @@ fn witness(args: &[String]) -> Result<(), String> {
 
     println!("domain      {domain}");
     println!("generation  {head}");
-    println!("log root    {}", publet_merkle::log::to_hex(&root));
+    println!("log root    {}", publet_algorithms::log::to_hex(&root));
     println!();
     println!("Publish this as a `witnessed` annotation and compare it with");
     println!("others: a publisher showing different histories to different");

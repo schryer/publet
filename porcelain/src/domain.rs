@@ -26,9 +26,9 @@
 //! the same party as a deliberate alternate rendering, not open-ended
 //! commentary, so requiring it stays affordable.
 
+use publet_algorithms::membership::Membership;
 use publet_core::{Cid, HashAlg, Object, cbor::Value};
 use publet_graph::RelationKind;
-use publet_merkle::membership::Membership;
 
 use crate::workspace::Workspace;
 
@@ -99,7 +99,7 @@ struct Built {
     domain: (Cid, Vec<u8>),
     generation: (Cid, Vec<u8>),
     snapshot: Cid,
-    root: publet_merkle::log::Hash,
+    root: publet_algorithms::log::Hash,
 }
 
 /// Author the domain manifest and genesis generation as one consistent
@@ -282,7 +282,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         "snapshot    {}  ({} member(s), root {})",
         built.snapshot,
         members.len(),
-        publet_merkle::log::to_hex(&built.root)
+        publet_algorithms::log::to_hex(&built.root)
     );
     println!("  not a stored object -- the membership root itself, addressed as");
     println!("  a CID, exactly as `pub-store declare` will recompute it");

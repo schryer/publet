@@ -48,7 +48,8 @@ Feature: A tree of named publet sources is built into objects and a lock
   Scenario: Publets citing each other in a cycle are refused by name
     When I make the tool cite the document and build
     Then it fails
-    And stderr mentions "cycle"
+    And stderr mentions "these publets refer to each other in a cycle"
+    And stderr mentions "demo-doc -> tool.demo -> demo-doc"
     And nothing new is stored
 
   Scenario: A tag that is not a Section 9.1 tag is refused

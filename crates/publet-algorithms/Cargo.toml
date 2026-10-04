@@ -1,0 +1,18 @@
+[package]
+name = "publet-algorithms"
+description = "Generic algorithms publet is built on: an RFC 6962 Merkle log, sorted-set membership with absence proofs, recursive content trees, exact fixed-point arithmetic, and deterministic trust propagation. Depends on nothing publet-specific."
+# Released on a version track of its own, not the workspace's.
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sha2 = "0.10"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+proptest = "1"

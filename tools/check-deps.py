@@ -14,14 +14,16 @@ import sys
 # crate -> crates it may depend on, within this workspace.
 ALLOWED = {
     "publet-core": set(),
-    "publet-graph": {"publet-core", "publet-lint"},
-    "publet-eval": {"publet-core", "publet-graph"},
-    "publet-merkle": {"publet-core"},
-    "publet-domain": {"publet-core", "publet-merkle", "publet-graph"},
+    "publet-graph": {"publet-core", "publet-lint", "publet-algorithms"},
+    "publet-eval": {"publet-core", "publet-graph", "publet-algorithms"},
+    # Generic algorithms: nothing publet-specific may reach them, so they
+    # depend on no workspace crate -- and publet-core, above, on none either.
+    "publet-algorithms": set(),
+    "publet-domain": {"publet-core", "publet-algorithms", "publet-graph"},
     "publet-lint": set(),
-    "publet-store": {"publet-core", "publet-domain", "publet-merkle", "publet-graph"},
+    "publet-store": {"publet-core", "publet-domain", "publet-algorithms", "publet-graph"},
     "publet-settle": {"publet-core"},
-    "publet-net": {"publet-core", "publet-domain", "publet-merkle",
+    "publet-net": {"publet-core", "publet-domain", "publet-algorithms",
                    "publet-graph", "publet-store"},
 }
 

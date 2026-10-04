@@ -494,8 +494,8 @@ fn advance(cfg: &Config, author: &str, meta: &mut Meta) -> Result<Option<(u64, C
             next.follows(&read_generation(&objects, previous)?)
                 .map_err(|e| e.to_string())?;
             next.check_against(
-                &publet_merkle::membership::Membership::new(before),
-                &publet_merkle::membership::Membership::new(listed.clone()),
+                &publet_algorithms::membership::Membership::new(before),
+                &publet_algorithms::membership::Membership::new(listed.clone()),
             )
             .map_err(|e| e.to_string())?;
             std::fs::write(objects.join(file_name(&cid)), &bytes).map_err(|e| e.to_string())?;

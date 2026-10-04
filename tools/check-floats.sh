@@ -14,7 +14,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-GUARDED=(crates/publet-core crates/publet-eval crates/publet-merkle)
+GUARDED=(crates/publet-core crates/publet-eval crates/publet-algorithms)
 status=0
 
 for dir in "${GUARDED[@]}"; do
