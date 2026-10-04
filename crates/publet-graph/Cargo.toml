@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+publet-algorithms.workspace = true
 publet-core.workspace = true
 publet-lint.workspace = true
 thiserror.workspace = true

@@ -14,7 +14,7 @@ import sys
 # crate -> crates it may depend on, within this workspace.
 ALLOWED = {
     "publet-core": set(),
-    "publet-graph": {"publet-core", "publet-lint"},
+    "publet-graph": {"publet-core", "publet-lint", "publet-algorithms"},
     "publet-eval": {"publet-core", "publet-graph", "publet-algorithms"},
     # Generic algorithms: nothing publet-specific may reach them, so they
     # depend on no workspace crate -- and publet-core, above, on none either.

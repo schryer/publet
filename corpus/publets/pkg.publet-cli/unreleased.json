@@ -3,6 +3,10 @@
     {
       "category": "internal",
       "change": "graphset's code moved into the workspace as the publet-algorithms crate, and publet-merkle's re-exports were replaced by it; nothing pub does changed (every scenario passes, and the evaluation digest is unchanged)."
+    },
+    {
+      "category": "internal",
+      "change": "The graph traversals (publet-graph's cycle check, depends closure, equivalence classes and lineage walks, and pub build's topological sort) and the delta checkpoint schedule now share one implementation in publet-algorithms; their results are unchanged."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

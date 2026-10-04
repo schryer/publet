@@ -24,6 +24,7 @@
 //! crate with that audit's rule made mechanical.
 
 pub mod fixed;
+pub mod graph;
 pub mod log;
 pub mod membership;
 pub mod propagate;

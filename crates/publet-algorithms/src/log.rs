@@ -292,3 +292,34 @@ pub fn verify_consistency(
 
     recomputed_old == *old_root && recomputed_new == *new_root
 }
+
+/// Checkpoint origins for a client catching up to `head`.
+///
+/// Exponentially spaced, so a client far behind is covered in O(log n)
+/// fetches rather than one per entry.
+#[must_use]
+pub fn checkpoints(head: u64) -> Vec<u64> {
+    let mut out = Vec::new();
+    let mut step = 1u64;
+    while step <= head {
+        out.push(head - step);
+        step = step.saturating_mul(2);
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// How many fetches a client at `current` needs to reach `head`.
+///
+/// With checkpoints at every power of two behind the head, a client greedily
+/// takes the largest jump that does not overshoot. The distance is therefore
+/// covered in one fetch per set bit -- `count_ones`, which is bounded by
+/// `log2(distance) + 1` and never exceeds 64.
+#[must_use]
+pub fn fetches_required(current: u64, head: u64) -> u32 {
+    if current >= head {
+        return 0;
+    }
+    (head - current).count_ones()
+}

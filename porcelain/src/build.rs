@@ -591,51 +591,16 @@ fn nodes_of(
 /// parent's identifier covers its children's -- and makes a cycle a
 /// structure no build could ever produce, so one is refused by name.
 fn topological(nodes: &BTreeMap<String, Node>) -> Result<Vec<String>, String> {
-    #[derive(Clone, Copy, PartialEq)]
-    enum Mark {
-        Visiting,
-        Done,
-    }
-    fn visit(
-        id: &str,
-        nodes: &BTreeMap<String, Node>,
-        marks: &mut BTreeMap<String, Mark>,
-        path: &mut Vec<String>,
-        order: &mut Vec<String>,
-    ) -> Result<(), String> {
-        match marks.get(id) {
-            Some(Mark::Done) => return Ok(()),
-            Some(Mark::Visiting) => {
-                let start = path.iter().position(|p| p == id).unwrap_or(0);
-                let mut cycle: Vec<&str> = path.iter().skip(start).map(String::as_str).collect();
-                cycle.push(id);
-                return Err(format!(
-                    "these publets refer to each other in a cycle, which no \
-                     content-addressed build can produce: {}",
-                    cycle.join(" -> ")
-                ));
-            }
-            None => {}
-        }
-        marks.insert(id.to_owned(), Mark::Visiting);
-        path.push(id.to_owned());
-        if let Some(node) = nodes.get(id) {
-            for dep in &node.deps {
-                visit(dep, nodes, marks, path, order)?;
-            }
-        }
-        path.pop();
-        marks.insert(id.to_owned(), Mark::Done);
-        order.push(id.to_owned());
-        Ok(())
-    }
-
-    let mut marks = BTreeMap::new();
-    let mut order = Vec::new();
-    for id in nodes.keys() {
-        visit(id, nodes, &mut marks, &mut Vec::new(), &mut order)?;
-    }
-    Ok(order)
+    publet_algorithms::graph::topological_order(nodes.keys().map(String::as_str), |id| {
+        nodes.get(id).map(|n| n.deps.clone()).unwrap_or_default()
+    })
+    .map_err(|cycle| {
+        format!(
+            "these publets refer to each other in a cycle, which no \
+             content-addressed build can produce: {}",
+            cycle.join(" -> ")
+        )
+    })
 }
 
 // ------------------------------------------------------------------- lock

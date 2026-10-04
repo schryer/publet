@@ -5,7 +5,7 @@
 //! checked as they are added rather than in a later pass, which means a
 //! cycle is reported against the edge that created it.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 
 use publet_core::{Cid, Object, Verified, cbor::Value};
 
@@ -186,24 +186,18 @@ impl Graph {
         if from == to {
             return true;
         }
-        // A cycle forms exactly when `from` is already reachable from `to`.
         let Some(edges) = self.out_edges.get(&kind) else {
             return false;
         };
-        let mut seen: BTreeSet<&str> = BTreeSet::new();
-        let mut queue: VecDeque<&str> = VecDeque::from([to]);
-        while let Some(current) = queue.pop_front() {
-            if current == from {
-                return true;
-            }
-            if !seen.insert(current) {
-                continue;
-            }
-            if let Some(next) = edges.get(current) {
-                queue.extend(next.iter().map(String::as_str));
-            }
-        }
-        false
+        // A cycle forms exactly when `from` is already reachable from `to`.
+        publet_algorithms::graph::reaches(to, from, |current| {
+            edges
+                .get(current)
+                .into_iter()
+                .flatten()
+                .cloned()
+                .collect::<Vec<_>>()
+        })
     }
 
     /// Reject annotations the class rules of Section 5.2 forbid.
@@ -696,19 +690,8 @@ impl Graph {
     pub fn lineage(&self, cid: &Cid, mode: Lineage) -> LineageView {
         let start = cid.to_string();
         let genesis = self.genesis_of(&start, mode);
-
-        let mut members = Vec::new();
-        let mut seen = BTreeSet::new();
-        let mut queue = VecDeque::from([genesis.clone()]);
-        while let Some(current) = queue.pop_front() {
-            if !seen.insert(current.clone()) {
-                continue;
-            }
-            members.push(current.clone());
-            for next in self.successors(&current, mode) {
-                queue.push_back(next);
-            }
-        }
+        let members =
+            publet_algorithms::graph::reachable(&genesis, |current| self.successors(current, mode));
 
         let heads = members
             .iter()
@@ -731,21 +714,10 @@ impl Graph {
     }
 
     fn genesis_of(&self, start: &str, mode: Lineage) -> String {
-        let mut current = start.to_owned();
-        let mut guard = BTreeSet::new();
-        loop {
-            if !guard.insert(current.clone()) {
-                return current;
-            }
-            let mut ancestors = self.ancestors(&current, mode);
-            match ancestors.pop() {
-                // Acyclicity means at most one path upward matters; where an
-                // object supersedes several, the lowest identifier is taken
-                // so the result is deterministic.
-                Some(next) => current = next,
-                None => return current,
-            }
-        }
+        // Acyclicity means at most one path upward matters; where an object
+        // supersedes several, the last in identifier order is taken, so the
+        // result is deterministic.
+        publet_algorithms::graph::root(start, |current| self.ancestors(current, mode).pop())
     }
 
     fn ancestors(&self, cid: &str, mode: Lineage) -> Vec<String> {
@@ -791,42 +763,29 @@ impl Graph {
     /// which Section 5.4 forbids.
     pub fn depends_closure(&self, cid: &Cid) -> Result<Vec<Cid>, GraphError> {
         let start = cid.to_string();
-        let mut out = Vec::new();
-        let mut seen = BTreeSet::new();
-        let mut queue = VecDeque::from([start.clone()]);
-        let mut first = true;
-
-        while let Some(current) = queue.pop_front() {
-            if current == start && !first {
-                return Err(GraphError::CycleClosing {
-                    kind: "depends",
-                    from: start.clone(),
-                    to: start,
-                });
-            }
-            first = false;
-            if !seen.insert(current.clone()) {
-                continue;
-            }
-            if current != start
-                && let Ok(parsed) = current.parse::<Cid>()
-            {
-                out.push(parsed);
-            }
+        let reached = publet_algorithms::graph::closure(&start, |current| {
             let mut next: BTreeSet<String> = BTreeSet::new();
-            if let Some(claim) = self.prose_claims.get(&current) {
+            if let Some(claim) = self.prose_claims.get(current) {
                 next.extend(claim.depends().iter().map(ToString::to_string));
             }
             if let Some(edges) = self
                 .out_edges
                 .get(&RelationKind::Depends)
-                .and_then(|m| m.get(&current))
+                .and_then(|m| m.get(current))
             {
                 next.extend(edges.iter().cloned());
             }
-            queue.extend(next);
-        }
-        Ok(out)
+            next
+        })
+        .map_err(|_| GraphError::CycleClosing {
+            kind: "depends",
+            from: start.clone(),
+            to: start.clone(),
+        })?;
+        Ok(reached
+            .iter()
+            .filter_map(|c| c.parse::<Cid>().ok())
+            .collect())
     }
 
     /// Connected components over `equivalent` edges whose signer passes
@@ -837,24 +796,26 @@ impl Graph {
     /// not answer.
     #[must_use]
     pub fn equivalence_class(&self, cid: &Cid, trusted: &dyn Fn(&Cid) -> bool) -> Vec<Cid> {
-        let mut seen = BTreeSet::new();
-        let mut queue = VecDeque::from([cid.to_string()]);
-        while let Some(current) = queue.pop_front() {
-            if !seen.insert(current.clone()) {
-                continue;
-            }
+        let mut members = publet_algorithms::graph::reachable(&cid.to_string(), |current| {
+            let mut next = Vec::new();
             for relation in self.relations.values() {
                 if relation.kind() != RelationKind::Equivalent || !trusted(relation.author()) {
                     continue;
                 }
                 let (from, to) = (relation.from().to_string(), relation.to().to_string());
                 if from == current {
-                    queue.push_back(to);
+                    next.push(to);
                 } else if to == current {
-                    queue.push_back(from);
+                    next.push(from);
                 }
             }
-        }
-        seen.iter().filter_map(|s| s.parse::<Cid>().ok()).collect()
+            next
+        });
+        // In identifier order, not the order the edges were walked in.
+        members.sort();
+        members
+            .iter()
+            .filter_map(|s| s.parse::<Cid>().ok())
+            .collect()
     }
 }
