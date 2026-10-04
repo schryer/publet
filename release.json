@@ -3,8 +3,21 @@
   "package": "pkg.publet-cli",
   "tag": "PKG-PUBCLI-10-2026",
   "corpus": "corpus",
-  "manifest": { "kind": "cargo-workspace", "path": "Cargo.toml" },
-  "code": ["crates/", "bin/", "porcelain/", "Cargo.toml", "Cargo.lock"],
-  "command": { "name": "pub", "check": "pub --version" },
-  "install": "cargo install --locked --git https://github.com/schryer/publet --tag {tag} publet-cli"
+  "manifest": {
+    "kind": "cargo-workspace",
+    "path": "Cargo.toml"
+  },
+  "code": [
+    "crates/",
+    "bin/",
+    "porcelain/",
+    "Cargo.toml",
+    "Cargo.lock"
+  ],
+  "command": {
+    "name": "pub",
+    "check": "pub --version"
+  },
+  "install": "cargo install --locked --git https://github.com/schryer/publet --tag {tag} publet-cli",
+  "key": "pub:sha2-256:m2smuezcqpjeyy6iofa2pjl47lgbwu254hohndyhs2do34fcrcma"
 }

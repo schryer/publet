@@ -15,7 +15,7 @@ jobs:
   #   a built pub-eval), the conformance scenarios, and the coverage report,
   #   which must be committed up to date.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.2.1
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.0
     with:
       gates: fmt-check guard-floats guard-deps lint doc guard-rules
       test-args: --workspace --all-features
@@ -35,7 +35,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: [ci, audit]
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.1.0
-    with: { pub-version: v0.1.1, pubrel-version: v0.1.0 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.2.0
+    with: { pubrel-version: v0.2.0 }
     permissions:
       contents: write
