@@ -7,6 +7,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+documentation = "https://docs.rs/publet-core"
+readme = "README.md"
+keywords = ["content-addressing", "cbor", "ed25519", "signatures", "publet"]
+categories = ["cryptography", "encoding"]
+include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE"]
 
 [dependencies]
 thiserror.workspace = true

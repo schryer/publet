@@ -1,4 +1,13 @@
 {
-  "changes": [],
+  "changes": [
+    {
+      "category": "changed",
+      "change": "version::satisfies reads ^X.Y as Cargo does: below 1.0 the minor part is fixed, so ^0.1 no longer admits 0.3.2. Version and Bump are removed; release arithmetic belongs to the semver crate."
+    },
+    {
+      "category": "fixed",
+      "change": "The crate ships what distribution needs: the Apache-2.0 licence text, crates.io metadata, an include list, and documentation with examples run as doctests, including the crates considered instead and why."
+    }
+  ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
 }

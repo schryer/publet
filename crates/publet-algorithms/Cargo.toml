@@ -7,6 +7,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+documentation = "https://docs.rs/publet-algorithms"
+readme = "README.md"
+keywords = ["merkle", "transparency-log", "pagerank", "fixed-point", "topological-sort"]
+categories = ["algorithms", "data-structures", "cryptography"]
+include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE"]
 
 [dependencies]
 sha2 = "0.10"

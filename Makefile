@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -50,10 +50,19 @@ release-check: ## Check this branch records its changes, or is a correct release
 release-pr: ## Cut a release: publish the package publet and open a release PR
 	pubrel prepare
 
+# The crates released on their own: what each would publish, packaged and
+# compiled exactly as crates.io would receive it.
+PUBLISHED := publet-core publet-algorithms
+
+publish-check: ## Package each crates.io crate and verify it builds as published
+	for crate in $(PUBLISHED); do \
+	  $(CARGO) publish --dry-run --locked -p $$crate; \
+	done
+
 deny: ## Licence and advisory audit
 	$(CARGO) deny check
 
-check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage deny ## Everything CI runs
+check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage publish-check deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean
