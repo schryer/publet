@@ -19,6 +19,10 @@
     {
       "category": "changed",
       "change": "A render pipeline's tool requirement ^X.Y means what it means to Cargo: below 1.0 it admits only the same minor version (^0.1 admits 0.1.9, not 0.2.0)."
+    },
+    {
+      "category": "internal",
+      "change": "cargo-deny is stricter (0.20.2; unmaintained and unsound crates fail; crates.io only) and cargo-vet records supply-chain audits; nothing pub does changed."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
