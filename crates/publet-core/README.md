@@ -69,6 +69,27 @@ assert!(verify(SigAlg::Ed25519, &public, &signature, "authored", "endorsed", obj
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+## Related crates
+
+Crates that do similar jobs, and why this one takes another approach. Each
+was checked at the version shown. The CBOR libraries were given encodings
+Section 4.1 forbids: integers not in shortest form, indefinite lengths,
+unsorted and duplicate keys, non-text keys, floats, tags, non-NFC text, and
+trailing bytes.
+
+| Crate | What it is | Why not here |
+|---|---|---|
+| [`ciborium`](https://crates.io/crates/ciborium) 0.2.2 | General CBOR with serde | Accepted every forbidden encoding, decoding several to the same values as the canonical bytes, so a later check cannot tell them apart. Its canonical key order differs from Section 4.1's. |
+| [`minicbor`](https://crates.io/crates/minicbor) 2.3.0 | Small `no_std` CBOR codec | Lenient in the same way: it accepted the six forbidden encodings tried, reading a non-shortest integer as the plain value. |
+| [`dcbor`](https://crates.io/crates/dcbor) 0.25.2 | Deterministic CBOR | Strict, and rejects most forbidden encodings. But it orders map keys by encoded length (RFC 8949 §4.2.1), while Section 4.1 orders them by UTF-8 bytes, so it rejects this crate's canonical objects. It also admits floats, tags and non-text keys. |
+| [`serde_cbor`](https://crates.io/crates/serde_cbor) 0.11.2 | CBOR with serde | Unmaintained since 2021. |
+| [`cid`](https://crates.io/crates/cid) | IPFS content identifiers | A multiformats CID carries a version, a codec and a multibase prefix (`bafy…`). Section 4.2 defines a different text form, `pub:<algorithm>:<base32>`, so the parser and printer don't apply. |
+
+What this crate builds on rather than reimplements: [`sha2`](https://crates.io/crates/sha2)
+for SHA-256, [`ed25519-dalek`](https://crates.io/crates/ed25519-dalek) for
+signatures, and [`unicode-normalization`](https://crates.io/crates/unicode-normalization)
+for the NFC check.
+
 ## Versions
 
 `publet-core` is released on a version track of its own, separate from the

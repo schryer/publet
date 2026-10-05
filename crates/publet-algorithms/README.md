@@ -88,6 +88,20 @@ assert!(satisfies("0.3.2", "^0.1"));
 assert!(!satisfies("0.150", "0.15"));
 ```
 
+## Related crates
+
+Crates that do similar jobs, and why this one takes another approach. Each
+was checked at the version shown.
+
+| Crate | What it is | Why not here |
+|---|---|---|
+| [`ct-merkle`](https://crates.io/crates/ct-merkle) 0.3.0 | The RFC 6962 append-only log | The same construction as `log`. This crate exposes it as plain functions over a slice of leaf hashes, which `membership`'s sorted tree is built from, rather than a tree type. |
+| [`rs_merkle`](https://crates.io/crates/rs_merkle) 1.5.0 | General Merkle trees | Not RFC 6962: interior nodes are hashed without the RFC's domain separation, so its root for the same leaves differs and its proofs cannot be checked against a transparency log's. |
+| [`petgraph`](https://crates.io/crates/petgraph) 0.8.3 | Graph types and algorithms | Its PageRank uses floating point, which bit-identical results rule out, and its traversals need the graph built as a structure first. |
+| [`pathfinding`](https://crates.io/crates/pathfinding) 4.16.0 | Graph algorithms over successor functions | Close to `graph`'s design, but its topological sort reports a cycle as a single node rather than the path, and its visit order is not a documented guarantee. Results here depend on that order. |
+| [`rust_decimal`](https://crates.io/crates/rust_decimal) 1.43.0 | Decimal arithmetic | Deterministic, but with different precision and rounding from `Fixed6`. Switching would change every propagation result. |
+| [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | `version::satisfies` also matches tool versions that aren't semver, such as `0.15` and `1.80+`. |
+
 ## Versions
 
 `publet-algorithms` is released on a version track of its own. Its releases
