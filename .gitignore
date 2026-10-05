@@ -17,6 +17,9 @@ main.bib
 lapreprint.typ
 frontmatter.typ
 LICENSE
+# ...but not the project's own licence, nor the crates' links to it.
+!/LICENSE
+!/crates/*/LICENSE
 myst-imports.typ
 _build/
 render-record.json

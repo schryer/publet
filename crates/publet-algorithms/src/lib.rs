@@ -1,16 +1,6 @@
-//! The generic algorithms publet is built on: an append-only Merkle log,
-//! sorted-set membership with absence proofs, recursive content trees,
-//! weighted graph propagation, and the exact fixed-point arithmetic that
-//! keeps propagation results bit-identical across runs.
+#![doc = include_str!("../README.md")]
 //!
-//! Nothing here knows what a caller's identifiers mean. Nodes are `String`,
-//! hashes are `[u8; 32]`, weights are [`Fixed6`]. A caller with richer
-//! identifiers (a content-addressed CID, a database key, a URL) converts at
-//! its own boundary and gets an ordinary generic-algorithm result back --
-//! the conversion is where whatever theory the caller's identifiers answer
-//! to enters the picture, not before it.
-//!
-//! # What belongs here
+//! ## What belongs here
 //!
 //! An algorithm belongs here when it needs nothing of publet's: this crate
 //! depends on no other crate in the workspace (`tools/check-deps.py`
