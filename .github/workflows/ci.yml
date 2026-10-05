@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: cargo install --locked cargo-deny --version 0.18.6
+      - run: cargo install --locked cargo-deny --version 0.20.2
       - run: make deny
 
   # The shared release workflow: on a pull request, a code change records

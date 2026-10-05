@@ -60,7 +60,7 @@ publish-check: ## Package each crates.io crate and verify it builds as published
 	done
 
 deny: ## Licence and advisory audit
-	$(CARGO) deny check
+	$(CARGO) deny --locked check
 
 check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage publish-check deny ## Everything CI runs
 
