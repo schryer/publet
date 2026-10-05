@@ -12,9 +12,9 @@ richer identifiers converts at its own boundary.
 | `membership` | A sorted set with a root hash: prove a value is present, or provably absent |
 | `tree` | Git-style recursive hashing of named, nested content |
 | `fixed` | `Fixed6`, base-10⁶ fixed-point arithmetic with no conversion from floats, so results are bit-identical everywhere |
-| `propagate` | Personalized PageRank over a weighted graph, run for an exact number of iterations, with edges that can be limited to subjects and lose weight with age |
+| `propagate` | Personalized `PageRank` over a weighted graph, run for an exact number of iterations, with edges that can be limited to subjects and lose weight with age |
 | `graph` | Traversals: reachability, closure that refuses a cycle, a chain's root, and topological order that names the cycle when there is one |
-| `version` | `MAJOR.MINOR.PATCH` arithmetic, and requirement matching (`^X.Y`, `X.Y+`, prefixes) |
+| `version` | Whether a tool's version meets a requirement: `^X.Y` as Cargo reads it, `X.Y+`, or a prefix |
 
 Every traversal and accumulation runs in a fixed order, so the same input
 always gives the same output, down to the bit.
@@ -72,19 +72,19 @@ let cyclic = |id: &str| vec![if id == "a" { "b" } else { "a" }.to_string()];
 assert_eq!(topological_order(["a"], cyclic).unwrap_err(), ["a", "b", "a"]);
 ```
 
-## Exact arithmetic, and versions
+## Exact arithmetic, and tool versions
 
 ```rust
 use publet_algorithms::Fixed6;
-use publet_algorithms::version::{Bump, Version, satisfies};
+use publet_algorithms::version::satisfies;
 
 let third = Fixed6::ONE.ratio(Fixed6::from_integer(3));
 assert_eq!(third.to_string(), "0.333333");
 
-let release = Version::parse("1.4.2").unwrap().bump(Bump::Minor);
-assert_eq!(release.to_string(), "1.5.0");
+// Tools print versions in many shapes; requirements match them all.
 assert!(satisfies("1.98.1", "1.80+"));
-assert!(satisfies("0.3.2", "^0.1"));
+assert!(satisfies("0.1.9", "^0.1"));
+assert!(!satisfies("0.2.0", "^0.1"));
 assert!(!satisfies("0.150", "0.15"));
 ```
 
@@ -97,10 +97,10 @@ was checked at the version shown.
 |---|---|---|
 | [`ct-merkle`](https://crates.io/crates/ct-merkle) 0.3.0 | The RFC 6962 append-only log | The same construction as `log`. This crate exposes it as plain functions over a slice of leaf hashes, which `membership`'s sorted tree is built from, rather than a tree type. |
 | [`rs_merkle`](https://crates.io/crates/rs_merkle) 1.5.0 | General Merkle trees | Not RFC 6962: interior nodes are hashed without the RFC's domain separation, so its root for the same leaves differs and its proofs cannot be checked against a transparency log's. |
-| [`petgraph`](https://crates.io/crates/petgraph) 0.8.3 | Graph types and algorithms | Its PageRank uses floating point, which bit-identical results rule out, and its traversals need the graph built as a structure first. |
+| [`petgraph`](https://crates.io/crates/petgraph) 0.8.3 | Graph types and algorithms | Its `PageRank` uses floating point, which bit-identical results rule out, and its traversals need the graph built as a structure first. |
 | [`pathfinding`](https://crates.io/crates/pathfinding) 4.16.0 | Graph algorithms over successor functions | Close to `graph`'s design, but its topological sort reports a cycle as a single node rather than the path, and its visit order is not a documented guarantee. Results here depend on that order. |
 | [`rust_decimal`](https://crates.io/crates/rust_decimal) 1.43.0 | Decimal arithmetic | Deterministic, but with different precision and rounding from `Fixed6`. Switching would change every propagation result. |
-| [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | `version::satisfies` also matches tool versions that aren't semver, such as `0.15` and `1.80+`. |
+| [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | Use it for release arithmetic on strict `MAJOR.MINOR.PATCH` versions, as pubrel does; this crate keeps no version type of its own. `version::satisfies` exists because tool versions such as `0.15` aren't semver. |
 
 ## Versions
 
