@@ -1,0 +1,39 @@
+
+# cargo-vet audits file
+
+[audits]
+
+[[trusted.proc-macro2]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-04-23"
+end = "2027-10-05"
+notes = "Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing."
+
+[[trusted.syn]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-10-05"
+notes = "Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing."
+
+[[trusted.thiserror]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-10-05"
+notes = "Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing."
+
+[[trusted.thiserror-impl]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-10-05"
+notes = "Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing."
+
+[[trusted.unicode-ident]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2021-10-02"
+end = "2027-10-05"
+notes = "Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing."

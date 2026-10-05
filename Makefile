@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules publish-check deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check supply-chain supply-chain-check vet deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -59,10 +59,19 @@ publish-check: ## Package each crates.io crate and verify it builds as published
 	  $(CARGO) publish --dry-run --locked -p $$crate; \
 	done
 
-deny: ## Licence and advisory audit
-	$(CARGO) deny check
+supply-chain: ## Regenerate each published crate's SUPPLY-CHAIN.md from supply-chain/
+	./tools/supply-chain-report.py
 
-check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage publish-check deny ## Everything CI runs
+supply-chain-check: ## Fail if a committed SUPPLY-CHAIN.md is stale
+	./tools/supply-chain-report.py --check
+
+vet: ## Every dependency is audited, trusted, or exempt with its evidence
+	cargo vet --locked
+
+deny: ## Licence and advisory audit
+	$(CARGO) deny --locked check
+
+check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage publish-check supply-chain-check vet deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean
