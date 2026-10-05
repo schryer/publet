@@ -85,6 +85,7 @@ criteria = "safe-to-deploy"
 [[exemptions.cpufeatures]]
 version = "0.2.17"
 criteria = "safe-to-deploy"
+notes = "No full audit in any cargo-vet registry set as of 2026-10-05; Zcash published safe-to-deploy deltas from 0.2.2 to 0.2.14, short of this version."
 
 [[exemptions.cpufeatures]]
 version = "0.3.1"
@@ -93,18 +94,22 @@ criteria = "safe-to-deploy"
 [[exemptions.crypto-common]]
 version = "0.1.7"
 criteria = "safe-to-deploy"
+notes = "Imported audits cover up to 0.1.6; the 0.1.6 to 0.1.7 diff (manifest only) awaits review by the maintainer."
 
 [[exemptions.curve25519-dalek]]
 version = "4.1.3"
 criteria = "safe-to-deploy"
+notes = "Zcash published crypto-reviewed, safe-to-deploy deltas for every release from 4.1.0 to this one (4.1.3), but no registry set has a full audit of 4.1.0; Google audited 4.0.0 for undefined-behaviour risk only. As of 2026-10-05."
 
 [[exemptions.curve25519-dalek-derive]]
 version = "0.1.1"
 criteria = "safe-to-deploy"
+notes = "Google audited 0.1.0 (ub-risk-3, does-not-implement-crypto) and Zcash published a crypto-reviewed delta 0.1.0 to 0.1.1, but no registry set audits 0.1.0 as safe-to-deploy. As of 2026-10-05."
 
 [[exemptions.digest]]
 version = "0.10.7"
 criteria = "safe-to-deploy"
+notes = "Imported deltas chain from 0.9.0 to this version (Bytecode Alliance 0.9.0 to 0.10.3, Mozilla to 0.10.6, ISRG to 0.10.7), but no registry set has a full audit of 0.9.0. As of 2026-10-05."
 
 [[exemptions.displaydoc]]
 version = "0.2.7"
@@ -113,10 +118,12 @@ criteria = "safe-to-deploy"
 [[exemptions.ed25519]]
 version = "2.2.3"
 criteria = "safe-to-deploy"
+notes = "Zcash published crypto-reviewed deltas 2.2.1 to 2.2.3, but no registry set has a full audit of 2.2.1. As of 2026-10-05."
 
 [[exemptions.ed25519-dalek]]
 version = "2.2.0"
 criteria = "safe-to-deploy"
+notes = "No audit of any version in any cargo-vet registry set as of 2026-10-05."
 
 [[exemptions.fastrand]]
 version = "2.5.0"
@@ -149,6 +156,7 @@ criteria = "safe-to-deploy"
 [[exemptions.generic-array]]
 version = "0.14.7"
 criteria = "safe-to-deploy"
+notes = "Google audited this version as safe-to-run (not safe-to-deploy); Mozilla and Zcash published safe-to-deploy deltas 0.14.5 to 0.14.7 without a full base audit. As of 2026-10-05."
 
 [[exemptions.getrandom]]
 version = "0.2.17"
@@ -304,10 +312,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.potential_utf]]
 version = "0.1.6"
-criteria = "safe-to-deploy"
-
-[[exemptions.proc-macro2]]
-version = "1.0.107"
 criteria = "safe-to-deploy"
 
 [[exemptions.proptest]]
@@ -470,24 +474,8 @@ criteria = "safe-to-deploy"
 version = "1.2.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.syn]]
-version = "2.0.119"
-criteria = "safe-to-deploy"
-
-[[exemptions.syn]]
-version = "3.0.5"
-criteria = "safe-to-deploy"
-
 [[exemptions.sync_wrapper]]
 version = "1.0.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.thiserror]]
-version = "2.0.20"
-criteria = "safe-to-deploy"
-
-[[exemptions.thiserror-impl]]
-version = "2.0.20"
 criteria = "safe-to-deploy"
 
 [[exemptions.tinystr]]
@@ -497,6 +485,7 @@ criteria = "safe-to-deploy"
 [[exemptions.tinyvec]]
 version = "1.13.2"
 criteria = "safe-to-deploy"
+notes = "Google audited 1.6.0 as safe-to-deploy and deltas up to 1.9.0; the 1.9.0 to 1.13.2 diff is unreviewed. As of 2026-10-05."
 
 [[exemptions.tokio]]
 version = "1.53.1"
@@ -537,10 +526,7 @@ criteria = "safe-to-deploy"
 [[exemptions.typenum]]
 version = "1.20.1"
 criteria = "safe-to-deploy"
-
-[[exemptions.unicode-ident]]
-version = "1.0.24"
-criteria = "safe-to-deploy"
+notes = "Mozilla and Zcash published safe-to-deploy deltas 1.15.0 to 1.17.0; nothing covers 1.17.0 to this version, and no set has a full audit. Most of the crate is generated code. As of 2026-10-05."
 
 [[exemptions.untrusted]]
 version = "0.9.0"
@@ -553,6 +539,7 @@ criteria = "safe-to-deploy"
 [[exemptions.version_check]]
 version = "0.9.5"
 criteria = "safe-to-deploy"
+notes = "Google audited 0.9.4 as safe-to-deploy; the 0.9.4 to 0.9.5 diff (documentation only) awaits review by the maintainer."
 
 [[exemptions.walkdir]]
 version = "2.5.0"
@@ -713,6 +700,7 @@ criteria = "safe-to-deploy"
 [[exemptions.zeroize]]
 version = "1.9.0"
 criteria = "safe-to-deploy"
+notes = "Mozilla audited 1.8.1 as safe-to-deploy and Zcash the delta to 1.8.2; the 1.8.2 to 1.9.0 diff is unreviewed. As of 2026-10-05."
 
 [[exemptions.zerotrie]]
 version = "0.2.5"

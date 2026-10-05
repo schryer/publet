@@ -17,7 +17,7 @@ jobs:
   ci:
     uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.0
     with:
-      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check
+      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check
       test-args: --workspace --all-features
       apt-packages: jq
       functional: functional guard-eval conformance coverage-check
@@ -28,6 +28,8 @@ jobs:
       - uses: actions/checkout@v5
       - run: cargo install --locked cargo-deny --version 0.20.2
       - run: make deny
+      - run: cargo install --locked cargo-vet --version 0.10.2
+      - run: make vet
 
   # The shared release workflow: on a pull request, a code change records
   # what it changes and a release is the bump those changes require,
