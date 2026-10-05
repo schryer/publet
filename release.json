@@ -47,5 +47,33 @@
         "crates/publet-algorithms/"
       ]
     }
-  ]
+  ],
+  "security": {
+    "checks": [
+      {
+        "name": "advisories, licences, bans and sources",
+        "run": "cargo deny --locked check --hide-inclusion-graph",
+        "version": "cargo deny --version"
+      },
+      {
+        "name": "supply-chain audits",
+        "run": "cargo vet --locked",
+        "version": "cargo vet --version"
+      },
+      {
+        "name": "supply-chain reports current",
+        "run": "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'"
+      }
+    ],
+    "facts": [
+      {
+        "name": "RustSec advisory database revision",
+        "run": "git -C \"$(ls -d ~/.cargo/advisory-dbs/advisory-db-*/ | head -1)\" log -1 --format='%H (%cs)'"
+      },
+      {
+        "name": "audits imported from",
+        "run": "grep -o '^\\[imports\\.[a-z-]*' supply-chain/config.toml | cut -d. -f2 | paste -sd, - | sed 's/,/, /g'"
+      }
+    ]
+  }
 }
