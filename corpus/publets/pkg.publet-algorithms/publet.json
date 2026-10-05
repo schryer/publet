@@ -1,0 +1,99 @@
+{
+  "claims": {
+    "identity": {
+      "class": "archival",
+      "content": "publet-algorithms 0.1.0 is released as publet-algorithms-v0.1.0 from commit e883eee4181cadc480b99142a2a67bfa1dfabad2.",
+      "data": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "version"
+          },
+          {
+            "name": "check"
+          },
+          {
+            "name": "expect"
+          },
+          {
+            "name": "tag"
+          },
+          {
+            "name": "commit"
+          }
+        ],
+        "rows": [
+          [
+            "publet-algorithms",
+            "0.1.0",
+            "",
+            "",
+            "publet-algorithms-v0.1.0",
+            "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+          ]
+        ]
+      },
+      "scope": "the published release publet-algorithms-v0.1.0 of publet-algorithms",
+      "sources": [
+        {
+          "ref": "publet-algorithms",
+          "revision": "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+        }
+      ]
+    },
+    "release": {
+      "class": "archival",
+      "content": "publet-algorithms 0.1.0 was released on 2026-10-04 from commit e883eee4181cadc480b99142a2a67bfa1dfabad2 with these changes.",
+      "data": {
+        "columns": [
+          {
+            "name": "category"
+          },
+          {
+            "name": "change"
+          }
+        ],
+        "rows": [
+          [
+            "added",
+            "The generic algorithms publet is built on, depending on nothing publet-specific: an RFC 6962 Merkle log with inclusion and consistency proofs and a checkpoint schedule; sorted-set membership with absence proofs; recursive content trees; Fixed6 exact fixed-point arithmetic; deterministic personalized PageRank; graph traversals (reachability, closure, root, topological order); and version arithmetic and requirement matching."
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release publet-algorithms-v0.1.0 of publet-algorithms",
+      "sources": [
+        {
+          "ref": "publet-algorithms",
+          "revision": "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+        }
+      ]
+    }
+  },
+  "created": "2026-10-04T00:00:00Z",
+  "sections": [
+    {
+      "heading": "Identity",
+      "items": [
+        {
+          "ref": "#identity"
+        }
+      ]
+    },
+    {
+      "heading": "Release",
+      "items": [
+        {
+          "ref": "#release"
+        }
+      ]
+    }
+  ],
+  "slug": "pkg.publet-algorithms",
+  "tag": "PKG-PUBALG-10-2026",
+  "title": "publet-algorithms"
+}
