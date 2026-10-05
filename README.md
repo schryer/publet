@@ -259,6 +259,13 @@ dependency has been superseded, or a dispute answers a resolved question.
 None of them is a refusal. Nothing here is overwritten, so a stale basis
 cannot clobber anything -- it is disclosed, not enforced.
 
+## Security
+
+Report a vulnerability privately through the repository's Security tab.
+[`SECURITY.md`](SECURITY.md) says how, and describes what is checked: RustSec
+advisories and supply-chain audits on every change, and a record of those
+checks signed into every release.
+
 ## Versions and releases
 
 A release of `pub` and the plumbing commands is a **version of a publet**:

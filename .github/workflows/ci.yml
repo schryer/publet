@@ -37,7 +37,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: [ci, audit]
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.0
-    with: { pubrel-version: v0.4.0 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.1
+    with: { pubrel-version: v0.4.1 }
     permissions:
       contents: write
