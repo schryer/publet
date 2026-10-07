@@ -1,0 +1,57 @@
+# Fuzz targets for the code that reads untrusted input. A workspace of its
+# own: it needs a nightly compiler and libFuzzer, and none of its
+# dependencies belong in the published crates' supply chain.
+#
+#   cargo +nightly fuzz run cbor_decode            # until stopped
+#   make fuzz-smoke                                # every target briefly
+[package]
+name = "publet-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+publet-core = { path = "../crates/publet-core" }
+publet-algorithms = { path = "../crates/publet-algorithms" }
+
+[workspace]
+
+[[bin]]
+name = "cbor_decode"
+path = "fuzz_targets/cbor_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "object_parse"
+path = "fuzz_targets/object_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cid_parse"
+path = "fuzz_targets/cid_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "log_verify"
+path = "fuzz_targets/log_verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "signature_verify"
+path = "fuzz_targets/signature_verify.rs"
+test = false
+doc = false
+bench = false

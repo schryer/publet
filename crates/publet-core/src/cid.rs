@@ -325,6 +325,14 @@ fn base32_lower_decode(text: &str) -> Result<Vec<u8>, CidError> {
             out.push(((acc >> bits) & 0xff) as u8);
         }
     }
+    // The bits left after the last whole byte are padding, and RFC 4648
+    // encoders write them as zero. Accepting others would give one digest
+    // many spellings, and an identifier more than one text form.
+    if acc & ((1 << bits) - 1) != 0 {
+        return Err(CidError::InvalidDigest(
+            "non-zero bits after the digest; an identifier has one text form",
+        ));
+    }
     Ok(out)
 }
 

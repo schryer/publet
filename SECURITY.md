@@ -57,11 +57,31 @@ missing or unsigned.
 **In the code:** every crate in the workspace forbids `unsafe`
 (`unsafe_code = "forbid"` in `Cargo.toml`).
 
+**Fuzzing:** the code that reads untrusted input is fuzzed on every change
+(`fuzz/`): the canonical CBOR decoder, object parsing, identifier parsing,
+Merkle log proof checking, and signature checking. Each run first replays
+every input that once found a bug (`fuzz/regressions/`). Fuzzing found
+four bugs before the first crates.io release, all fixed with regression
+tests:
+
+- `null` written in a two-byte form was accepted, so an object could have
+  two encodings, and two identifiers.
+- Base32 padding bits in an identifier were not checked, so one identifier
+  could be spelled many ways.
+- A Merkle proof claiming a log of more than 2^63 entries made the verifier
+  loop forever.
+- A consistency proof between sizes above 2^63 made the verifier panic
+  where integer overflow is checked, as it is in `pub`'s release builds.
+
+**Test vectors:** each published crate checks itself against values from
+independent sources (`testdata/`): RFC 8032 keys, the Certificate
+Transparency project's RFC 6962 roots, and signatures and hashes from other
+implementations. Two other implementations are compared in the tests too:
+`ciborium` for CBOR and `ct-merkle` for RFC 6962.
+
 ## What is not yet done
 
 - Not every dependency of the published crates has an audit. The exemptions,
   and the evidence for each, are listed in each crate's `SUPPLY-CHAIN.md`.
-- The decoders that take untrusted input (canonical CBOR, objects,
-  identifiers) are not yet fuzzed.
 - Advisory checks run when the code changes, not on a schedule, so an
   advisory published after a release is caught by the next run of CI.

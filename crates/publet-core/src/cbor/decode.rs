@@ -165,7 +165,18 @@ impl Parser<'_> {
                 return Err(CanonError::IndefiniteLength { offset });
             }
             let arg = if info == 24 {
-                u64::from(self.byte()?)
+                // RFC 8949 Section 3.3: a simple value below 32 must use the
+                // one-byte form. Accepting `f8 16` would give null a second
+                // encoding, and the same object a second identifier.
+                let value = self.byte()?;
+                if value < 32 {
+                    return Err(CanonError::NonShortestInteger {
+                        offset,
+                        value: u64::from(value),
+                        used: 1,
+                    });
+                }
+                u64::from(value)
             } else if info <= 23 {
                 u64::from(info)
             } else {

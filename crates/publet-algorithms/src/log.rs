@@ -82,11 +82,11 @@ pub fn node_hash(left: &Hash, right: &Hash) -> Hash {
 /// RFC 6962's split point. Defined for `n > 1`.
 fn split(n: usize) -> usize {
     debug_assert!(n > 1);
-    let mut k = 1;
-    while k << 1 < n {
-        k <<= 1;
-    }
-    k
+    // The largest power of two strictly below n is the top bit of n - 1.
+    // Doubling up to it instead never ends for n above 2^63: the shift
+    // wraps to zero, and a peer's proof claiming such a size would hang
+    // the verifier.
+    1 << (usize::BITS - 1 - (n - 1).leading_zeros())
 }
 
 /// Merkle Tree Hash over `leaves`, already leaf-hashed.
@@ -285,7 +285,10 @@ fn subproof(leaves: &[Hash], m: usize, start: bool) -> Vec<Hash> {
 /// consistency proof be checked without rebuilding either tree.
 fn decompose(index: u64, size: u64) -> (u32, u32) {
     let inner = u64::BITS - (index ^ (size - 1)).leading_zeros();
-    let border = (index >> inner).count_ones();
+    // `inner` reaches 64 when the size is above 2^63, and shifting a u64 by
+    // 64 overflows: a panic where overflow is checked, a wrong answer where
+    // it is not. Every bit is then inside, so none is on the border.
+    let border = index.checked_shr(inner).unwrap_or(0).count_ones();
     (inner, border)
 }
 

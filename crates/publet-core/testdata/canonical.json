@@ -159,6 +159,24 @@
       "why": "the simple value undefined"
     },
     {
+      "name": "null in two bytes",
+      "hex": "f816",
+      "rule": "shortest-form integers",
+      "why": "simple value 22 in the two-byte form, which RFC 8949 3.3 forbids below 32; found by fuzzing: it gave null a second encoding"
+    },
+    {
+      "name": "false in two bytes",
+      "hex": "f814",
+      "rule": "shortest-form integers",
+      "why": "simple value 20 in the two-byte form"
+    },
+    {
+      "name": "two-byte simple value",
+      "hex": "f820",
+      "rule": "supported item types",
+      "why": "simple value 32: well formed, but outside the profile"
+    },
+    {
       "name": "trailing data",
       "hex": "0102",
       "rule": "single top-level item",

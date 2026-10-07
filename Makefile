@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules publish-check vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check fuzz-smoke vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -57,6 +57,17 @@ PUBLISHED := publet-core publet-algorithms
 publish-check: ## Package each crates.io crate and verify it builds as published
 	for crate in $(PUBLISHED); do \
 	  $(CARGO) publish --dry-run --locked -p $$crate; \
+	done
+
+FUZZ_TARGETS := cbor_decode object_parse cid_parse log_verify signature_verify
+FUZZ_SECONDS ?= 60
+
+fuzz-smoke: ## Replay fuzz regressions, then fuzz each target briefly (needs nightly and cargo-fuzz)
+	cd fuzz && cargo +nightly fuzz build
+	cd fuzz && for target in $(FUZZ_TARGETS); do \
+	  mkdir -p corpus/$$target regressions/$$target; \
+	  cargo +nightly fuzz run $$target corpus/$$target regressions/$$target -- \
+	    -max_total_time=$(FUZZ_SECONDS) -timeout=10 || exit 1; \
 	done
 
 vectors: ## Regenerate the published crates' test vectors from independent sources
