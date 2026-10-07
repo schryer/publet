@@ -1,0 +1,124 @@
+{
+  "description": "Fixed6 operations on scaled values (10^6 is one), truncating toward zero.",
+  "source": "Integer arithmetic in tools/vectors/generate.py.",
+  "cases": [
+    {
+      "op": "mul_div",
+      "a": 2000000,
+      "b": 1000000,
+      "c": 3000000,
+      "expect": 666666
+    },
+    {
+      "op": "mul_div",
+      "a": -2000000,
+      "b": 1000000,
+      "c": 3000000,
+      "expect": -666666
+    },
+    {
+      "op": "mul_div",
+      "a": 1000000,
+      "b": 1000000,
+      "c": 0,
+      "expect": 0
+    },
+    {
+      "op": "mul_div",
+      "a": 7000000,
+      "b": 22000000,
+      "c": 7000000,
+      "expect": 22000000
+    },
+    {
+      "op": "times",
+      "a": 500000,
+      "b": 500000,
+      "expect": 250000
+    },
+    {
+      "op": "times",
+      "a": -500000,
+      "b": 333333,
+      "expect": -166666
+    },
+    {
+      "op": "times",
+      "a": 1,
+      "b": 1,
+      "expect": 0
+    },
+    {
+      "op": "times",
+      "a": 3000000,
+      "b": -1000000,
+      "expect": -3000000
+    },
+    {
+      "op": "ratio",
+      "a": 1000000,
+      "b": 3000000,
+      "expect": 333333
+    },
+    {
+      "op": "ratio",
+      "a": -1000000,
+      "b": 3000000,
+      "expect": -333333
+    },
+    {
+      "op": "ratio",
+      "a": 2000000,
+      "b": 0,
+      "expect": 0
+    },
+    {
+      "op": "ratio",
+      "a": 1000000,
+      "b": 7,
+      "expect": 142857142857
+    },
+    {
+      "op": "halve_fractional",
+      "a": 1000000,
+      "num": 30,
+      "den": 30,
+      "expect": 500000
+    },
+    {
+      "op": "halve_fractional",
+      "a": 1000000,
+      "num": 15,
+      "den": 30,
+      "expect": 750000
+    },
+    {
+      "op": "halve_fractional",
+      "a": 1000000,
+      "num": 45,
+      "den": 30,
+      "expect": 375000
+    },
+    {
+      "op": "halve_fractional",
+      "a": -1000000,
+      "num": 15,
+      "den": 30,
+      "expect": -750000
+    },
+    {
+      "op": "halve_fractional",
+      "a": 1000000,
+      "num": 3810,
+      "den": 30,
+      "expect": 0
+    },
+    {
+      "op": "halve_fractional",
+      "a": 1000000,
+      "num": 1,
+      "den": 0,
+      "expect": 1000000
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "description": "Ed25519 keys from RFC 8032, and detached signatures over Section 4.4's domain-separated message: \"pub/v1/sig\" 0x00 purpose 0x00 target.",
+  "source": "Keys: RFC 8032 Section 7.1, checked against Python's cryptography package, which also made the signatures.",
+  "keys": [
+    {
+      "name": "RFC 8032 7.1 TEST 1",
+      "seed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "public": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+    },
+    {
+      "name": "RFC 8032 7.1 TEST 2",
+      "seed": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "public": "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"
+    },
+    {
+      "name": "RFC 8032 7.1 TEST 3",
+      "seed": "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+      "public": "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025"
+    }
+  ],
+  "signatures": [
+    {
+      "name": "authored, empty target",
+      "seed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "purpose": "authored",
+      "target_hex": "",
+      "signature": "e8d29ab12b56e8bbe32d4d90c6c57d035cb67b5591c24c786b926bd0fa867d0a1a8518e7228c222699e66c5bc16057a08923baecf2e4aa13dfcaf8427c624707"
+    },
+    {
+      "name": "authored, an object",
+      "seed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "purpose": "authored",
+      "target_hex": "a1616101",
+      "signature": "c47c82262b6cab1689d05a6fbd02b1da512d9509b3261f0b775457c156bc5446f4e2c19bfb4d702d00860da8e808101e0df4c0af1555b25fd3437a26f2e5ce0e"
+    },
+    {
+      "name": "endorse, an object",
+      "seed": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "purpose": "endorse",
+      "target_hex": "a1616101",
+      "signature": "f68f7d6674c4093ddfeed66cd3fb6030b5ef1cbf53cc45a84597677f2728f2a00e092d3ddb73a61145d5ea2b6c73711266b46c5ba69081fe584a45eea9935c06"
+    }
+  ]
+}

@@ -11,7 +11,7 @@ documentation = "https://docs.rs/publet-algorithms"
 readme = "README.md"
 keywords = ["merkle", "transparency-log", "pagerank", "fixed-point", "topological-sort"]
 categories = ["algorithms", "data-structures", "cryptography"]
-include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
+include = ["src/**/*.rs", "tests/**/*.rs", "testdata/*.json", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
 
 [dependencies]
 sha2 = "0.10"
@@ -20,4 +20,7 @@ sha2 = "0.10"
 workspace = true
 
 [dev-dependencies]
+serde_json = "1"
 proptest = "1"
+ct-merkle = "0.3"
+sha2_011 = { version = "0.11", package = "sha2" }
