@@ -40,7 +40,7 @@ fn edge(from: &str, to: &str, weight: i64) -> TrustEdge {
     }
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate
+// covers: propagate::propagate
 #[test]
 fn an_unvouched_subgraph_receives_no_weight_at_any_size() {
     // The structural defence: an adversary creating nodes that point to
@@ -63,7 +63,7 @@ fn an_unvouched_subgraph_receives_no_weight_at_any_size() {
     }
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate
+// covers: propagate::propagate
 #[test]
 fn vouching_for_more_nodes_does_not_confer_more_weight() {
     // Per-node normalization: a node's total conferred weight is fixed.
@@ -87,7 +87,7 @@ fn vouching_for_more_nodes_does_not_confer_more_weight() {
     );
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate
+// covers: propagate::propagate
 #[test]
 fn propagation_is_invariant_under_input_order() {
     let p = params();
@@ -107,7 +107,7 @@ fn propagation_is_invariant_under_input_order() {
     );
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate
+// covers: propagate::propagate
 #[test]
 fn propagation_is_reproducible_across_runs() {
     let p = params();
@@ -119,7 +119,7 @@ fn propagation_is_reproducible_across_runs() {
     }
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate
+// covers: propagate::propagate
 #[test]
 fn decay_reduces_an_older_edge() {
     let mut p = params();
@@ -135,7 +135,7 @@ fn decay_reduces_an_older_edge() {
     );
 }
 
-// covers: Fixed6::from_integer, Fixed6::from_scaled, propagate::propagate, propagate::propagate_within
+// covers: propagate::propagate, propagate::propagate_within
 #[test]
 fn a_subject_confined_edge_applies_only_within_that_subject() {
     let p = params();
@@ -154,7 +154,7 @@ fn a_subject_confined_edge_applies_only_within_that_subject() {
     );
 }
 
-// covers: Fixed6::from_integer, propagate::reachable_within
+// covers: propagate::reachable_within
 #[test]
 fn reachability_is_undirected_and_bounded_by_distance() {
     let edges = vec![edge("a", "b", 1), edge("b", "c", 1), edge("c", "d", 1)];
