@@ -20,7 +20,7 @@ jobs:
       gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check doc-coverage-check
       test-args: --workspace --all-features
       apt-packages: jq
-      functional: functional guard-eval conformance coverage-check
+      functional: functional guard-eval conformance coverage-check vectors-check
 
   audit:
     runs-on: ubuntu-latest

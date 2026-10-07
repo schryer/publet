@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules publish-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -59,6 +59,12 @@ publish-check: ## Package each crates.io crate and verify it builds as published
 	  $(CARGO) publish --dry-run --locked -p $$crate; \
 	done
 
+vectors: ## Regenerate the published crates' test vectors from independent sources
+	./tools/vectors/generate.py
+
+vectors-check: vectors ## Fail if the committed test vectors differ from what the sources give
+	git diff --exit-code -- crates/publet-core/testdata crates/publet-algorithms/testdata
+
 doc-coverage: ## Regenerate each published crate's TESTING.md
 	./tools/doc-coverage.py
 
@@ -77,7 +83,7 @@ vet: ## Every dependency is audited, trusted, or exempt with its evidence
 deny: ## Licence and advisory audit
 	$(CARGO) deny --locked check
 
-check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage publish-check doc-coverage-check supply-chain-check vet deny ## Everything CI runs
+check: sync-check fmt-check lint guard-floats guard-deps guard-eval guard-rules test doc functional coverage vectors-check publish-check doc-coverage-check supply-chain-check vet deny ## Everything CI runs
 
 clean: ## Remove build artifacts
 	$(CARGO) clean

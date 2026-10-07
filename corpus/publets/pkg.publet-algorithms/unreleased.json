@@ -15,6 +15,10 @@
     {
       "category": "fixed",
       "change": "Every public function's documentation has an example run as a test, the crate root has an overview, a cookbook and why this crate exists, and docs.rs renders how every item is tested, how each dependency is vouched for, the security policy and the changelog."
+    },
+    {
+      "category": "internal",
+      "change": "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

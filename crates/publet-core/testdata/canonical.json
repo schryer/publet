@@ -1,0 +1,186 @@
+{
+  "description": "Bytes the Section 4.1 profile accepts, which must re-encode to themselves, and bytes it refuses, with the rule each breaks.",
+  "source": "Hand-encoded from the specification; see tools/vectors/generate.py.",
+  "accept": [
+    {
+      "name": "zero",
+      "hex": "00",
+      "why": "the integer 0"
+    },
+    {
+      "name": "largest one-byte integer",
+      "hex": "17",
+      "why": "23 fits in the initial byte"
+    },
+    {
+      "name": "smallest two-byte integer",
+      "hex": "1818",
+      "why": "24 needs a following byte"
+    },
+    {
+      "name": "negative one",
+      "hex": "20",
+      "why": "-1 is stored as 0"
+    },
+    {
+      "name": "empty byte string",
+      "hex": "40",
+      "why": ""
+    },
+    {
+      "name": "empty text",
+      "hex": "60",
+      "why": ""
+    },
+    {
+      "name": "empty array",
+      "hex": "80",
+      "why": ""
+    },
+    {
+      "name": "empty map",
+      "hex": "a0",
+      "why": ""
+    },
+    {
+      "name": "false",
+      "hex": "f4",
+      "why": ""
+    },
+    {
+      "name": "true",
+      "hex": "f5",
+      "why": ""
+    },
+    {
+      "name": "null",
+      "hex": "f6",
+      "why": ""
+    },
+    {
+      "name": "map, keys sorted by UTF-8 bytes",
+      "hex": "a262616101616202",
+      "why": "Section 4.1 sorts \"aa\" before \"b\": by bytes, not by encoded length"
+    },
+    {
+      "name": "nested",
+      "hex": "a161618301626869a0",
+      "why": "{\"a\": [1, \"hi\", {}]}"
+    },
+    {
+      "name": "NFC text",
+      "hex": "62c3a9",
+      "why": "\"é\" as the single code point U+00E9"
+    }
+  ],
+  "reject": [
+    {
+      "name": "integer not in shortest form",
+      "hex": "1801",
+      "rule": "shortest-form integers",
+      "why": "1 written in two bytes"
+    },
+    {
+      "name": "length not in shortest form",
+      "hex": "780161",
+      "rule": "shortest-form integers",
+      "why": "a one-byte text with its length in two bytes"
+    },
+    {
+      "name": "indefinite-length array",
+      "hex": "9f01ff",
+      "rule": "no indefinite length",
+      "why": ""
+    },
+    {
+      "name": "indefinite-length text",
+      "hex": "7f6161ff",
+      "rule": "no indefinite length",
+      "why": ""
+    },
+    {
+      "name": "half-precision float",
+      "hex": "f93e00",
+      "rule": "no floating point",
+      "why": "1.5"
+    },
+    {
+      "name": "double-precision float",
+      "hex": "fb3ff8000000000000",
+      "rule": "no floating point",
+      "why": "1.5"
+    },
+    {
+      "name": "integer map key",
+      "hex": "a10102",
+      "rule": "text map keys",
+      "why": "{1: 2}"
+    },
+    {
+      "name": "duplicate map keys",
+      "hex": "a2616101616102",
+      "rule": "unique map keys",
+      "why": "{\"a\": 1, \"a\": 2}"
+    },
+    {
+      "name": "keys out of order",
+      "hex": "a2616201616102",
+      "rule": "sorted map keys",
+      "why": "{\"b\": 1, \"a\": 2}"
+    },
+    {
+      "name": "keys in encoded-length order",
+      "hex": "a261620262616101",
+      "rule": "sorted map keys",
+      "why": "RFC 8949 deterministic order puts \"b\" before \"aa\"; Section 4.1 does not"
+    },
+    {
+      "name": "invalid UTF-8",
+      "hex": "61ff",
+      "rule": "valid UTF-8",
+      "why": ""
+    },
+    {
+      "name": "text not in NFC",
+      "hex": "6365cc81",
+      "rule": "NFC normalization",
+      "why": "\"é\" as e plus a combining accent"
+    },
+    {
+      "name": "tag",
+      "hex": "c06178",
+      "rule": "supported item types",
+      "why": "tag 0 on \"x\""
+    },
+    {
+      "name": "undefined",
+      "hex": "f7",
+      "rule": "supported item types",
+      "why": "the simple value undefined"
+    },
+    {
+      "name": "trailing data",
+      "hex": "0102",
+      "rule": "single top-level item",
+      "why": "1, then 2"
+    },
+    {
+      "name": "truncated text",
+      "hex": "6261",
+      "rule": "complete items",
+      "why": "a two-byte text with one byte present"
+    },
+    {
+      "name": "truncated array",
+      "hex": "8201",
+      "rule": "complete items",
+      "why": "an array of two with one element"
+    },
+    {
+      "name": "nesting deeper than 64",
+      "hex": "818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818180",
+      "rule": "nesting limit",
+      "why": "65 arrays inside each other"
+    }
+  ]
+}

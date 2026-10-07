@@ -11,7 +11,7 @@ documentation = "https://docs.rs/publet-core"
 readme = "README.md"
 keywords = ["content-addressing", "cbor", "ed25519", "signatures", "publet"]
 categories = ["cryptography", "encoding"]
-include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
+include = ["src/**/*.rs", "tests/**/*.rs", "testdata/*.json", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
 
 [dependencies]
 thiserror.workspace = true
@@ -20,7 +20,9 @@ ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 unicode-normalization = "0.1"
 
 [dev-dependencies]
+serde_json = "1"
 proptest = "1"
+ciborium = "0.2"
 
 [lints]
 workspace = true

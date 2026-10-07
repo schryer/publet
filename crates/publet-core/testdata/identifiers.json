@@ -1,0 +1,63 @@
+{
+  "description": "Identifiers of known bytes (Section 4.2), and text that is not an identifier.",
+  "source": "SHA-256 and RFC 4648 base32 from Python's standard library.",
+  "compute": [
+    {
+      "name": "empty",
+      "hex": "",
+      "cid": "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq"
+    },
+    {
+      "name": "hello",
+      "hex": "68656c6c6f",
+      "cid": "pub:sha2-256:ftze3os7wcrq4jxihmvmlopctynrmhs4d6tuexttaqzwfe4ltasa"
+    },
+    {
+      "name": "CBOR text hello",
+      "hex": "6568656c6c6f",
+      "cid": "pub:sha2-256:zobvle7e7i3dhtexd7f5d2yibsrsejmcebki5nyippvpr33np72a"
+    },
+    {
+      "name": "one byte",
+      "hex": "00",
+      "cid": "pub:sha2-256:ny2axhh7wn5jrhffittlw6akfr4jahj7wm3tq5ufcgrqmf5puaoq"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "no scheme",
+      "text": "sha2-256:abc",
+      "error": "MissingScheme"
+    },
+    {
+      "name": "missing digest",
+      "text": "pub:sha2-256",
+      "error": "Malformed"
+    },
+    {
+      "name": "empty digest",
+      "text": "pub:sha2-256:",
+      "error": "Malformed"
+    },
+    {
+      "name": "unknown algorithm",
+      "text": "pub:md5:aaaa",
+      "error": "UnknownAlgorithm"
+    },
+    {
+      "name": "upper-case digest",
+      "text": "pub:sha2-256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ",
+      "error": "InvalidDigest"
+    },
+    {
+      "name": "padded digest",
+      "text": "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq====",
+      "error": "InvalidDigest"
+    },
+    {
+      "name": "short digest",
+      "text": "pub:sha2-256:aaaa",
+      "error": "WrongDigestLength"
+    }
+  ]
+}

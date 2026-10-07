@@ -2,3 +2,6 @@
 # resolved set with hashes lives in requirements.lock, which bootstrap
 # installs. Regenerate with: make lock
 -r requirements-pubkit.txt
+# Independent Ed25519 for tools/vectors/generate.py: it makes the signature
+# test vectors, and checks RFC 8032's keys, without using publet's code.
+cryptography==46.0.5

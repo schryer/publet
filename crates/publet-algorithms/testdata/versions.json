@@ -1,0 +1,116 @@
+{
+  "description": "Whether a tool's version meets a requirement: ^X.Y as Cargo reads it, X.Y+, a prefix.",
+  "source": "The rules as tools/vectors/generate.py implements them, independently of the crate.",
+  "cases": [
+    {
+      "version": "0.15",
+      "requires": "0.15",
+      "expect": true
+    },
+    {
+      "version": "0.15.2",
+      "requires": "0.15",
+      "expect": true
+    },
+    {
+      "version": "0.150",
+      "requires": "0.15",
+      "expect": false
+    },
+    {
+      "version": "0.16.0",
+      "requires": "0.15",
+      "expect": false
+    },
+    {
+      "version": "1.2",
+      "requires": "",
+      "expect": true
+    },
+    {
+      "version": "1.98.1",
+      "requires": "1.80+",
+      "expect": true
+    },
+    {
+      "version": "1.79.9",
+      "requires": "1.80+",
+      "expect": false
+    },
+    {
+      "version": "22.22.1",
+      "requires": "22+",
+      "expect": true
+    },
+    {
+      "version": "abc",
+      "requires": "1+",
+      "expect": false
+    },
+    {
+      "version": "1.9.0",
+      "requires": "^1.2",
+      "expect": true
+    },
+    {
+      "version": "2.0.0",
+      "requires": "^1.2",
+      "expect": false
+    },
+    {
+      "version": "1.1.9",
+      "requires": "^1.2",
+      "expect": false
+    },
+    {
+      "version": "0.1.0",
+      "requires": "^0.1",
+      "expect": true
+    },
+    {
+      "version": "0.1.9",
+      "requires": "^0.1",
+      "expect": true
+    },
+    {
+      "version": "0.2.0",
+      "requires": "^0.1",
+      "expect": false
+    },
+    {
+      "version": "0.0.9",
+      "requires": "^0.1",
+      "expect": false
+    },
+    {
+      "version": "1.0.0",
+      "requires": "^0.1",
+      "expect": false
+    },
+    {
+      "version": "0.0.3",
+      "requires": "^0.0.3",
+      "expect": true
+    },
+    {
+      "version": "0.0.4",
+      "requires": "^0.0.3",
+      "expect": false
+    },
+    {
+      "version": "0.0.7",
+      "requires": "^0.0",
+      "expect": true
+    },
+    {
+      "version": "0.1.0",
+      "requires": "^0.0",
+      "expect": false
+    },
+    {
+      "version": "x.1",
+      "requires": "^0.1",
+      "expect": false
+    }
+  ]
+}
