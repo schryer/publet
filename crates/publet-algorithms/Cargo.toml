@@ -11,7 +11,7 @@ documentation = "https://docs.rs/publet-algorithms"
 readme = "README.md"
 keywords = ["merkle", "transparency-log", "pagerank", "fixed-point", "topological-sort"]
 categories = ["algorithms", "data-structures", "cryptography"]
-include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SUPPLY-CHAIN.md"]
+include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
 
 [dependencies]
 sha2 = "0.10"

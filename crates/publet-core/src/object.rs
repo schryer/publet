@@ -134,6 +134,35 @@ impl Object {
     /// Returns [`ObjectError`] if the bytes are not canonical, if a required
     /// header field is absent or ill-typed, or if an unrecognized field
     /// appears at the top level.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .build()?;
+    ///
+    /// // Parsing checks the form; verifying checks the identity.
+    /// let unverified = Object::parse(&bytes)?;
+    /// let verified = unverified.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?;
+    /// assert_eq!(verified.object().kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
+    ///
+    /// # Example: what is refused
+    ///
+    /// ```
+    /// use publet_core::{Object, ObjectError};
+    ///
+    /// // The integer 1 written in two bytes instead of one: not canonical.
+    /// assert!(matches!(Object::parse(&[0x18, 0x01]), Err(ObjectError::Canonical(_))));
+    ///
+    /// // Canonical CBOR, but not a map.
+    /// assert!(matches!(Object::parse(&[0x01]), Err(ObjectError::NotAMap { .. })));
+    /// ```
     pub fn parse(bytes: &[u8]) -> Result<Unverified<Self>, ObjectError> {
         let value = cbor::decode(bytes)?;
         let Value::Map(map) = value else {
@@ -195,6 +224,20 @@ impl Object {
     }
 
     /// Start building an object of `kind` authored by `author`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Object, cbor::Value};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    ///     .build()?;
+    /// assert_eq!(Object::parse(&bytes)?.peek().kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn builder(kind: &str, author: &str) -> Builder {
         Builder {
@@ -210,12 +253,40 @@ impl Object {
     }
 
     /// The protocol major version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// assert_eq!(object.protocol(), publet_core::PROTOCOL_VERSION);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn protocol(&self) -> &str {
         &self.protocol
     }
 
     /// The object type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// assert_eq!(object.kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn kind(&self) -> &str {
         &self.kind
@@ -225,24 +296,84 @@ impl Object {
     ///
     /// Section 4.3: this is an unverified claim. Use a timestamp
     /// attestation where correctness depends on time.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// assert_eq!(object.created(), "2026-10-05T00:00:00Z");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn created(&self) -> &str {
         &self.created
     }
 
     /// The identifier of the signing key object.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// assert_eq!(object.author().to_string(), AUTHOR);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn author(&self) -> &Cid {
         &self.author
     }
 
     /// The type-specific payload.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// assert_eq!(
+    ///     object.body().get("content"),
+    ///     Some(&Value::Text("Water boils at 100 °C at sea level.".into())),
+    /// );
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn body(&self) -> &BTreeMap<String, Value> {
         &self.body
     }
 
     /// The author's previous object, if this one names it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// // This object names no previous object.
+    /// assert_eq!(object.prev(), None);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn prev(&self) -> Option<&Cid> {
         self.prev.as_ref()
@@ -254,18 +385,64 @@ impl Object {
     /// (R1), so a stale basis cannot clobber anything. What it buys is
     /// that the interval between what an author read and what was true
     /// when their work landed is recorded rather than reconstructed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// // This object names no basis.
+    /// assert_eq!(object.basis(), None);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn basis(&self) -> Option<&Cid> {
         self.basis.as_ref()
     }
 
     /// Extension fields, if present.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// // This object carries no extension fields.
+    /// assert_eq!(object.ext(), None);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn ext(&self) -> Option<&BTreeMap<String, Value>> {
         self.ext.as_ref()
     }
 
     /// The canonical bytes this object was parsed from.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use publet_core::{Cid, HashAlg, Object, cbor::Value};
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// # let bytes = Object::builder("claim.prose", AUTHOR)
+    /// #     .created("2026-10-05T00:00:00Z")
+    /// #     .field("content", Value::Text("Water boils at 100 °C at sea level.".into()))
+    /// #     .build()?;
+    /// # let object = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?.into_inner();
+    /// // The bytes are what the identifier is computed from.
+    /// assert_eq!(object.bytes(), bytes.as_slice());
+    /// assert!(Cid::of(&bytes, HashAlg::Sha2_256).verifies(object.bytes()));
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
@@ -285,6 +462,25 @@ impl Unverified<Object> {
     /// # Errors
     ///
     /// Returns [`ObjectError::IdentifierMismatch`] if they do not.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object, ObjectError};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    ///
+    /// assert!(Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256)).is_ok());
+    ///
+    /// // Bytes that are not the ones the identifier names are refused.
+    /// let asked_for = Cid::of(b"something else", HashAlg::Sha2_256);
+    /// assert!(matches!(
+    ///     Object::parse(&bytes)?.verify(&asked_for),
+    ///     Err(ObjectError::IdentifierMismatch { .. }),
+    /// ));
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     pub fn verify(self, expected: &Cid) -> Result<Verified<Object>, ObjectError> {
         if expected.verifies(&self.0.bytes) {
             Ok(Verified(self.0))
@@ -300,6 +496,20 @@ impl Unverified<Object> {
     ///
     /// For error messages and inspection tools only. Nothing that indexes,
     /// evaluates, or stores should take this path.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::Object;
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    ///
+    /// // For a diagnostic message only; nothing should act on an unverified object.
+    /// let unverified = Object::parse(&bytes)?;
+    /// assert_eq!(unverified.peek().kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn peek(&self) -> &Object {
         &self.0
@@ -312,12 +522,38 @@ pub struct Verified<T>(T);
 
 impl Verified<Object> {
     /// Borrow the verified object.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    /// let verified = Object::parse(&bytes)?.verify(&Cid::of(&bytes, HashAlg::Sha2_256))?;
+    /// assert_eq!(verified.object().kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn object(&self) -> &Object {
         &self.0
     }
 
     /// Take ownership of the verified object.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    /// let object: Object = Object::parse(&bytes)?
+    ///     .verify(&Cid::of(&bytes, HashAlg::Sha2_256))?
+    ///     .into_inner();
+    /// assert_eq!(object.kind(), "claim.prose");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn into_inner(self) -> Object {
         self.0
@@ -339,6 +575,19 @@ pub struct Builder {
 
 impl Builder {
     /// Set the creation instant (RFC 3339 UTC, second precision).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::Object;
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("claim.prose", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .build()?;
+    /// assert_eq!(Object::parse(&bytes)?.peek().created(), "2026-10-05T00:00:00Z");
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn created(mut self, when: &str) -> Self {
         self.created = Some(when.to_owned());
@@ -346,6 +595,27 @@ impl Builder {
     }
 
     /// Insert a body field.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Object, cbor::Value};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// // Fields may be added in any order; the encoding sorts them.
+    /// let one = Object::builder("note", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .field("b", Value::Uint(2))
+    ///     .field("a", Value::Uint(1))
+    ///     .build()?;
+    /// let other = Object::builder("note", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .field("a", Value::Uint(1))
+    ///     .field("b", Value::Uint(2))
+    ///     .build()?;
+    /// assert_eq!(one, other);
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn field(mut self, key: &str, value: Value) -> Self {
         self.body.insert(key.to_owned(), value);
@@ -353,6 +623,23 @@ impl Builder {
     }
 
     /// Name the author's previous object.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let first = Object::builder("note", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    /// let first_cid = Cid::of(&first, HashAlg::Sha2_256);
+    ///
+    /// let second = Object::builder("note", AUTHOR)
+    ///     .created("2026-10-06T00:00:00Z")
+    ///     .prev(&first_cid.to_string())
+    ///     .build()?;
+    /// assert_eq!(Object::parse(&second)?.peek().prev(), Some(&first_cid));
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn prev(mut self, cid: &str) -> Self {
         self.prev = Some(cid.to_owned());
@@ -360,6 +647,22 @@ impl Builder {
     }
 
     /// Name the state the author was looking at (Section 4.6).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg, Object};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// // The state the author had read when writing this.
+    /// let read = Cid::of(b"the head the author was looking at", HashAlg::Sha2_256);
+    /// let bytes = Object::builder("note", AUTHOR)
+    ///     .created("2026-10-05T00:00:00Z")
+    ///     .basis(&read.to_string())
+    ///     .build()?;
+    /// assert_eq!(Object::parse(&bytes)?.peek().basis(), Some(&read));
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     #[must_use]
     pub fn basis(mut self, cid: &str) -> Self {
         self.basis = Some(cid.to_owned());
@@ -372,6 +675,29 @@ impl Builder {
     ///
     /// Returns [`ObjectError`] if a CID-valued field does not parse or if
     /// no creation instant was set.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Object, ObjectError};
+    ///
+    /// # const AUTHOR: &str = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq";
+    /// let bytes = Object::builder("note", AUTHOR).created("2026-10-05T00:00:00Z").build()?;
+    /// assert!(Object::parse(&bytes).is_ok());
+    ///
+    /// // A creation instant is required.
+    /// assert_eq!(
+    ///     Object::builder("note", AUTHOR).build(),
+    ///     Err(ObjectError::MissingField { field: "created" }),
+    /// );
+    ///
+    /// // The author must be an identifier.
+    /// assert!(matches!(
+    ///     Object::builder("note", "not an identifier").created("2026-10-05T00:00:00Z").build(),
+    ///     Err(ObjectError::BadCid { field: "author", .. }),
+    /// ));
+    /// # Ok::<(), publet_core::ObjectError>(())
+    /// ```
     pub fn build(self) -> Result<Vec<u8>, ObjectError> {
         let created = self
             .created

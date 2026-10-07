@@ -18,12 +18,36 @@ use sha2::{Digest as _, Sha256};
 pub type Hash = [u8; 32];
 
 /// Hash of an empty tree, per RFC 6962: `HASH()`.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{empty_root, root, to_hex};
+///
+/// assert_eq!(root(&[]), empty_root());
+/// // SHA-256 of nothing, as RFC 6962 defines it.
+/// assert_eq!(
+///     to_hex(&empty_root()),
+///     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+/// );
+/// ```
 #[must_use]
 pub fn empty_root() -> Hash {
     Sha256::digest([]).into()
 }
 
 /// Leaf hash: `HASH(0x00 || leaf)`.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{leaf_hash, to_hex};
+///
+/// assert_eq!(
+///     to_hex(&leaf_hash(b"a")),
+///     "022a6979e6dab7aa5ae4c3e5e45f7e977112a7e63593820dbec1ec738a24f93c",
+/// );
+/// ```
 #[must_use]
 pub fn leaf_hash(leaf: &[u8]) -> Hash {
     let mut h = Sha256::new();
@@ -33,6 +57,17 @@ pub fn leaf_hash(leaf: &[u8]) -> Hash {
 }
 
 /// Interior hash: `HASH(0x01 || left || right)`.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{leaf_hash, node_hash, root};
+///
+/// let (a, b) = (leaf_hash(b"a"), leaf_hash(b"b"));
+/// assert_eq!(node_hash(&a, &b), root(&[a, b]));
+/// // Order matters: a log is a sequence.
+/// assert_ne!(node_hash(&a, &b), node_hash(&b, &a));
+/// ```
 #[must_use]
 pub fn node_hash(left: &Hash, right: &Hash) -> Hash {
     let mut h = Sha256::new();
@@ -55,6 +90,18 @@ fn split(n: usize) -> usize {
 }
 
 /// Merkle Tree Hash over `leaves`, already leaf-hashed.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{leaf_hash, root, to_hex};
+///
+/// let leaves = [leaf_hash(b"a"), leaf_hash(b"b")];
+/// assert_eq!(
+///     to_hex(&root(&leaves)),
+///     "b137985ff484fb600db93107c77b0365c80d78f5b429ded0fd97361d077999eb",
+/// );
+/// ```
 #[must_use]
 pub fn root(leaves: &[Hash]) -> Hash {
     match leaves.len() {
@@ -69,6 +116,16 @@ pub fn root(leaves: &[Hash]) -> Hash {
 }
 
 /// Audit path proving `index` is in a tree of `leaves.len()` leaves.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{Hash, inclusion_proof, leaf_hash, root, verify_inclusion};
+///
+/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let path = inclusion_proof(&leaves, 2);
+/// assert!(verify_inclusion(&leaves[2], 2, leaves.len(), &path, &root(&leaves)));
+/// ```
 #[must_use]
 pub fn inclusion_proof(leaves: &[Hash], index: usize) -> Vec<Hash> {
     let n = leaves.len();
@@ -92,6 +149,14 @@ pub fn inclusion_proof(leaves: &[Hash], index: usize) -> Vec<Hash> {
 }
 
 /// Render a hash as lower-case hexadecimal.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::to_hex;
+///
+/// assert_eq!(to_hex(&[0xab; 32]), "ab".repeat(32));
+/// ```
 #[must_use]
 pub fn to_hex(hash: &Hash) -> String {
     use std::fmt::Write as _;
@@ -114,6 +179,20 @@ enum Side {
 /// specifies. Which side each sibling belongs on is only known by
 /// descending from the root, so the descent is done first and the sides are
 /// then applied in reverse against the path.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{Hash, inclusion_proof, leaf_hash, root, verify_inclusion};
+///
+/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let head = root(&leaves);
+/// let path = inclusion_proof(&leaves, 1);
+/// assert!(verify_inclusion(&leaves[1], 1, 3, &path, &head));
+/// // The same path does not prove a different entry, or a different position.
+/// assert!(!verify_inclusion(&leaf_hash(b"forged"), 1, 3, &path, &head));
+/// assert!(!verify_inclusion(&leaves[1], 0, 3, &path, &head));
+/// ```
 #[must_use]
 pub fn verify_inclusion(
     leaf: &Hash,
@@ -155,6 +234,17 @@ pub fn verify_inclusion(
 }
 
 /// Proof that a tree of `m` leaves is a prefix of one of `leaves.len()`.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{Hash, consistency_proof, leaf_hash, root, verify_consistency};
+///
+/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// // The first two entries form a log that the three-entry log extends.
+/// let proof = consistency_proof(&leaves, 2);
+/// assert!(verify_consistency(2, 3, &root(&leaves[..2]), &root(&leaves), &proof));
+/// ```
 #[must_use]
 pub fn consistency_proof(leaves: &[Hash], m: usize) -> Vec<Hash> {
     let n = leaves.len();
@@ -234,6 +324,21 @@ fn chain_border_right(seed: Hash, path: &[Hash]) -> Hash {
 /// from one path. Getting it wrong is not visible in ordinary use -- proofs
 /// would simply always fail, or worse, always pass -- so the round-trip
 /// tests exercise every `(m, n)` pair rather than a sample.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::{Hash, consistency_proof, leaf_hash, root, verify_consistency};
+///
+/// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// let old = root(&leaves[..2]);
+/// let proof = consistency_proof(&leaves, 2);
+/// assert!(verify_consistency(2, 3, &old, &root(&leaves), &proof));
+///
+/// // A log that rewrote its history is not consistent with what was seen before.
+/// let rewritten: Vec<Hash> = ["a", "B", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
+/// assert!(!verify_consistency(2, 3, &old, &root(&rewritten), &consistency_proof(&rewritten, 2)));
+/// ```
 #[must_use]
 pub fn verify_consistency(
     m: usize,
@@ -297,6 +402,15 @@ pub fn verify_consistency(
 ///
 /// Exponentially spaced, so a client far behind is covered in O(log n)
 /// fetches rather than one per entry.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::checkpoints;
+///
+/// // Behind a head at 100: entries 1, 2, 4, 8, ... back from it.
+/// assert_eq!(checkpoints(100), [36, 68, 84, 92, 96, 98, 99]);
+/// ```
 #[must_use]
 pub fn checkpoints(head: u64) -> Vec<u64> {
     let mut out = Vec::new();
@@ -316,6 +430,16 @@ pub fn checkpoints(head: u64) -> Vec<u64> {
 /// takes the largest jump that does not overshoot. The distance is therefore
 /// covered in one fetch per set bit -- `count_ones`, which is bounded by
 /// `log2(distance) + 1` and never exceeds 64.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::log::fetches_required;
+///
+/// // 0 to 300 is a distance with four set bits, so four fetches.
+/// assert_eq!(fetches_required(0, 300), 4);
+/// assert_eq!(fetches_required(300, 300), 0);
+/// ```
 #[must_use]
 pub fn fetches_required(current: u64, head: u64) -> u32 {
     if current >= head {

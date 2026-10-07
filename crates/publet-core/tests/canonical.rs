@@ -15,6 +15,7 @@ fn rule_for(bytes: &[u8]) -> &'static str {
     decode(bytes).expect_err("expected rejection").rule()
 }
 
+// covers: cbor::decode
 #[test]
 fn accepts_canonical_forms() {
     assert_eq!(decode(&[0x05]).unwrap(), Value::Uint(5));
@@ -30,6 +31,7 @@ fn accepts_canonical_forms() {
     assert_eq!(decode(b"\x63abc").unwrap(), Value::Text("abc".into()));
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_non_shortest_integer() {
     // 5 encoded in two bytes rather than one.
@@ -43,6 +45,7 @@ fn rejects_non_shortest_integer() {
     );
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_indefinite_length() {
     assert_eq!(rule_for(&[0x9f, 0x01, 0xff]), "no indefinite length"); // array
@@ -50,6 +53,7 @@ fn rejects_indefinite_length() {
     assert_eq!(rule_for(&[0x5f, 0xff]), "no indefinite length"); // bytes
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_floats() {
     assert_eq!(rule_for(&[0xf9, 0x3c, 0x00]), "no floating point"); // half 1.0
@@ -63,29 +67,34 @@ fn rejects_floats() {
     ); // double 1.0
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_non_text_map_keys() {
     // {1: 2}
     assert_eq!(rule_for(&[0xa1, 0x01, 0x02]), "text map keys");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_unsorted_map_keys() {
     // {"b": 1, "a": 2}
     assert_eq!(rule_for(b"\xa2\x61b\x01\x61a\x02"), "sorted map keys");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_duplicate_map_keys() {
     // {"a": 1, "a": 2}
     assert_eq!(rule_for(b"\xa2\x61a\x01\x61a\x02"), "unique map keys");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_invalid_utf8() {
     assert_eq!(rule_for(&[0x62, 0xff, 0xfe]), "valid UTF-8");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_non_nfc_text() {
     // "e" followed by COMBINING ACUTE ACCENT is NFD; NFC is U+00E9.
@@ -98,16 +107,19 @@ fn rejects_non_nfc_text() {
     assert_eq!(decode(&ok).unwrap(), Value::Text("é".into()));
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_tags() {
     assert_eq!(rule_for(&[0xc0, 0x01]), "supported item types");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_trailing_data() {
     assert_eq!(rule_for(&[0x01, 0x02]), "single top-level item");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_truncated_input() {
     assert_eq!(rule_for(&[0x18]), "complete items");
@@ -115,12 +127,14 @@ fn rejects_truncated_input() {
     assert_eq!(rule_for(&[]), "complete items");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_oversized_input() {
     let big = vec![0u8; 64 * 1024 + 1];
     assert_eq!(rule_for(&big), "object size limit");
 }
 
+// covers: CanonError::rule, cbor::decode
 #[test]
 fn rejects_deep_nesting() {
     // 100 nested single-element arrays exceeds the default depth of 64.
@@ -129,6 +143,7 @@ fn rejects_deep_nesting() {
     assert_eq!(rule_for(&bytes), "nesting limit");
 }
 
+// covers: cbor::decode, cbor::encode
 #[test]
 fn round_trips_a_realistic_object() {
     let mut body = BTreeMap::new();
@@ -147,6 +162,7 @@ fn round_trips_a_realistic_object() {
     assert_eq!(encode(&decode(&bytes).unwrap()), bytes);
 }
 
+// covers: cbor::decode, cbor::encode
 #[test]
 fn encoder_emits_sorted_keys_regardless_of_insertion_order() {
     let mut m = BTreeMap::new();
@@ -162,6 +178,7 @@ fn encoder_emits_sorted_keys_regardless_of_insertion_order() {
 
 /// Section 4.6: one header field for the state an author was looking at,
 /// replacing the four type-specific fields that each said it separately.
+// covers: Builder::basis, Builder::build, Builder::created, Builder::field, Cid::of, Object::basis, Object::builder, Object::parse, Unverified::verify, Verified::object
 #[test]
 fn basis_round_trips_as_a_header_field() {
     const AUTHOR: &str = "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra";
@@ -179,6 +196,7 @@ fn basis_round_trips_as_a_header_field() {
 }
 
 /// It is optional, and an object without one is not thereby malformed.
+// covers: Builder::basis, Builder::build, Builder::created, Cid::of, Object::basis, Object::builder, Object::parse, Unverified::verify, Verified::object
 #[test]
 fn basis_is_optional() {
     const AUTHOR: &str = "pub:sha2-256:z7uu6enmjz5gfxa5jtqjx4kynsm3chepcvqtv5s5g7zfj4y2iwra";

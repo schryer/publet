@@ -12,6 +12,7 @@ fn set(items: &[&str]) -> Membership {
     Membership::new(items.iter().map(|s| (*s).to_owned()))
 }
 
+// covers: Membership::new, Membership::prove, Membership::root, membership::verify
 #[test]
 fn present_members_prove_inclusion() {
     let m = set(&["b", "d", "f", "h"]);
@@ -23,6 +24,7 @@ fn present_members_prove_inclusion() {
     }
 }
 
+// covers: Membership::new, Membership::prove, Membership::root, membership::verify
 #[test]
 fn absent_members_prove_absence() {
     let m = set(&["b", "d", "f", "h"]);
@@ -35,6 +37,7 @@ fn absent_members_prove_absence() {
     }
 }
 
+// covers: Membership::new, Membership::prove, Membership::root, membership::verify
 #[test]
 fn an_absence_proof_does_not_verify_a_present_member() {
     let m = set(&["b", "d", "f"]);
@@ -49,6 +52,7 @@ fn an_absence_proof_does_not_verify_a_present_member() {
     assert!(!verify("b", &proof, &root));
 }
 
+// covers: Membership::new, Membership::prove, Membership::root, membership::verify
 #[test]
 fn non_adjacent_brackets_are_rejected() {
     // The adjacency check is what stops a prover skipping over the member
@@ -82,6 +86,7 @@ fn non_adjacent_brackets_are_rejected() {
     );
 }
 
+// covers: Membership::new, Membership::prove, Membership::root, membership::verify
 #[test]
 fn a_tampered_bracket_is_rejected() {
     let m = set(&["b", "d", "f"]);
@@ -104,6 +109,7 @@ fn a_tampered_bracket_is_rejected() {
     assert!(!verify("c", &forged, &root));
 }
 
+// covers: Membership::new, Membership::root
 #[test]
 fn the_root_is_independent_of_insertion_order() {
     let forward = set(&["a", "b", "c", "d"]);
@@ -111,6 +117,7 @@ fn the_root_is_independent_of_insertion_order() {
     assert_eq!(forward.root(), backward.root());
 }
 
+// covers: Membership::len, Membership::new, Membership::root
 #[test]
 fn duplicates_do_not_change_the_root() {
     let plain = set(&["a", "b"]);
@@ -119,6 +126,7 @@ fn duplicates_do_not_change_the_root() {
     assert_eq!(duplicated.len(), 2);
 }
 
+// covers: Membership::prove, Membership::root, membership::verify
 #[test]
 fn an_empty_membership_proves_absence_of_everything() {
     let m = Membership::default();
@@ -127,6 +135,7 @@ fn an_empty_membership_proves_absence_of_everything() {
     assert!(verify("anything", &proof, &root));
 }
 
+// covers: Membership::new, membership::diff
 #[test]
 fn diff_reports_additions_and_removals_in_sorted_order() {
     let before = set(&["a", "b", "c"]);
@@ -136,6 +145,7 @@ fn diff_reports_additions_and_removals_in_sorted_order() {
     assert_eq!(removed, vec!["a".to_owned()]);
 }
 
+// covers: Membership::new, Membership::root
 #[test]
 fn a_changed_membership_changes_the_root() {
     let before = set(&["a", "b", "c"]);

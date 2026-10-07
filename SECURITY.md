@@ -42,8 +42,8 @@ version of the package that needs it.
 **In each published crate:** `SUPPLY-CHAIN.md` lists every dependency, says
 whether it runs code at build time, and says how its code is vouched for. It
 ships in the crate package, so it describes exactly what you install. See
-[publet-core](crates/publet-core/SUPPLY-CHAIN.md) and
-[publet-algorithms](crates/publet-algorithms/SUPPLY-CHAIN.md).
+[publet-core](https://github.com/schryer/publet/blob/main/crates/publet-core/SUPPLY-CHAIN.md) and
+[publet-algorithms](https://github.com/schryer/publet/blob/main/crates/publet-algorithms/SUPPLY-CHAIN.md).
 
 **In every release:** the checks above run again before the release is cut,
 and the release is not cut if one fails. What ran is recorded as a `security`

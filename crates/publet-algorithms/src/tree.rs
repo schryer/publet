@@ -54,6 +54,16 @@ const BRANCH_TAG: u8 = 0x02;
 
 impl Node {
     /// Build a leaf.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::log::leaf_hash;
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// // A leaf commits to its content exactly as a log leaf does.
+    /// assert_eq!(Node::leaf("fn main() {}").hash(), leaf_hash(b"fn main() {}"));
+    /// ```
     #[must_use]
     pub fn leaf(content: impl Into<Vec<u8>>) -> Self {
         Self::Leaf {
@@ -62,6 +72,15 @@ impl Node {
     }
 
     /// Build a branch with no children yet.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// let module = Node::branch("mod parser").with_child("parse", Node::leaf("fn parse() {}"));
+    /// assert!(module.is_branch());
+    /// ```
     #[must_use]
     pub fn branch(header: impl Into<Vec<u8>>) -> Self {
         Self::Branch {
@@ -71,6 +90,21 @@ impl Node {
     }
 
     /// Add or replace a named child. Returns `self` for chaining.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// // Children are keyed by name, so the order they are added in does not matter.
+    /// let one = Node::branch("impl S")
+    ///     .with_child("a", Node::leaf("fn a() {}"))
+    ///     .with_child("b", Node::leaf("fn b() {}"));
+    /// let other = Node::branch("impl S")
+    ///     .with_child("b", Node::leaf("fn b() {}"))
+    ///     .with_child("a", Node::leaf("fn a() {}"));
+    /// assert_eq!(one.hash(), other.hash());
+    /// ```
     #[must_use]
     pub fn with_child(mut self, name: impl Into<String>, child: Self) -> Self {
         if let Self::Branch { children, .. } = &mut self {
@@ -80,12 +114,31 @@ impl Node {
     }
 
     /// Whether this is a branch (as opposed to a leaf).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// assert!(Node::branch("mod m").is_branch());
+    /// assert!(!Node::leaf("const X: u8 = 1;").is_branch());
+    /// ```
     #[must_use]
     pub const fn is_branch(&self) -> bool {
         matches!(self, Self::Branch { .. })
     }
 
     /// This node's children, if it is a branch.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// let module = Node::branch("mod m").with_child("f", Node::leaf("fn f() {}"));
+    /// assert_eq!(module.children().map(|c| c.len()), Some(1));
+    /// assert_eq!(Node::leaf("fn f() {}").children(), None);
+    /// ```
     #[must_use]
     pub fn children(&self) -> Option<&BTreeMap<String, Node>> {
         match self {
@@ -98,6 +151,18 @@ impl Node {
     /// branch, a hash of its header and every child's own `hash()`,
     /// paired with its name and length-prefixed so no concatenation of
     /// two different `(name, hash)` sequences can ever coincide.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// let tree = |body: &str| {
+    ///     Node::branch("mod m").with_child("inner", Node::branch("impl S").with_child("f", Node::leaf(body)))
+    /// };
+    /// // A change to one deeply nested leaf changes the root's hash.
+    /// assert_ne!(tree("fn f() { 1 }").hash(), tree("fn f() { 2 }").hash());
+    /// ```
     #[must_use]
     pub fn hash(&self) -> Hash {
         match self {
@@ -122,6 +187,18 @@ impl Node {
 
     /// Find the node at a `/`-separated path of child names, if it
     /// exists. `find("")` returns `self`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// let tree = Node::branch("mod m")
+    ///     .with_child("S", Node::branch("impl S").with_child("f", Node::leaf("fn f() {}")));
+    /// assert_eq!(tree.find("S/f"), Some(&Node::leaf("fn f() {}")));
+    /// assert_eq!(tree.find(""), Some(&tree));
+    /// assert_eq!(tree.find("S/g"), None);
+    /// ```
     #[must_use]
     pub fn find(&self, path: &str) -> Option<&Node> {
         if path.is_empty() {
@@ -133,6 +210,21 @@ impl Node {
 
     /// Every leaf's hash paired with its full `/`-joined path from this
     /// node, in sorted path order.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::log::leaf_hash;
+    /// use publet_algorithms::tree::Node;
+    ///
+    /// let tree = Node::branch("mod m")
+    ///     .with_child("b", Node::leaf("fn b() {}"))
+    ///     .with_child("a", Node::branch("impl A").with_child("f", Node::leaf("fn f() {}")));
+    /// assert_eq!(tree.leaves(), [
+    ///     ("a/f".to_string(), leaf_hash(b"fn f() {}")),
+    ///     ("b".to_string(), leaf_hash(b"fn b() {}")),
+    /// ]);
+    /// ```
     #[must_use]
     pub fn leaves(&self) -> Vec<(String, Hash)> {
         let mut out = Vec::new();

@@ -27,6 +27,32 @@ pub const DEFAULT_MAX_DEPTH: usize = 64;
 ///
 /// Returns [`CanonError`] naming the violated rule, with the byte offset at
 /// which it was detected.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::cbor::{Value, decode};
+///
+/// // {"a": 1}
+/// assert_eq!(
+///     decode(&[0xa1, 0x61, b'a', 0x01])?.get("a"),
+///     Some(&Value::Uint(1)),
+/// );
+/// # Ok::<(), publet_core::CanonError>(())
+/// ```
+///
+/// # Example: each rule names itself
+///
+/// ```
+/// use publet_core::cbor::decode;
+///
+/// let rule = |bytes: &[u8]| decode(bytes).unwrap_err().rule();
+/// assert_eq!(rule(&[0x18, 0x01]), "shortest-form integers");      // 1 in two bytes
+/// assert_eq!(rule(&[0x9f, 0x01, 0xff]), "no indefinite length");   // [_ 1]
+/// assert_eq!(rule(&[0xf9, 0x3e, 0x00]), "no floating point");      // 1.5
+/// assert_eq!(rule(&[0xa1, 0x01, 0x02]), "text map keys");          // {1: 2}
+/// assert_eq!(rule(&[0x01, 0x02]), "single top-level item");        // 1, then 2
+/// ```
 pub fn decode(input: &[u8]) -> Result<Value, CanonError> {
     decode_with_limit(input, MAX_OBJECT_BYTES, DEFAULT_MAX_DEPTH)
 }
@@ -36,6 +62,25 @@ pub fn decode(input: &[u8]) -> Result<Value, CanonError> {
 /// # Errors
 ///
 /// As [`decode`], and [`CanonError::TooLarge`] if `input` exceeds `max_bytes`.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::CanonError;
+/// use publet_core::cbor::{DEFAULT_MAX_DEPTH, decode_with_limit};
+///
+/// // Three bytes is over a two-byte limit, whatever they hold.
+/// assert!(matches!(
+///     decode_with_limit(&[0x82, 0x01, 0x02], 2, DEFAULT_MAX_DEPTH),
+///     Err(CanonError::TooLarge { size: 3, limit: 2 }),
+/// ));
+///
+/// // [[[]]] nests deeper than one level.
+/// assert!(matches!(
+///     decode_with_limit(&[0x81, 0x81, 0x80], 1024, 1),
+///     Err(CanonError::TooDeep { .. }),
+/// ));
+/// ```
 pub fn decode_with_limit(
     input: &[u8],
     max_bytes: usize,

@@ -31,6 +31,14 @@ pub enum SigAlg {
 
 impl SigAlg {
     /// The in-band identifier.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::SigAlg;
+    ///
+    /// assert_eq!(SigAlg::Ed25519.id(), "ed25519");
+    /// ```
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
@@ -39,6 +47,15 @@ impl SigAlg {
     }
 
     /// Resolve an in-band identifier.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::SigAlg;
+    ///
+    /// assert_eq!(SigAlg::from_id("ed25519"), Some(SigAlg::Ed25519));
+    /// assert_eq!(SigAlg::from_id("rsa"), None);
+    /// ```
     #[must_use]
     pub fn from_id(id: &str) -> Option<Self> {
         match id {
@@ -92,6 +109,19 @@ pub enum SigError {
 ///
 /// Returns [`SigError::PurposeContainsNul`] if `purpose` contains `0x00`,
 /// which would make the separated encoding ambiguous.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::{SigError, signing_message};
+///
+/// let message = signing_message("authored", b"target bytes")?;
+/// assert_eq!(message, b"pub/v1/sig\0authored\0target bytes");
+///
+/// // A purpose may not contain the separator.
+/// assert_eq!(signing_message("a\0b", b""), Err(SigError::PurposeContainsNul));
+/// # Ok::<(), SigError>(())
+/// ```
 pub fn signing_message(purpose: &str, target_bytes: &[u8]) -> Result<Vec<u8>, SigError> {
     if purpose.as_bytes().contains(&0) {
         return Err(SigError::PurposeContainsNul);
@@ -114,6 +144,30 @@ pub fn signing_message(purpose: &str, target_bytes: &[u8]) -> Result<Vec<u8>, Si
 /// # Errors
 ///
 /// Returns [`SigError`] describing which check failed.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::{SigAlg, SigError, sign, verify, verifying_key};
+///
+/// # let seed = [7u8; 32];
+/// let public = verifying_key(SigAlg::Ed25519, &seed)?;
+/// let signature = sign(SigAlg::Ed25519, &seed, "authored", b"object")?;
+///
+/// verify(SigAlg::Ed25519, &public, &signature, "authored", "authored", b"object")?;
+///
+/// // The purpose the signature was made for must be the one asked about...
+/// assert!(matches!(
+///     verify(SigAlg::Ed25519, &public, &signature, "authored", "retracted", b"object"),
+///     Err(SigError::PurposeMismatch { .. }),
+/// ));
+/// // ...and the bytes must be the ones signed.
+/// assert_eq!(
+///     verify(SigAlg::Ed25519, &public, &signature, "authored", "authored", b"altered"),
+///     Err(SigError::BadSignature),
+/// );
+/// # Ok::<(), SigError>(())
+/// ```
 pub fn verify(
     alg: SigAlg,
     public_key: &[u8],
@@ -153,6 +207,21 @@ pub fn verify(
 ///
 /// Returns [`SigError`] if `secret_key` is not a 32-byte Ed25519 seed, or
 /// if `purpose` contains the separator byte.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::{SigAlg, sign};
+///
+/// // A real seed comes from a random source; this crate needs no RNG.
+/// let seed = [7u8; 32];
+/// let signature = sign(SigAlg::Ed25519, &seed, "authored", b"object")?;
+/// assert_eq!(signature.len(), 64);
+///
+/// // Deterministic: the same key, purpose and bytes give the same signature.
+/// assert_eq!(sign(SigAlg::Ed25519, &seed, "authored", b"object")?, signature);
+/// # Ok::<(), publet_core::SigError>(())
+/// ```
 pub fn sign(
     alg: SigAlg,
     secret_key: &[u8],
@@ -182,6 +251,19 @@ pub fn sign(
 ///
 /// Returns [`SigError::MalformedSecretKey`] if `secret_key` is not a 32-byte
 /// Ed25519 seed.
+///
+/// # Example
+///
+/// ```
+/// use publet_core::{SigAlg, SigError, verifying_key};
+///
+/// let public = verifying_key(SigAlg::Ed25519, &[7u8; 32])?;
+/// assert_eq!(public.len(), 32);
+///
+/// // A seed must be exactly 32 bytes.
+/// assert_eq!(verifying_key(SigAlg::Ed25519, &[7u8; 31]), Err(SigError::MalformedSecretKey));
+/// # Ok::<(), SigError>(())
+/// ```
 pub fn verifying_key(alg: SigAlg, secret_key: &[u8]) -> Result<Vec<u8>, SigError> {
     match alg {
         SigAlg::Ed25519 => {
@@ -203,6 +285,7 @@ mod tests {
         SigningKey::from_bytes(&[7u8; 32])
     }
 
+    // covers: signing_message, verify
     #[test]
     fn verifies_a_correct_signature() {
         let sk = key();
@@ -222,6 +305,7 @@ mod tests {
         );
     }
 
+    // covers: signing_message, verify
     #[test]
     fn rejects_a_signature_replayed_under_another_purpose() {
         let sk = key();
@@ -256,6 +340,7 @@ mod tests {
         ));
     }
 
+    // covers: signing_message, verify
     #[test]
     fn rejects_a_signature_over_different_bytes() {
         let sk = key();
@@ -274,6 +359,7 @@ mod tests {
         );
     }
 
+    // covers: signing_message
     #[test]
     fn purposes_cannot_be_made_ambiguous() {
         assert_eq!(
@@ -286,6 +372,7 @@ mod tests {
         assert_ne!(x, y);
     }
 
+    // covers: verify
     #[test]
     fn rejects_malformed_inputs() {
         let sk = key();
@@ -306,6 +393,7 @@ mod tests {
         );
     }
 
+    // covers: sign, verify
     #[test]
     fn a_signature_this_module_produces_verifies_against_itself() {
         let sk = key();
@@ -330,6 +418,7 @@ mod tests {
         );
     }
 
+    // covers: sign
     #[test]
     fn sign_rejects_a_malformed_secret_key() {
         assert_eq!(

@@ -24,6 +24,7 @@ fn names() -> Vec<String> {
 }
 
 proptest! {
+    // covers: graph::topological_order
     #[test]
     fn a_topological_order_puts_every_dependency_first(g in graphs()) {
         let next = |n: &str| g.get(n).cloned().unwrap_or_default();
@@ -49,6 +50,7 @@ proptest! {
         }
     }
 
+    // covers: graph::closure, graph::reachable, graph::reaches
     #[test]
     fn the_closure_is_what_the_start_reaches_by_at_least_one_edge(g in graphs(), s in 0u8..8) {
         let start = format!("n{s}");

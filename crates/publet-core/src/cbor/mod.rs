@@ -66,6 +66,19 @@ pub enum Value {
 
 impl Value {
     /// Borrow a map entry, if this is a map containing `key`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::cbor::{Value, decode};
+    ///
+    /// let value = decode(&[0xa1, 0x61, b'a', 0x01])?; // {"a": 1}
+    /// assert_eq!(value.get("a"), Some(&Value::Uint(1)));
+    /// assert_eq!(value.get("b"), None);
+    /// // Not a map, so there is nothing to get.
+    /// assert_eq!(Value::Uint(1).get("a"), None);
+    /// # Ok::<(), publet_core::CanonError>(())
+    /// ```
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
@@ -75,6 +88,15 @@ impl Value {
     }
 
     /// Borrow the text, if this is a text string.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::cbor::Value;
+    ///
+    /// assert_eq!(Value::Text("hello".into()).as_text(), Some("hello"));
+    /// assert_eq!(Value::Uint(1).as_text(), None);
+    /// ```
     #[must_use]
     pub fn as_text(&self) -> Option<&str> {
         match self {
@@ -84,6 +106,15 @@ impl Value {
     }
 
     /// Borrow the bytes, if this is a byte string.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::cbor::Value;
+    ///
+    /// assert_eq!(Value::Bytes(vec![1, 2]).as_bytes(), Some(&[1u8, 2][..]));
+    /// assert_eq!(Value::Text("hello".into()).as_bytes(), None);
+    /// ```
     #[must_use]
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match self {
@@ -93,6 +124,16 @@ impl Value {
     }
 
     /// The value, if this is a non-negative integer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::cbor::Value;
+    ///
+    /// assert_eq!(Value::Uint(7).as_uint(), Some(7));
+    /// // -1 is a negative integer, not a non-negative one.
+    /// assert_eq!(Value::Nint(0).as_uint(), None);
+    /// ```
     #[must_use]
     pub fn as_uint(&self) -> Option<u64> {
         match self {

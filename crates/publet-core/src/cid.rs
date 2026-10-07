@@ -46,6 +46,14 @@ pub enum HashAlg {
 
 impl HashAlg {
     /// The in-band identifier used in a CID.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::HashAlg;
+    ///
+    /// assert_eq!(HashAlg::Sha2_256.id(), "sha2-256");
+    /// ```
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
@@ -54,6 +62,16 @@ impl HashAlg {
     }
 
     /// Resolve an in-band identifier.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::HashAlg;
+    ///
+    /// assert_eq!(HashAlg::from_id("sha2-256"), Some(HashAlg::Sha2_256));
+    /// // An algorithm this implementation does not know.
+    /// assert_eq!(HashAlg::from_id("md5"), None);
+    /// ```
     #[must_use]
     pub fn from_id(id: &str) -> Option<Self> {
         match id {
@@ -63,6 +81,17 @@ impl HashAlg {
     }
 
     /// Hash `bytes` with this algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::HashAlg;
+    ///
+    /// // SHA-256 of the empty string.
+    /// let digest = HashAlg::Sha2_256.digest(b"");
+    /// assert_eq!(digest.len(), 32);
+    /// assert_eq!(digest[..4], [0xe3, 0xb0, 0xc4, 0x42]);
+    /// ```
     #[must_use]
     pub fn digest(self, bytes: &[u8]) -> Vec<u8> {
         match self {
@@ -84,6 +113,20 @@ impl Cid {
     /// `bytes` must already be canonical; this does not check that, because
     /// callers holding a decoded object have checked it already and callers
     /// holding raw input should use [`crate::cbor::decode`] first.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg};
+    ///
+    /// let cid = Cid::of(b"", HashAlg::Sha2_256);
+    /// assert_eq!(
+    ///     cid.to_string(),
+    ///     "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
+    /// );
+    /// // The same bytes always have the same identifier.
+    /// assert_eq!(Cid::of(b"", HashAlg::Sha2_256), cid);
+    /// ```
     #[must_use]
     pub fn of(bytes: &[u8], alg: HashAlg) -> Self {
         Self {
@@ -97,6 +140,19 @@ impl Cid {
     /// Merkle roots are digests rather than hashes of any single byte
     /// string, so they cannot be produced by [`Cid::of`]. Returns `None`
     /// when the digest length does not match the algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg};
+    ///
+    /// let digest = HashAlg::Sha2_256.digest(b"");
+    /// let cid = Cid::from_digest(HashAlg::Sha2_256, &digest).unwrap();
+    /// assert_eq!(cid, Cid::of(b"", HashAlg::Sha2_256));
+    ///
+    /// // A digest of the wrong length for the algorithm is refused.
+    /// assert_eq!(Cid::from_digest(HashAlg::Sha2_256, &digest[..31]), None);
+    /// ```
     #[must_use]
     pub fn from_digest(alg: HashAlg, digest: &[u8]) -> Option<Self> {
         if digest.len() != alg.digest(&[]).len() {
@@ -109,12 +165,31 @@ impl Cid {
     }
 
     /// The algorithm this identifier uses.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg};
+    ///
+    /// let cid: Cid = "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq".parse()?;
+    /// assert_eq!(cid.alg(), HashAlg::Sha2_256);
+    /// # Ok::<(), publet_core::CidError>(())
+    /// ```
     #[must_use]
     pub fn alg(&self) -> HashAlg {
         self.alg
     }
 
     /// The raw digest.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg};
+    ///
+    /// let cid = Cid::of(b"", HashAlg::Sha2_256);
+    /// assert_eq!(cid.digest(), HashAlg::Sha2_256.digest(b"").as_slice());
+    /// ```
     #[must_use]
     pub fn digest(&self) -> &[u8] {
         &self.digest
@@ -124,6 +199,17 @@ impl Cid {
     ///
     /// Section 4.2 requires a recipient to verify retrieved bytes against
     /// the identifier they asked for before parsing them.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::{Cid, HashAlg};
+    ///
+    /// let cid = Cid::of(b"the bytes asked for", HashAlg::Sha2_256);
+    /// assert!(cid.verifies(b"the bytes asked for"));
+    /// // Bytes a peer substituted do not match the identifier asked for.
+    /// assert!(!cid.verifies(b"other bytes"));
+    /// ```
     #[must_use]
     pub fn verifies(&self, bytes: &[u8]) -> bool {
         self.alg.digest(bytes) == self.digest
@@ -246,6 +332,7 @@ fn base32_lower_decode(text: &str) -> Result<Vec<u8>, CidError> {
 mod tests {
     use super::*;
 
+    // covers: Cid, Cid::of
     #[test]
     fn round_trips_through_text() {
         let cid = Cid::of(b"hello world", HashAlg::Sha2_256);
@@ -264,6 +351,7 @@ mod tests {
         assert_eq!(base32_lower(b"foobar"), "mzxw6ytboi");
     }
 
+    // covers: Cid
     #[test]
     fn rejects_malformed_identifiers() {
         assert_eq!("nope".parse::<Cid>(), Err(CidError::MissingScheme));
@@ -282,6 +370,7 @@ mod tests {
         ));
     }
 
+    // covers: Cid::of, Cid::verifies
     #[test]
     fn verifies_only_the_bytes_it_names() {
         let cid = Cid::of(b"a", HashAlg::Sha2_256);
