@@ -4,14 +4,22 @@ description = "Generic algorithms publet is built on: an RFC 6962 Merkle log, so
 # Released on a version track of its own, not the workspace's.
 version = "0.1.0"
 edition.workspace = true
-rust-version.workspace = true
+# The oldest Rust this crate builds on, tested in CI (`make msrv`): the first
+# release with the 2024 edition. Not the workspace's, which is the toolchain
+# publet itself is developed with.
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 documentation = "https://docs.rs/publet-algorithms"
-readme = "README.md"
 keywords = ["merkle", "transparency-log", "pagerank", "fixed-point", "topological-sort"]
 categories = ["algorithms", "data-structures", "cryptography"]
 include = ["src/**/*.rs", "tests/**/*.rs", "testdata/*.json", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
+
+[package.metadata.docs.rs]
+# Link every item in the rendered source to its definition (docs.rs builds
+# with nightly rustdoc, which has the flag).
+rustdoc-args = ["--generate-link-to-definition"]
+all-features = true
 
 [dependencies]
 sha2 = "0.10"

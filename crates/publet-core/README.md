@@ -41,8 +41,8 @@ assert_eq!(object.object().kind(), "claim.prose");
 
 ### Minimum Rust version
 
-Rust 1.98. The minimum may rise in a release that bumps the minor version, and
-never in a patch release.
+Rust 1.85, tested in CI. The minimum may rise in a release that bumps the
+minor version, and never in a patch release.
 
 ### Security
 

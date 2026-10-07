@@ -4,14 +4,22 @@ description = "Objects, canonical CBOR, content identifiers, and signatures."
 # Released on a version track of its own, not the workspace's.
 version = "0.1.1"
 edition.workspace = true
-rust-version.workspace = true
+# The oldest Rust this crate builds on, tested in CI (`make msrv`): the first
+# release with the 2024 edition. Not the workspace's, which is the toolchain
+# publet itself is developed with.
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 documentation = "https://docs.rs/publet-core"
-readme = "README.md"
 keywords = ["content-addressing", "cbor", "ed25519", "signatures", "publet"]
 categories = ["cryptography", "encoding"]
 include = ["src/**/*.rs", "tests/**/*.rs", "testdata/*.json", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
+
+[package.metadata.docs.rs]
+# Link every item in the rendered source to its definition (docs.rs builds
+# with nightly rustdoc, which has the flag).
+rustdoc-args = ["--generate-link-to-definition"]
+all-features = true
 
 [dependencies]
 thiserror.workspace = true
