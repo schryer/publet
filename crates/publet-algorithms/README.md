@@ -40,8 +40,8 @@ assert!(verify_inclusion(&leaves[1], 1, leaves.len(), &path, &head));
 
 ### Minimum Rust version
 
-Rust 1.98. The minimum may rise in a release that bumps the minor version, and
-never in a patch release.
+Rust 1.85, tested in CI. The minimum may rise in a release that bumps the
+minor version, and never in a patch release.
 
 ### Security
 

@@ -162,8 +162,9 @@ None. Everything in the crate is always available.
 
 # Minimum Rust version
 
-This crate requires Rust 1.98 (its `rust-version`). The minimum may rise in
-a release that bumps the minor version, and never in a patch release.
+This crate requires Rust 1.85 (its `rust-version`), the first release with
+the 2024 edition; CI builds it there. The minimum may rise in a release that
+bumps the minor version, and never in a patch release.
 */
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]

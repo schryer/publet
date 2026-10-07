@@ -23,6 +23,10 @@
     {
       "category": "security",
       "change": "Merkle log proof checking looped forever on a proof claiming more than 2^63 entries, and a consistency proof between sizes above 2^63 shifted a u64 by 64 bits, panicking where overflow is checked; either let a peer stop anyone checking its proofs. Both are fixed. Found by fuzzing."
+    },
+    {
+      "category": "fixed",
+      "change": "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

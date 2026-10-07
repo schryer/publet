@@ -11,7 +11,7 @@ export PUBLET_BIN_DIR := $(CURDIR)/target/debug
 CARGO_SCOPE := --workspace --all-features
 
 .PHONY: bootstrap matrix coverage coverage-check conformance verify-suite verify-optional \
-        guard-deps guard-floats guard-eval guard-rules publish-check fuzz-smoke vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
+        guard-deps guard-floats guard-eval guard-rules publish-check msrv fuzz-smoke vectors vectors-check doc-coverage doc-coverage-check supply-chain supply-chain-check vet deny check clean \
         release-check release-pr
 
 bootstrap: ## Prepare a bare machine (idempotent)
@@ -58,6 +58,14 @@ publish-check: ## Package each crates.io crate and verify it builds as published
 	for crate in $(PUBLISHED); do \
 	  $(CARGO) publish --dry-run --locked -p $$crate; \
 	done
+
+# The published crates' minimum Rust version, as their manifests declare it.
+MSRV := $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' crates/publet-core/Cargo.toml)
+
+msrv: ## Build the published crates on their minimum Rust version (rustup toolchain install $(MSRV))
+	@test "$(MSRV)" = "$$(sed -n 's/^rust-version = "\(.*\)"/\1/p' crates/publet-algorithms/Cargo.toml)" \
+	  || { echo "publet-core and publet-algorithms declare different minimum Rust versions"; exit 1; }
+	$(CARGO) +$(MSRV) check --locked -p publet-core -p publet-algorithms
 
 FUZZ_TARGETS := cbor_decode object_parse cid_parse log_verify signature_verify
 FUZZ_SECONDS ?= 60
