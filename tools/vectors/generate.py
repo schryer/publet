@@ -73,6 +73,12 @@ def canonical():
         ("text not in NFC", "6365cc81", "NFC normalization", '"é" as e plus a combining accent'),
         ("tag", "c06178", "supported item types", 'tag 0 on "x"'),
         ("undefined", "f7", "supported item types", "the simple value undefined"),
+        ("null in two bytes", "f816", "shortest-form integers",
+         "simple value 22 in the two-byte form, which RFC 8949 3.3 forbids below 32; "
+         "found by fuzzing: it gave null a second encoding"),
+        ("false in two bytes", "f814", "shortest-form integers", "simple value 20 in the two-byte form"),
+        ("two-byte simple value", "f820", "supported item types",
+         "simple value 32: well formed, but outside the profile"),
         ("trailing data", "0102", "single top-level item", "1, then 2"),
         ("truncated text", "6261", "complete items", "a two-byte text with one byte present"),
         ("truncated array", "8201", "complete items", "an array of two with one element"),
@@ -87,6 +93,19 @@ def canonical():
     })
 
 
+def trailing_bits_set(text):
+    """The same identifier, spelled with non-zero padding bits.
+
+    A 32-byte digest is 52 base32 characters, and the last carries one bit
+    of the digest and four of padding. Setting the padding gives a second
+    spelling, which a parser must refuse. Found by fuzzing.
+    """
+    alphabet = "abcdefghijklmnopqrstuvwxyz234567"
+    last = alphabet.index(text[-1])
+    assert last & 0b01111 == 0
+    return text[:-1] + alphabet[last | 0b00001]
+
+
 def identifiers():
     compute = [("empty", b""), ("hello", b"hello"), ("CBOR text hello", b"\x65hello"),
                ("one byte", b"\x00")]
@@ -98,6 +117,7 @@ def identifiers():
         ("upper-case digest", cid(b"").upper().replace("PUB:SHA2-256:", "pub:sha2-256:"), "InvalidDigest"),
         ("padded digest", cid(b"") + "====", "InvalidDigest"),
         ("short digest", "pub:sha2-256:aaaa", "WrongDigestLength"),
+        ("non-zero padding bits", trailing_bits_set(cid(b"")), "InvalidDigest"),
     ]
     write("crates/publet-core/testdata/identifiers.json", {
         "description": "Identifiers of known bytes (Section 4.2), and text that is not an identifier.",

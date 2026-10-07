@@ -149,3 +149,29 @@ fn a_tampered_consistency_proof_is_rejected() {
     proof[0][0] ^= 0xff;
     assert!(!verify_consistency(5, 16, &old_root, &new_root, &proof));
 }
+
+// covers: log::verify_inclusion, log::verify_consistency
+#[test]
+fn absurd_sizes_are_refused_without_hanging() {
+    // Found by fuzzing: a proof claiming more than 2^63 entries made the
+    // verifier loop forever. Proofs come from peers, so that was a way to
+    // stop anyone checking them.
+    let leaf = publet_algorithms::log::leaf_hash(b"x");
+    let root = publet_algorithms::log::empty_root();
+    for size in [usize::MAX, usize::MAX - 1, (1 << 63) + 1, 1 << 63] {
+        assert!(!verify_inclusion(&leaf, size - 1, size, &[], &root));
+        assert!(!verify_consistency(1, size, &root, &root, &[]));
+    }
+    // Also found by fuzzing: a consistency proof between sizes like these
+    // shifted a u64 by 64 bits, which panics where overflow is checked --
+    // as it is in pub's release builds.
+    let proof = [leaf; 3];
+    assert!(!verify_consistency(
+        3_352_797_463_764_764_551,
+        9_765_923_333_140_350_855,
+        &root,
+        &root,
+        &proof
+    ));
+    assert!(!verify_consistency(3, usize::MAX, &root, &root, &proof));
+}

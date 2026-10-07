@@ -58,6 +58,11 @@
       "name": "short digest",
       "text": "pub:sha2-256:aaaa",
       "error": "WrongDigestLength"
+    },
+    {
+      "name": "non-zero padding bits",
+      "text": "pub:sha2-256:4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkr",
+      "error": "InvalidDigest"
     }
   ]
 }

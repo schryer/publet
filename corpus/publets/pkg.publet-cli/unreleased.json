@@ -31,6 +31,10 @@
     {
       "category": "internal",
       "change": "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
+    },
+    {
+      "category": "security",
+      "change": "pub compiles in three fixes found by fuzzing: the CBOR decoder no longer accepts null in a two-byte form (a second encoding and identifier for the same object), identifier parsing refuses non-zero base32 padding bits (many spellings of one identifier), and Merkle proof checking no longer loops forever, or panics (pub's release builds check overflow), on a log size above 2^63."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

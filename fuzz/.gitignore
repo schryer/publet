@@ -1,0 +1,6 @@
+# What a fuzzing run leaves behind. Inputs worth keeping -- the ones that
+# found a bug -- are copied into regressions/, which every run replays.
+target/
+corpus/
+artifacts/
+coverage/

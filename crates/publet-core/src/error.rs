@@ -27,7 +27,8 @@ pub enum CanonError {
         count: usize,
     },
 
-    /// An integer used a longer encoding than necessary.
+    /// An item's argument -- an integer, a length, or a simple value such as
+    /// `null` -- used a longer encoding than necessary.
     #[error("shortest-form integers: value {value} encoded in {used} byte(s) at offset {offset}")]
     NonShortestInteger {
         /// Byte offset of the item's head.
