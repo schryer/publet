@@ -17,7 +17,7 @@ jobs:
   ci:
     uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.0
     with:
-      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check
+      gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check doc-coverage-check
       test-args: --workspace --all-features
       apt-packages: jq
       functional: functional guard-eval conformance coverage-check

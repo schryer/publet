@@ -13,6 +13,20 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// Every node reachable from `start`, `start` first, in breadth-first
 /// order.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::graph::reachable;
+///
+/// # use std::collections::BTreeMap;
+/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// # let next = |n: &str| -> Vec<String> {
+/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// # };
+/// // a -> b, a -> c, b -> d, c -> d: breadth-first, each node once.
+/// assert_eq!(reachable("a", next), ["a", "b", "c", "d"]);
+/// ```
 pub fn reachable<F, I>(start: &str, mut next: F) -> Vec<String>
 where
     F: FnMut(&str) -> I,
@@ -35,6 +49,21 @@ where
 ///
 /// Adding an edge `from -> to` closes a cycle exactly when
 /// `reaches(to, from, ..)`.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::graph::reaches;
+///
+/// # use std::collections::BTreeMap;
+/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// # let next = |n: &str| -> Vec<String> {
+/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// # };
+/// assert!(reaches("a", "d", next));
+/// assert!(!reaches("d", "a", next));
+/// // Adding d -> a would close a cycle exactly when a already reaches d.
+/// ```
 pub fn reaches<F, I>(start: &str, target: &str, mut next: F) -> bool
 where
     F: FnMut(&str) -> I,
@@ -65,6 +94,23 @@ pub struct CycleThroughStart;
 ///
 /// [`CycleThroughStart`] if an edge leads back to `start`: for a relation
 /// that must be acyclic, the closure of a node on a cycle is not defined.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::graph::{CycleThroughStart, closure};
+///
+/// # use std::collections::BTreeMap;
+/// # let edges = BTreeMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+/// # let next = |n: &str| -> Vec<String> {
+/// #     edges.get(n).into_iter().flatten().map(|s| s.to_string()).collect()
+/// # };
+/// assert_eq!(closure("a", next).unwrap(), ["b", "c", "d"]);
+///
+/// // With d -> a added, the closure of a would contain a itself.
+/// let cyclic = |n: &str| if n == "d" { vec!["a".to_string()] } else { next(n) };
+/// assert_eq!(closure("a", cyclic), Err(CycleThroughStart));
+/// ```
 pub fn closure<F, I>(start: &str, mut next: F) -> Result<Vec<String>, CycleThroughStart>
 where
     F: FnMut(&str) -> I,
@@ -93,6 +139,20 @@ where
 /// Follow `parent` from `start` until a node has none, and return that
 /// node. If the walk returns to a node it has passed, it stops there, so a
 /// cycle cannot make it run forever.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::graph::root;
+///
+/// // Each version names the one it replaces.
+/// let replaces = |v: &str| match v {
+///     "v3" => Some("v2".to_string()),
+///     "v2" => Some("v1".to_string()),
+///     _ => None,
+/// };
+/// assert_eq!(root("v3", replaces), "v1");
+/// ```
 pub fn root<F>(start: &str, mut parent: F) -> String
 where
     F: FnMut(&str) -> Option<String>,
@@ -121,6 +181,23 @@ where
 ///
 /// The cycle, as the path that closes it -- `["a", "b", "a"]` -- if the
 /// dependencies form one.
+///
+/// # Example
+///
+/// ```
+/// use std::collections::BTreeMap;
+/// use publet_algorithms::graph::topological_order;
+///
+/// let deps = BTreeMap::from([("app", vec!["lib"]), ("lib", vec!["util"])]);
+/// let needs = |id: &str| -> Vec<String> {
+///     deps.get(id).into_iter().flatten().map(|d| d.to_string()).collect()
+/// };
+/// assert_eq!(topological_order(["app", "lib", "util"], needs).unwrap(), ["util", "lib", "app"]);
+///
+/// // A cycle is reported as the path that closes it.
+/// let cyclic = |id: &str| vec![if id == "a" { "b" } else { "a" }.to_string()];
+/// assert_eq!(topological_order(["a"], cyclic).unwrap_err(), ["a", "b", "a"]);
+/// ```
 pub fn topological_order<'a, N, F, I>(nodes: N, mut deps: F) -> Result<Vec<String>, Vec<String>>
 where
     N: IntoIterator<Item = &'a str>,
@@ -192,6 +269,7 @@ mod tests {
         |n: &str| g.get(n).cloned().unwrap_or_default()
     }
 
+    // covers: graph::reachable
     #[test]
     fn reachable_is_breadth_first_from_the_start() {
         let g = graph(&["a>b", "a>c", "b>d", "c>d", "d>a"]);
@@ -199,6 +277,7 @@ mod tests {
         assert_eq!(reachable("z", next(&g)), ["z"]);
     }
 
+    // covers: graph::reaches
     #[test]
     fn reaches_finds_paths_and_a_node_reaches_itself() {
         let g = graph(&["a>b", "b>c"]);
@@ -207,6 +286,7 @@ mod tests {
         assert!(reaches("b", "b", next(&g)));
     }
 
+    // covers: graph::closure
     #[test]
     fn closure_excludes_the_start_and_refuses_a_cycle_through_it() {
         let g = graph(&["a>b", "b>c", "c>b"]);
@@ -217,6 +297,7 @@ mod tests {
         assert_eq!(closure("a", next(&g)), Err(CycleThroughStart));
     }
 
+    // covers: graph::root
     #[test]
     fn root_follows_parents_and_stops_on_a_cycle() {
         let parents = graph(&["c>b", "b>a"]);
@@ -227,6 +308,7 @@ mod tests {
         assert_eq!(root("a", up), "a");
     }
 
+    // covers: graph::topological_order
     #[test]
     fn topological_order_puts_dependencies_first() {
         let deps = graph(&["app>lib", "app>util", "lib>util"]);
@@ -236,6 +318,7 @@ mod tests {
         assert!(pos("util") < pos("lib") && pos("lib") < pos("app"));
     }
 
+    // covers: graph::topological_order
     #[test]
     fn topological_order_names_the_cycle() {
         let deps = graph(&["a>b", "b>c", "c>b"]);

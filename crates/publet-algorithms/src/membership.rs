@@ -47,6 +47,17 @@ pub enum Proof {
 
 impl Membership {
     /// Build from an unsorted collection, sorting and deduplicating.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::Membership;
+    ///
+    /// // Order and duplicates in the input do not matter.
+    /// let one = Membership::new(["plum", "apple", "apple"].map(String::from));
+    /// let other = Membership::new(["apple", "plum"].map(String::from));
+    /// assert_eq!(one.root(), other.root());
+    /// ```
     #[must_use]
     pub fn new(members: impl IntoIterator<Item = String>) -> Self {
         let mut members: Vec<String> = members.into_iter().collect();
@@ -56,18 +67,44 @@ impl Membership {
     }
 
     /// The members, in sorted order.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::Membership;
+    ///
+    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// assert_eq!(members.members(), ["apple", "cherry", "plum"]);
+    /// ```
     #[must_use]
     pub fn members(&self) -> &[String] {
         &self.members
     }
 
     /// How many members there are.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::Membership;
+    ///
+    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// assert_eq!(members.len(), 3);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.members.len()
     }
 
     /// Whether there are no members.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::Membership;
+    ///
+    /// assert!(Membership::new(Vec::<String>::new()).is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.members.is_empty()
@@ -81,12 +118,40 @@ impl Membership {
     }
 
     /// The membership root for this generation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::Membership;
+    ///
+    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let more = Membership::new(["apple", "cherry", "plum", "quince"].map(String::from));
+    /// assert_ne!(members.root(), more.root());
+    /// ```
     #[must_use]
     pub fn root(&self) -> Hash {
         tree_root(&self.leaves())
     }
 
     /// Prove that `member` is present or absent.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::membership::{Membership, Proof, verify};
+    ///
+    /// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+    /// let root = members.root();
+    ///
+    /// let present = members.prove("cherry");
+    /// assert!(matches!(present, Proof::Present { .. }));
+    /// assert!(verify("cherry", &present, &root));
+    ///
+    /// // "banana" is absent: "apple" and "cherry" are adjacent, so nothing lies between.
+    /// let absent = members.prove("banana");
+    /// assert!(matches!(absent, Proof::Absent { .. }));
+    /// assert!(verify("banana", &absent, &root));
+    /// ```
     #[must_use]
     pub fn prove(&self, member: &str) -> Proof {
         let leaves = self.leaves();
@@ -125,6 +190,19 @@ impl Membership {
 /// adjacent by index, and the queried value sorts strictly between them.
 /// Omitting the adjacency check would let a prover skip over the very
 /// member whose absence is being claimed.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::membership::{Membership, verify};
+///
+/// # let members = Membership::new(["apple", "cherry", "plum"].map(String::from));
+/// let root = members.root();
+/// let proof = members.prove("banana");
+/// assert!(verify("banana", &proof, &root));
+/// // A proof of absence for "banana" proves nothing about "cherry".
+/// assert!(!verify("cherry", &proof, &root));
+/// ```
 #[must_use]
 pub fn verify(member: &str, proof: &Proof, expected_root: &Hash) -> bool {
     match proof {
@@ -177,6 +255,18 @@ pub fn verify(member: &str, proof: &Proof, expected_root: &Hash) -> bool {
 ///
 /// Returned in sorted order so a generation record built from this is
 /// deterministic.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::membership::{Membership, diff};
+///
+/// let before = Membership::new(["apple", "cherry"].map(String::from));
+/// let after = Membership::new(["cherry", "plum"].map(String::from));
+/// let (added, removed) = diff(&before, &after);
+/// assert_eq!(added, ["plum"]);
+/// assert_eq!(removed, ["apple"]);
+/// ```
 #[must_use]
 pub fn diff(previous: &Membership, next: &Membership) -> (Vec<String>, Vec<String>) {
     let added = next

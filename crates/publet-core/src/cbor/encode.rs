@@ -10,6 +10,25 @@ use super::Value;
 ///
 /// The result round-trips: `decode(&encode(v))` yields `v`, and
 /// `encode(&decode(b)?)` yields `b` for any canonical `b`.
+///
+/// # Example
+///
+/// ```
+/// use std::collections::BTreeMap;
+/// use publet_core::cbor::{Value, decode, encode};
+///
+/// let map = Value::Map(BTreeMap::from([
+///     ("b".to_owned(), Value::Uint(2)),
+///     ("a".to_owned(), Value::Text("x".into())),
+/// ]));
+/// let bytes = encode(&map);
+///
+/// // Keys sorted by their UTF-8 bytes, integers in shortest form.
+/// assert_eq!(bytes, [0xa2, 0x61, b'a', 0x61, b'x', 0x61, b'b', 0x02]);
+/// // What is encoded decodes to itself.
+/// assert_eq!(decode(&bytes)?, map);
+/// # Ok::<(), publet_core::CanonError>(())
+/// ```
 #[must_use]
 pub fn encode(value: &Value) -> Vec<u8> {
     let mut out = Vec::new();

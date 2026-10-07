@@ -76,6 +76,28 @@ pub type Weights = BTreeMap<String, Fixed6>;
 /// Run the propagation to a fixed iteration count.
 ///
 /// `edges` need not be sorted; they are grouped deterministically here.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::Fixed6;
+/// use publet_algorithms::propagate::{Params, Seed, TrustEdge, propagate};
+///
+/// let edge = |from: &str, to: &str| TrustEdge {
+///     from: from.into(), to: to.into(), weight: Fixed6::ONE, age_days: 0, subjects: vec![],
+/// };
+/// let params = Params { damping: Fixed6::from_scaled(850_000), iterations: 20, decay_half_life_days: None };
+/// let seeds = [Seed { key: "alice".into(), weight: Fixed6::ONE }];
+/// let edges = [edge("alice", "bob"), edge("bob", "carol"), edge("dave", "erin")];
+///
+/// let weights = propagate(&params, &seeds, &edges);
+/// // Weight flows from the seed along edges, less at each step...
+/// assert!(weights["alice"] > weights["bob"] && weights["bob"] > weights["carol"]);
+/// // ...and never to nodes the seed cannot reach.
+/// assert!(!weights.contains_key("dave") && !weights.contains_key("erin"));
+/// // The same input gives the same output, to the last digit.
+/// assert_eq!(propagate(&params, &seeds, &edges), weights);
+/// ```
 #[must_use]
 pub fn propagate(params: &Params, roots: &[Seed], edges: &[TrustEdge]) -> Weights {
     propagate_within(params, roots, edges, &[])
@@ -87,6 +109,24 @@ pub fn propagate(params: &Params, roots: &[Seed], edges: &[TrustEdge]) -> Weight
 /// them. Propagating with no subject context therefore uses the unconfined
 /// edges alone: an edge declared "on Rust terminology" has not said
 /// anything about a query that is not one.
+///
+/// # Example
+///
+/// ```
+/// use publet_algorithms::Fixed6;
+/// use publet_algorithms::propagate::{Params, Seed, TrustEdge, propagate, propagate_within};
+///
+/// let edge = |from: &str, to: &str| TrustEdge {
+///     from: from.into(), to: to.into(), weight: Fixed6::ONE, age_days: 0, subjects: vec![],
+/// };
+/// let params = Params { damping: Fixed6::from_scaled(850_000), iterations: 20, decay_half_life_days: None };
+/// let seeds = [Seed { key: "alice".into(), weight: Fixed6::ONE }];
+/// // alice vouches for bob only on Rust terminology.
+/// let edges = [TrustEdge { subjects: vec!["rust".into()], ..edge("alice", "bob") }];
+///
+/// assert!(!propagate(&params, &seeds, &edges).contains_key("bob"));
+/// assert!(propagate_within(&params, &seeds, &edges, &["rust".into()]).contains_key("bob"));
+/// ```
 #[must_use]
 pub fn propagate_within(
     params: &Params,
@@ -178,6 +218,24 @@ fn propagate_all(params: &Params, roots: &[Seed], edges: &[TrustEdge]) -> Weight
 
 /// Nodes reachable from `start` within `distance` hops, over `edges`
 /// treated as undirected.
+///
+/// # Example
+///
+/// ```
+/// use std::collections::BTreeSet;
+/// use publet_algorithms::Fixed6;
+/// use publet_algorithms::propagate::{TrustEdge, reachable_within};
+///
+/// let edge = |from: &str, to: &str| TrustEdge {
+///     from: from.into(), to: to.into(), weight: Fixed6::ONE, age_days: 0, subjects: vec![],
+/// };
+/// let edges = [edge("a", "b"), edge("b", "c"), edge("c", "d")];
+/// // One hop from b, in either direction.
+/// assert_eq!(
+///     reachable_within(&edges, "b", 1),
+///     BTreeSet::from(["a".to_string(), "b".to_string(), "c".to_string()]),
+/// );
+/// ```
 #[must_use]
 pub fn reachable_within(edges: &[TrustEdge], start: &str, distance: u32) -> BTreeSet<String> {
     let mut adjacency: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();

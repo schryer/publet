@@ -17,6 +17,7 @@ fn leaves(n: usize) -> Vec<Hash> {
         .collect()
 }
 
+// covers: log::empty_root, log::leaf_hash, log::to_hex
 #[test]
 fn matches_rfc6962_constants() {
     // MTH({}) = HASH(), the SHA-256 of the empty string.
@@ -32,6 +33,7 @@ fn matches_rfc6962_constants() {
     );
 }
 
+// covers: log::leaf_hash, log::node_hash
 #[test]
 fn leaf_and_interior_hashes_are_domain_separated() {
     // Without separation a leaf could be presented as an interior node and
@@ -45,6 +47,7 @@ fn leaf_and_interior_hashes_are_domain_separated() {
     assert_ne!(interior, leaf_hash(&concatenated));
 }
 
+// covers: log::inclusion_proof, log::leaf_hash, log::root, log::verify_inclusion
 #[test]
 fn inclusion_proofs_round_trip_for_every_index_and_size() {
     for n in 1..=64usize {
@@ -60,6 +63,7 @@ fn inclusion_proofs_round_trip_for_every_index_and_size() {
     }
 }
 
+// covers: log::inclusion_proof, log::leaf_hash, log::root, log::verify_inclusion
 #[test]
 fn an_inclusion_proof_does_not_verify_a_different_leaf() {
     let tree = leaves(16);
@@ -70,6 +74,7 @@ fn an_inclusion_proof_does_not_verify_a_different_leaf() {
     assert!(!verify_inclusion(&tree[5], 6, 16, &path, &r));
 }
 
+// covers: log::inclusion_proof, log::leaf_hash, log::root, log::verify_inclusion
 #[test]
 fn a_tampered_inclusion_path_is_rejected() {
     let tree = leaves(16);
@@ -79,6 +84,7 @@ fn a_tampered_inclusion_path_is_rejected() {
     assert!(!verify_inclusion(&tree[3], 3, 16, &path, &r));
 }
 
+// covers: log::consistency_proof, log::leaf_hash, log::root, log::verify_consistency
 #[test]
 fn consistency_proofs_round_trip_for_every_pair() {
     for n in 1..=48usize {
@@ -95,6 +101,7 @@ fn consistency_proofs_round_trip_for_every_pair() {
     }
 }
 
+// covers: log::consistency_proof, log::leaf_hash, log::root, log::verify_consistency
 #[test]
 fn a_rewritten_history_fails_consistency() {
     // The attack the log exists to detect: a publisher who changes what an
@@ -112,6 +119,7 @@ fn a_rewritten_history_fails_consistency() {
     );
 }
 
+// covers: log::consistency_proof, log::leaf_hash, log::root, log::verify_consistency
 #[test]
 fn a_truncated_history_fails_consistency() {
     let tree = leaves(8);
@@ -121,6 +129,7 @@ fn a_truncated_history_fails_consistency() {
     assert!(!verify_consistency(6, 4, &old_root, &root(shorter), &proof));
 }
 
+// covers: log::leaf_hash, log::root, log::verify_consistency
 #[test]
 fn identical_sizes_require_an_empty_proof_and_equal_roots() {
     let tree = leaves(5);
@@ -130,6 +139,7 @@ fn identical_sizes_require_an_empty_proof_and_equal_roots() {
     assert!(!verify_consistency(5, 5, &r, &leaf_hash(b"other"), &[]));
 }
 
+// covers: log::consistency_proof, log::leaf_hash, log::root, log::verify_consistency
 #[test]
 fn a_tampered_consistency_proof_is_rejected() {
     let tree = leaves(16);

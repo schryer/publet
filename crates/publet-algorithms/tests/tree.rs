@@ -8,16 +8,19 @@ fn leaf_fn(body: &str) -> Node {
     Node::leaf(body.as_bytes())
 }
 
+// covers: Node::hash, Node::leaf
 #[test]
 fn two_leaves_with_the_same_content_hash_the_same() {
     assert_eq!(leaf_fn("fn f() {}").hash(), leaf_fn("fn f() {}").hash());
 }
 
+// covers: Node::hash, Node::leaf
 #[test]
 fn two_leaves_with_different_content_hash_differently() {
     assert_ne!(leaf_fn("fn f() {}").hash(), leaf_fn("fn g() {}").hash());
 }
 
+// covers: Node::branch, Node::hash, Node::leaf, Node::with_child
 #[test]
 fn a_branch_commits_to_its_children() {
     let a = Node::branch("impl Foo")
@@ -38,6 +41,7 @@ fn a_branch_commits_to_its_children() {
     );
 }
 
+// covers: Node::branch, Node::hash, Node::leaf, Node::with_child
 #[test]
 fn child_insertion_order_does_not_affect_the_hash() {
     let forward = Node::branch("mod m")
@@ -51,6 +55,7 @@ fn child_insertion_order_does_not_affect_the_hash() {
     assert_eq!(forward.hash(), backward.hash());
 }
 
+// covers: Node::branch, Node::hash, Node::leaf, Node::with_child
 #[test]
 fn renaming_a_child_changes_the_branch_hash_even_if_content_is_identical() {
     // The name is part of what a branch commits to -- moving `bar`'s
@@ -62,6 +67,7 @@ fn renaming_a_child_changes_the_branch_hash_even_if_content_is_identical() {
     assert_ne!(original.hash(), renamed.hash());
 }
 
+// covers: Node::branch, Node::find, Node::hash, Node::leaf, Node::with_child
 #[test]
 fn nesting_propagates_a_leaf_change_to_every_ancestor() {
     let build = |body: &str| {
@@ -85,6 +91,7 @@ fn nesting_propagates_a_leaf_change_to_every_ancestor() {
     );
 }
 
+// covers: Node::branch, Node::find, Node::hash, Node::leaf, Node::with_child
 #[test]
 fn find_resolves_a_slash_joined_path() {
     let tree = Node::branch("mod outer").with_child(
@@ -97,6 +104,7 @@ fn find_resolves_a_slash_joined_path() {
     assert_eq!(tree.find("").unwrap().hash(), tree.hash());
 }
 
+// covers: Node::branch, Node::leaf, Node::leaves, Node::with_child
 #[test]
 fn leaves_lists_every_leaf_with_its_full_path_in_sorted_order() {
     let tree = Node::branch("mod outer")
@@ -109,6 +117,7 @@ fn leaves_lists_every_leaf_with_its_full_path_in_sorted_order() {
     assert_eq!(paths, vec!["a/nested".to_owned(), "b".to_owned()]);
 }
 
+// covers: Node::branch, Node::hash
 #[test]
 fn a_leaf_and_a_branch_never_collide_even_with_matching_bytes() {
     // The branch tag (0x02) and the leaf tag (0x00, from crate::log)

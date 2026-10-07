@@ -50,18 +50,44 @@ impl Fixed6 {
     pub const ONE: Self = Self(SCALE);
 
     /// Construct from a raw scaled value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// // 1_500_000 scaled by 10^6 is 1.5.
+    /// assert_eq!(Fixed6::from_scaled(1_500_000).to_string(), "1.500000");
+    /// ```
     #[must_use]
     pub const fn from_scaled(raw: i128) -> Self {
         Self(raw)
     }
 
     /// Construct from a whole number.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// assert_eq!(Fixed6::from_integer(3).to_string(), "3.000000");
+    /// assert_eq!(Fixed6::from_integer(-2).to_scaled(), -2_000_000);
+    /// ```
     #[must_use]
     pub const fn from_integer(n: i64) -> Self {
         Self(n as i128 * SCALE)
     }
 
     /// The underlying scaled value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::{Fixed6, SCALE};
+    ///
+    /// assert_eq!(Fixed6::ONE.to_scaled(), SCALE);
+    /// ```
     #[must_use]
     pub const fn to_scaled(self) -> i128 {
         self.0
@@ -76,6 +102,20 @@ impl Fixed6 {
     /// Returns [`Self::ZERO`] when `denominator` is zero, which is the
     /// arithmetic identity this layer wants: a key that confers no weight
     /// at all confers none to anyone.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// let two = Fixed6::from_integer(2);
+    /// let three = Fixed6::from_integer(3);
+    /// // 2 * 1 / 3, truncated: 0.666666, not 0.666667.
+    /// assert_eq!(two.mul_div(Fixed6::ONE, three).to_string(), "0.666666");
+    ///
+    /// // A zero denominator gives zero rather than panicking.
+    /// assert_eq!(two.mul_div(Fixed6::ONE, Fixed6::ZERO), Fixed6::ZERO);
+    /// ```
     #[must_use]
     pub fn mul_div(self, numerator: Self, denominator: Self) -> Self {
         if denominator.0 == 0 {
@@ -86,6 +126,15 @@ impl Fixed6 {
     }
 
     /// `self * other`, truncating toward zero.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// let half = Fixed6::from_scaled(500_000);
+    /// assert_eq!(half.times(half).to_string(), "0.250000");
+    /// ```
     #[must_use]
     pub fn times(self, other: Self) -> Self {
         Self(self.0.saturating_mul(other.0) / SCALE)
@@ -94,6 +143,15 @@ impl Fixed6 {
     /// `self / other`, truncating toward zero.
     ///
     /// Returns [`Self::ZERO`] when `other` is zero.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// assert_eq!(Fixed6::ONE.ratio(Fixed6::from_integer(3)).to_string(), "0.333333");
+    /// assert_eq!(Fixed6::ONE.ratio(Fixed6::ZERO), Fixed6::ZERO);
+    /// ```
     #[must_use]
     pub fn ratio(self, other: Self) -> Self {
         if other.0 == 0 {
@@ -103,12 +161,31 @@ impl Fixed6 {
     }
 
     /// The smaller of two values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// assert_eq!(Fixed6::ONE.min(Fixed6::ZERO), Fixed6::ZERO);
+    /// ```
     #[must_use]
     pub fn min(self, other: Self) -> Self {
         if self.0 <= other.0 { self } else { other }
     }
 
     /// Whether this value is zero.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// assert!(Fixed6::ZERO.is_zero());
+    /// // Truncation can reach zero: a millionth of a millionth.
+    /// let tiny = Fixed6::from_scaled(1);
+    /// assert!(tiny.times(tiny).is_zero());
+    /// ```
     #[must_use]
     pub const fn is_zero(self) -> bool {
         self.0 == 0
@@ -121,6 +198,17 @@ impl Fixed6 {
     /// exponentiation would need a transcendental function, which cannot be
     /// made bit-identical across platforms; this approximation is fully
     /// specified by integer operations and therefore can.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_algorithms::Fixed6;
+    ///
+    /// // One half-life: exactly half.
+    /// assert_eq!(Fixed6::ONE.halve_fractional(30, 30).to_string(), "0.500000");
+    /// // Half a half-life: interpolated between 1 and 0.5 (2^-0.5 is about 0.707).
+    /// assert_eq!(Fixed6::ONE.halve_fractional(15, 30).to_string(), "0.750000");
+    /// ```
     #[must_use]
     pub fn halve_fractional(self, numerator: u64, denominator: u64) -> Self {
         if denominator == 0 || self.0 == 0 {
@@ -184,6 +272,7 @@ impl fmt::Display for Fixed6 {
 mod tests {
     use super::*;
 
+    // covers: Fixed6::from_integer, Fixed6::from_scaled, Fixed6::mul_div
     #[test]
     fn mul_div_keeps_the_scale() {
         let two = Fixed6::from_integer(2);
@@ -199,6 +288,7 @@ mod tests {
         );
     }
 
+    // covers: Fixed6::from_integer, Fixed6::ratio
     #[test]
     fn truncates_toward_zero_rather_than_rounding() {
         let one = Fixed6::ONE;
@@ -209,12 +299,14 @@ mod tests {
         assert_eq!(two.ratio(three).to_string(), "0.666666");
     }
 
+    // covers: Fixed6::mul_div, Fixed6::ratio
     #[test]
     fn division_by_zero_yields_zero() {
         assert_eq!(Fixed6::ONE.ratio(Fixed6::ZERO), Fixed6::ZERO);
         assert_eq!(Fixed6::ONE.mul_div(Fixed6::ONE, Fixed6::ZERO), Fixed6::ZERO);
     }
 
+    // covers: Fixed6::from_scaled
     #[test]
     fn display_is_stable_to_six_places() {
         assert_eq!(Fixed6::ZERO.to_string(), "0.000000");
@@ -223,6 +315,7 @@ mod tests {
         assert_eq!(Fixed6::from_scaled(-1).to_string(), "-0.000001");
     }
 
+    // covers: Fixed6::halve_fractional
     #[test]
     fn halving_is_exact_on_whole_periods() {
         let one = Fixed6::ONE;
@@ -232,6 +325,7 @@ mod tests {
         assert_eq!(one.halve_fractional(1000, 10), Fixed6::ZERO);
     }
 
+    // covers: Fixed6::from_scaled
     #[test]
     fn addition_saturates_rather_than_wrapping() {
         let big = Fixed6::from_scaled(i128::MAX);

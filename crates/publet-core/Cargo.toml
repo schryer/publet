@@ -11,7 +11,7 @@ documentation = "https://docs.rs/publet-core"
 readme = "README.md"
 keywords = ["content-addressing", "cbor", "ed25519", "signatures", "publet"]
 categories = ["cryptography", "encoding"]
-include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SUPPLY-CHAIN.md"]
+include = ["src/**/*.rs", "tests/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
 
 [dependencies]
 thiserror.workspace = true

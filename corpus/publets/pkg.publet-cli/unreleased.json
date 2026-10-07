@@ -23,6 +23,10 @@
     {
       "category": "internal",
       "change": "cargo-deny is stricter (0.20.2; unmaintained and unsound crates fail; crates.io only) and cargo-vet records supply-chain audits; nothing pub does changed."
+    },
+    {
+      "category": "internal",
+      "change": "The published crates' documentation is reworked; a guard checks every public function has an example. Nothing pub does changed."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."

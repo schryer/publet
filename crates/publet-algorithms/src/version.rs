@@ -77,6 +77,7 @@ pub fn satisfies(version: &str, requires: &str) -> bool {
 mod tests {
     use super::*;
 
+    // covers: version::satisfies
     #[test]
     fn a_requirement_is_a_version_prefix_at_a_dot_boundary() {
         assert!(satisfies("0.15", "0.15"));
@@ -86,6 +87,7 @@ mod tests {
         assert!(!satisfies("0.16.0", "0.15"));
     }
 
+    // covers: version::satisfies
     #[test]
     fn a_minimum_compares_part_by_part() {
         assert!(satisfies("1.98.1", "1.80+"));
@@ -94,6 +96,7 @@ mod tests {
         assert!(!satisfies("abc", "1+"));
     }
 
+    // covers: version::satisfies
     #[test]
     fn a_caret_is_compatible_as_cargo_reads_it() {
         // From 1.0: the major part is fixed.

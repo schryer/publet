@@ -127,6 +127,15 @@ impl CanonError {
     /// The short rule name this violation maps to.
     ///
     /// Stable across releases: the conformance scenarios match on it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use publet_core::cbor::decode;
+    ///
+    /// let error = decode(&[0xa2, 0x61, b'b', 0x01, 0x61, b'a', 0x02]).unwrap_err(); // {"b": 1, "a": 2}
+    /// assert_eq!(error.rule(), "sorted map keys");
+    /// ```
     #[must_use]
     pub fn rule(&self) -> &'static str {
         match self {
