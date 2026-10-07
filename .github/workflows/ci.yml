@@ -59,7 +59,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: [ci, audit, fuzz, msrv]
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.1
-    with: { pubrel-version: v0.4.1 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.2
+    with: { pubrel-version: v0.4.2, semver-checks-version: 0.51.0 }
     permissions:
       contents: write

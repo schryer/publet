@@ -56,7 +56,8 @@ The rest of this page is:
 * [Why this crate?](#why-this-crate): what a general CBOR library or IPFS
   identifiers would get wrong here.
 * [Related crates](#related-crates): what was considered instead, and why not.
-* [Crate features](#crate-features) and [Minimum Rust version](#minimum-rust-version).
+* [Crate features](#crate-features), [Minimum Rust version](#minimum-rust-version)
+  and [Versioning](#versioning).
 
 Longer documents live in [`_documentation`]: how every item is
 [tested](crate::_documentation::testing), how each dependency is
@@ -165,6 +166,15 @@ None. Everything in the crate is always available.
 This crate requires Rust 1.85 (its `rust-version`), the first release with
 the 2024 edition; CI builds it there. The minimum may rise in a release that
 bumps the minor version, and never in a patch release.
+
+# Versioning
+
+Versions follow Cargo's convention: below 1.0, a breaking change bumps the
+minor version (`0.1.x` to `0.2.0`) and anything compatible bumps the patch.
+Each change to the public API is checked against the last release (its
+`publet-core-v` tag) by [`cargo-semver-checks`](https://crates.io/crates/cargo-semver-checks),
+so a release cannot break the API without the
+[changelog](crate::_documentation::changelog) saying so.
 */
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]

@@ -33,7 +33,8 @@
       },
       "code": [
         "crates/publet-core/"
-      ]
+      ],
+      "semver-checks": true
     },
     {
       "name": "publet-algorithms",
@@ -45,7 +46,8 @@
       },
       "code": [
         "crates/publet-algorithms/"
-      ]
+      ],
+      "semver-checks": true
     }
   ],
   "security": {

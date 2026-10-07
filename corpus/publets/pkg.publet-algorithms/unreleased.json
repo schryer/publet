@@ -27,6 +27,10 @@
     {
       "category": "fixed",
       "change": "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
+    },
+    {
+      "category": "internal",
+      "change": "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
