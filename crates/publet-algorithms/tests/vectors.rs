@@ -86,7 +86,13 @@ fn audit_paths_match_rfc_6962() {
             "leaf {m} of {n}"
         );
         assert!(
-            verify_inclusion(&leaves[m], m, n, &expected, &root(&leaves[..n])),
+            verify_inclusion(
+                &leaves[m],
+                m as u64,
+                n as u64,
+                &expected,
+                &root(&leaves[..n])
+            ),
             "leaf {m} of {n}"
         );
     }
@@ -102,7 +108,13 @@ fn consistency_proofs_match_rfc_6962() {
         let expected = hashes(&case["proof"]);
         assert_eq!(consistency_proof(&leaves[..n], m), expected, "{m} to {n}");
         assert!(
-            verify_consistency(m, n, &root(&leaves[..m]), &root(&leaves[..n]), &expected),
+            verify_consistency(
+                m as u64,
+                n as u64,
+                &root(&leaves[..m]),
+                &root(&leaves[..n]),
+                &expected
+            ),
             "{m} to {n}"
         );
     }

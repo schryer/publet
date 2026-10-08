@@ -35,7 +35,7 @@ let leaves: Vec<_> = ["first", "second", "third"]
 let head = root(&leaves);
 
 let path = inclusion_proof(&leaves, 1);
-assert!(verify_inclusion(&leaves[1], 1, leaves.len(), &path, &head));
+assert!(verify_inclusion(&leaves[1], 1, leaves.len() as u64, &path, &head));
 ```
 
 ### Minimum Rust version

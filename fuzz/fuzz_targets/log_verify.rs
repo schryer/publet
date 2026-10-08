@@ -11,9 +11,9 @@ use publet_algorithms::log::{Hash, verify_consistency, verify_inclusion};
 #[derive(Arbitrary, Debug)]
 struct Input {
     leaf: Hash,
-    index: usize,
-    size: usize,
-    old_size: usize,
+    index: u64,
+    size: u64,
+    old_size: u64,
     old_root: Hash,
     new_root: Hash,
     path: Vec<Hash>,
