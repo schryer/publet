@@ -1,4 +1,4 @@
-# Managed by pubkit 0.3.0: `pubkit sync` rewrites this file, and
+# Managed by pubkit 0.3.1: `pubkit sync` rewrites this file, and
 # `pubkit sync --check` fails when it differs. Include it from the Makefile,
 # and override the variables below there; targets of your own go there too.
 SHELL := /bin/bash

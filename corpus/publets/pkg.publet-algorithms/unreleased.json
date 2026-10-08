@@ -35,7 +35,11 @@
     {
       "category": "internal",
       "change": "tree::Node's docs say why it is exhaustive."
+    },
+    {
+      "category": "internal",
+      "change": "The log's absurd-size regression tests also build and run on 32-bit targets."
     }
   ],
-  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
+  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
 }
