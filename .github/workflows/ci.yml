@@ -3,6 +3,11 @@ name: ci
 on:
   push: { branches: [main] }
   pull_request:
+  # Nightly: the same checks, plus longer fuzzing and the tests on the
+  # latest stable and beta Rust, so new advisories and a new Rust that
+  # breaks the build show up within a day.
+  schedule: [{ cron: '23 3 * * *' }]
+  workflow_dispatch:
 
 jobs:
   # pubkit's shared Rust CI, with publet's own gates and checks named:
@@ -14,35 +19,21 @@ jobs:
   # - functional: the Gherkin suite, then the evaluation digest (which needs
   #   a built pub-eval), the conformance scenarios, and the coverage report,
   #   which must be committed up to date.
+  # - msrv: the published crates build on the oldest Rust they promise.
+  # - fuzz: the decoders that read untrusted input, after replaying every
+  #   input that once found a bug (fuzz/regressions/).
+  # - cross: R8's bit-identical results on a 32-bit and a big-endian machine.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.0
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@claude/ci-phase4
     with:
       gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check doc-coverage-check
       test-args: --workspace --all-features
       apt-packages: jq
       functional: functional guard-eval conformance coverage-check vectors-check
-
-  # The published crates build on the oldest Rust they promise.
-  msrv:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - run: rustup toolchain install "$(sed -n 's/^rust-version = "\(.*\)"/\1/p' crates/publet-core/Cargo.toml)" --profile minimal
-      - run: make msrv
-
-  # The decoders that read untrusted input, fuzzed briefly on every change,
-  # after replaying every input that once found a bug (fuzz/regressions/).
-  fuzz:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - run: rustup toolchain install nightly --profile minimal
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-fuzz
-          key: cargo-fuzz-0.13.2
-      - run: command -v cargo-fuzz || cargo install --locked cargo-fuzz --version 0.13.2
-      - run: make fuzz-smoke FUZZ_SECONDS=60
+      msrv: true
+      fuzz: true
+      cross-targets: '["i686-unknown-linux-gnu", "s390x-unknown-linux-gnu"]'
+      cross-test-args: --workspace --all-features
 
   audit:
     runs-on: ubuntu-latest
@@ -58,7 +49,7 @@ jobs:
   # published; on main, a published version is tagged and released. CI signs
   # nothing; the release was signed when the package publet was published.
   release:
-    needs: [ci, audit, fuzz, msrv]
+    needs: [ci, audit]
     uses: schryer/pubrel/.github/workflows/release.yml@v0.4.2
     with: { pubrel-version: v0.4.2, semver-checks-version: 0.51.0 }
     permissions:
