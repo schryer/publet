@@ -177,5 +177,11 @@ fn absurd_sizes_are_refused_without_hanging() {
         &proof
     ));
     assert!(!verify_consistency(3, usize::MAX, &root, &root, &proof));
-    assert!(!verify_consistency(top - 3, usize::MAX, &root, &root, &proof));
+    assert!(!verify_consistency(
+        top - 3,
+        usize::MAX,
+        &root,
+        &root,
+        &proof
+    ));
 }
