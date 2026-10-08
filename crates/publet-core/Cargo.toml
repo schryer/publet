@@ -2,7 +2,7 @@
 name = "publet-core"
 description = "Objects, canonical CBOR, content identifiers, and signatures."
 # Released on a version track of its own, not the workspace's.
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 # The oldest Rust this crate builds on, tested in CI (`make msrv`): the first
 # release with the 2024 edition. Not the workspace's, which is the toolchain

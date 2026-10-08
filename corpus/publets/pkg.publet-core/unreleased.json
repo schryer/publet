@@ -1,33 +1,4 @@
 {
-  "changes": [
-    {
-      "category": "fixed",
-      "change": "The crate ships what distribution needs: the Apache-2.0 licence text, crates.io metadata, an include list, and documentation with examples run as doctests, including the crates considered instead and why."
-    },
-    {
-      "category": "fixed",
-      "change": "The package ships SUPPLY-CHAIN.md: every dependency, whether it runs code at build time, and how its code is vouched for (an imported audit, a trusted publisher, or an exemption with the evidence beside it)."
-    },
-    {
-      "category": "fixed",
-      "change": "Every public function's documentation has an example run as a test, the crate root has an overview, a cookbook and why this crate exists, and docs.rs renders how every item is tested, how each dependency is vouched for, the security policy and the changelog."
-    },
-    {
-      "category": "internal",
-      "change": "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
-    },
-    {
-      "category": "security",
-      "change": "The CBOR decoder accepted a simple value below 32 in the two-byte form (null as f8 16), giving the same object a second encoding and a second identifier; it is now refused as not shortest form. Identifier parsing ignored the base32 padding bits after the digest, so one identifier had many spellings; non-zero padding bits are now refused. Both found by fuzzing."
-    },
-    {
-      "category": "fixed",
-      "change": "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
-    },
-    {
-      "category": "internal",
-      "change": "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
-    }
-  ],
-  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel prepare` moves them into the package publet."
+  "changes": [],
+  "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."
 }

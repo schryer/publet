@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "publet-core 0.1.1 is released as publet-core-v0.1.1 from commit 1ecf8bbd3b66e476d0c14463f899d1286136e056.",
+      "content": "publet-core 0.1.2 is released as publet-core-v0.1.2 from commit 435f26eb0e9953f233bb86e3a34ecc6d01bf6143.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "publet-core",
-            "0.1.1",
+            "0.1.2",
             "",
             "",
-            "publet-core-v0.1.1",
-            "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+            "publet-core-v0.1.2",
+            "435f26eb0e9953f233bb86e3a34ecc6d01bf6143"
           ]
         ]
       },
-      "scope": "the published release publet-core-v0.1.1 of publet-core",
+      "scope": "the published release publet-core-v0.1.2 of publet-core",
       "sources": [
         {
           "ref": "publet-core",
-          "revision": "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+          "revision": "435f26eb0e9953f233bb86e3a34ecc6d01bf6143"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "publet-core 0.1.1 was released on 2026-10-04 from commit 1ecf8bbd3b66e476d0c14463f899d1286136e056 with these changes.",
+      "content": "publet-core 0.1.2 was released on 2026-10-08 from commit 435f26eb0e9953f233bb86e3a34ecc6d01bf6143 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,24 +57,118 @@
         ],
         "rows": [
           [
-            "added",
-            "The protocol floor as a crate of its own: objects and their verification type state, the canonical CBOR profile, content identifiers, and Ed25519 detached signatures (Sections 4.1-4.5)."
+            "fixed",
+            "The crate ships what distribution needs: the Apache-2.0 licence text, crates.io metadata, an include list, and documentation with examples run as doctests, including the crates considered instead and why."
+          ],
+          [
+            "fixed",
+            "The package ships SUPPLY-CHAIN.md: every dependency, whether it runs code at build time, and how its code is vouched for (an imported audit, a trusted publisher, or an exemption with the evidence beside it)."
+          ],
+          [
+            "fixed",
+            "Every public function's documentation has an example run as a test, the crate root has an overview, a cookbook and why this crate exists, and docs.rs renders how every item is tested, how each dependency is vouched for, the security policy and the changelog."
+          ],
+          [
+            "internal",
+            "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
+          ],
+          [
+            "security",
+            "The CBOR decoder accepted a simple value below 32 in the two-byte form (null as f8 16), giving the same object a second encoding and a second identifier; it is now refused as not shortest form. Identifier parsing ignored the base32 padding bits after the digest, so one identifier had many spellings; non-zero padding bits are now refused. Both found by fuzzing."
+          ],
+          [
+            "fixed",
+            "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
+          ],
+          [
+            "internal",
+            "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release publet-core-v0.1.1 of publet-core",
+      "scope": "the published release publet-core-v0.1.2 of publet-core",
       "sources": [
         {
           "ref": "publet-core",
-          "revision": "1ecf8bbd3b66e476d0c14463f899d1286136e056"
+          "revision": "435f26eb0e9953f233bb86e3a34ecc6d01bf6143"
+        }
+      ]
+    },
+    "security": {
+      "class": "archival",
+      "content": "publet-core 0.1.2 passed these security checks before release on 2026-10-08.",
+      "data": {
+        "columns": [
+          {
+            "name": "kind"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "command"
+          },
+          {
+            "name": "tool"
+          },
+          {
+            "name": "result"
+          }
+        ],
+        "rows": [
+          [
+            "check",
+            "advisories, licences, bans and sources",
+            "cargo deny --locked check --hide-inclusion-graph",
+            "cargo-deny 0.20.2",
+            "│ ╰────────────────────────────────────────────────────────────────────────┘ lock entries"
+          ],
+          [
+            "check",
+            "supply-chain audits",
+            "cargo vet --locked",
+            "cargo-vet 0.10.2",
+            "Vetting Succeeded (54 fully audited, 183 exempted)"
+          ],
+          [
+            "check",
+            "supply-chain reports current",
+            "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'",
+            "",
+            "SUPPLY-CHAIN.md current for every published crate"
+          ],
+          [
+            "fact",
+            "RustSec advisory database revision",
+            "git -C \"$(ls -d ~/.cargo/advisory-dbs/advisory-db-*/ | head -1)\" log -1 --format='%H (%cs)'",
+            "",
+            "5701a6d2a6158d5d4a933df5141a0415c285075d (2026-10-08)"
+          ],
+          [
+            "fact",
+            "audits imported from",
+            "grep -o '^\\[imports\\.[a-z-]*' supply-chain/config.toml | cut -d. -f2 | paste -sd, - | sed 's/,/, /g'",
+            "",
+            "bytecode-alliance, embark-studios, google, isrg, mozilla, zcash"
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release publet-core-v0.1.2 of publet-core",
+      "sources": [
+        {
+          "ref": "publet-core",
+          "revision": "435f26eb0e9953f233bb86e3a34ecc6d01bf6143"
         }
       ]
     }
   },
-  "created": "2026-10-04T00:00:00Z",
+  "created": "2026-10-08T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
@@ -89,6 +183,14 @@
       "items": [
         {
           "ref": "#release"
+        }
+      ]
+    },
+    {
+      "heading": "Security",
+      "items": [
+        {
+          "ref": "#security"
         }
       ]
     }
