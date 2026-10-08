@@ -328,8 +328,8 @@ parse_type==0.6.6 \
 pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
     --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
-pubkit @ https://github.com/schryer/pubkit/releases/download/v0.3.0/pubkit-0.3.0-py3-none-any.whl \
-    --hash=sha256:645eb81b1a652db000d74cb4c1472d8a7c288b5e4e21670c2a45d76d309e05e8
+pubkit @ https://github.com/schryer/pubkit/releases/download/v0.3.1/pubkit-0.3.1-py3-none-any.whl \
+    --hash=sha256:a2afdbb27e36ff79cb553e60017ea07dd90ef359f3d7ace0b3679d7bd68b923d
 pycparser==3.0 \
     --hash=sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29 \
     --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992

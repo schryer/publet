@@ -24,7 +24,7 @@ jobs:
   #   input that once found a bug (fuzz/regressions/).
   # - cross: R8's bit-identical results on a 32-bit and a big-endian machine.
   ci:
-    uses: schryer/pubkit/.github/workflows/rust-ci.yml@claude/ci-phase4
+    uses: schryer/pubkit/.github/workflows/rust-ci.yml@v0.3.1
     with:
       gates: fmt-check guard-floats guard-deps lint doc guard-rules publish-check supply-chain-check doc-coverage-check
       test-args: --workspace --all-features
@@ -50,7 +50,7 @@ jobs:
   # nothing; the release was signed when the package publet was published.
   release:
     needs: [ci, audit]
-    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.2
-    with: { pubrel-version: v0.4.2, semver-checks-version: 0.51.0 }
+    uses: schryer/pubrel/.github/workflows/release.yml@v0.4.3
+    with: { pubrel-version: v0.4.3, semver-checks-version: 0.51.0 }
     permissions:
       contents: write
