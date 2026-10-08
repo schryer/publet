@@ -80,12 +80,18 @@ pub fn node_hash(left: &Hash, right: &Hash) -> Hash {
 /// Largest power of two strictly less than `n`.
 ///
 /// RFC 6962's split point. Defined for `n > 1`.
-fn split(n: usize) -> usize {
+fn split(n: u64) -> u64 {
     debug_assert!(n > 1);
     // The largest power of two strictly below n is the top bit of n - 1.
     // Doubling up to it instead never ends for n above 2^63: the shift
     // wraps to zero, and a peer's proof claiming such a size would hang
     // the verifier.
+    1 << (u64::BITS - 1 - (n - 1).leading_zeros())
+}
+
+/// [`split`] for a number of leaves held in memory.
+fn split_len(n: usize) -> usize {
+    debug_assert!(n > 1);
     1 << (usize::BITS - 1 - (n - 1).leading_zeros())
 }
 
@@ -108,7 +114,7 @@ pub fn root(leaves: &[Hash]) -> Hash {
         0 => empty_root(),
         1 => leaves.first().copied().unwrap_or_else(empty_root),
         n => {
-            let k = split(n);
+            let k = split_len(n);
             let (left, right) = leaves.split_at(k);
             node_hash(&root(left), &root(right))
         }
@@ -124,7 +130,7 @@ pub fn root(leaves: &[Hash]) -> Hash {
 ///
 /// # let leaves: Vec<Hash> = ["a", "b", "c"].iter().map(|e| leaf_hash(e.as_bytes())).collect();
 /// let path = inclusion_proof(&leaves, 2);
-/// assert!(verify_inclusion(&leaves[2], 2, leaves.len(), &path, &root(&leaves)));
+/// assert!(verify_inclusion(&leaves[2], 2, leaves.len() as u64, &path, &root(&leaves)));
 /// ```
 #[must_use]
 pub fn inclusion_proof(leaves: &[Hash], index: usize) -> Vec<Hash> {
@@ -135,7 +141,7 @@ pub fn inclusion_proof(leaves: &[Hash], index: usize) -> Vec<Hash> {
     if n == 1 {
         return Vec::new();
     }
-    let k = split(n);
+    let k = split_len(n);
     let (left, right) = leaves.split_at(k);
     if index < k {
         let mut path = inclusion_proof(left, index);
@@ -180,6 +186,11 @@ enum Side {
 /// descending from the root, so the descent is done first and the sides are
 /// then applied in reverse against the path.
 ///
+/// `index` and `size` are `u64`, as RFC 6962's tree sizes are, on every
+/// target: they come with a proof from someone else, whose log may be
+/// larger than this machine's `usize`. A 32-bit or `wasm32` verifier
+/// checks a proof for a log of any size.
+///
 /// # Example
 ///
 /// ```
@@ -196,8 +207,8 @@ enum Side {
 #[must_use]
 pub fn verify_inclusion(
     leaf: &Hash,
-    index: usize,
-    size: usize,
+    index: u64,
+    size: u64,
     path: &[Hash],
     expected_root: &Hash,
 ) -> bool {
@@ -265,7 +276,7 @@ fn subproof(leaves: &[Hash], m: usize, start: bool) -> Vec<Hash> {
         }
         return vec![root(leaves)];
     }
-    let k = split(n);
+    let k = split_len(n);
     let (left, right) = leaves.split_at(k);
     if m <= k {
         let mut path = subproof(left, m, start);
@@ -328,6 +339,9 @@ fn chain_border_right(seed: Hash, path: &[Hash]) -> Hash {
 /// would simply always fail, or worse, always pass -- so the round-trip
 /// tests exercise every `(m, n)` pair rather than a sample.
 ///
+/// The sizes are `u64` on every target, for the reason
+/// [`verify_inclusion`]'s are.
+///
 /// # Example
 ///
 /// ```
@@ -344,8 +358,8 @@ fn chain_border_right(seed: Hash, path: &[Hash]) -> Hash {
 /// ```
 #[must_use]
 pub fn verify_consistency(
-    m: usize,
-    n: usize,
+    m: u64,
+    n: u64,
     old_root: &Hash,
     new_root: &Hash,
     proof: &[Hash],
@@ -364,14 +378,13 @@ pub fn verify_consistency(
         return false;
     }
 
-    let (m64, n64) = (m as u64, n as u64);
-    let (mut inner, border) = decompose(m64 - 1, n64);
-    let shift = m64.trailing_zeros();
+    let (mut inner, border) = decompose(m - 1, n);
+    let shift = m.trailing_zeros();
     inner -= shift;
 
     // When `m` is an exact power of two the old root is the seed and is not
     // carried in the proof; otherwise the proof supplies it.
-    let (seed, start) = if m64 == 1u64 << shift {
+    let (seed, start) = if m == 1u64 << shift {
         (*old_root, 0usize)
     } else {
         match proof.first() {
@@ -394,7 +407,7 @@ pub fn verify_consistency(
         return false;
     };
 
-    let mask = (m64 - 1) >> shift;
+    let mask = (m - 1) >> shift;
     let recomputed_old = chain_border_right(chain_inner_right(seed, inner_part, mask), border_part);
     let recomputed_new = chain_border_right(chain_inner(seed, inner_part, mask), border_part);
 

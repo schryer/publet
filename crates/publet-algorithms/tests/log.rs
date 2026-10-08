@@ -56,7 +56,7 @@ fn inclusion_proofs_round_trip_for_every_index_and_size() {
         for i in 0..n {
             let path = inclusion_proof(&tree, i);
             assert!(
-                verify_inclusion(&tree[i], i, n, &path, &r),
+                verify_inclusion(&tree[i], i as u64, n as u64, &path, &r),
                 "inclusion failed for index {i} of {n}"
             );
         }
@@ -94,7 +94,7 @@ fn consistency_proofs_round_trip_for_every_pair() {
             let old_root = root(&new_tree[..m]);
             let proof = consistency_proof(&new_tree, m);
             assert!(
-                verify_consistency(m, n, &old_root, &new_root, &proof),
+                verify_consistency(m as u64, n as u64, &old_root, &new_root, &proof),
                 "consistency failed for m={m} n={n}"
             );
         }
@@ -155,12 +155,11 @@ fn a_tampered_consistency_proof_is_rejected() {
 fn absurd_sizes_are_refused_without_hanging() {
     // Found by fuzzing: a proof claiming more than 2^63 entries made the
     // verifier loop forever. Proofs come from peers, so that was a way to
-    // stop anyone checking them. The top bit is 2^63 on 64-bit targets and
-    // 2^31 on 32-bit ones, where the same loop would have hung.
+    // stop anyone checking them. Sizes are u64 on every target, so these
+    // run on 32-bit machines too.
     let leaf = publet_algorithms::log::leaf_hash(b"x");
     let root = publet_algorithms::log::empty_root();
-    let top = 1_usize << (usize::BITS - 1);
-    for size in [usize::MAX, usize::MAX - 1, top + 1, top] {
+    for size in [u64::MAX, u64::MAX - 1, (1 << 63) + 1, 1 << 63] {
         assert!(!verify_inclusion(&leaf, size - 1, size, &[], &root));
         assert!(!verify_consistency(1, size, &root, &root, &[]));
     }
@@ -168,7 +167,6 @@ fn absurd_sizes_are_refused_without_hanging() {
     // shifted a u64 by 64 bits, which panics where overflow is checked --
     // as it is in pub's release builds.
     let proof = [leaf; 3];
-    #[cfg(target_pointer_width = "64")]
     assert!(!verify_consistency(
         3_352_797_463_764_764_551,
         9_765_923_333_140_350_855,
@@ -176,12 +174,20 @@ fn absurd_sizes_are_refused_without_hanging() {
         &root,
         &proof
     ));
-    assert!(!verify_consistency(3, usize::MAX, &root, &root, &proof));
-    assert!(!verify_consistency(
-        top - 3,
-        usize::MAX,
-        &root,
-        &root,
-        &proof
-    ));
+    assert!(!verify_consistency(3, u64::MAX, &root, &root, &proof));
+}
+
+// covers: log::verify_inclusion, log::verify_consistency
+#[test]
+fn sizes_beyond_a_32_bit_usize_are_checked_like_any_other() {
+    // A log larger than 2^32 entries cannot be held in a 32-bit machine's
+    // memory, but its proofs can still be checked there. The path for the
+    // last entry of a log of 2^32 + 1 is one sibling: the root of the
+    // first 2^32 entries.
+    let left = [7u8; 32];
+    let last = publet_algorithms::log::leaf_hash(b"last");
+    let size = (1u64 << 32) + 1;
+    let head = publet_algorithms::log::node_hash(&left, &last);
+    assert!(verify_inclusion(&last, size - 1, size, &[left], &head));
+    assert!(!verify_inclusion(&last, size - 2, size, &[left], &head));
 }

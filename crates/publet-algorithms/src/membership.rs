@@ -23,11 +23,14 @@ pub struct Membership {
 #[non_exhaustive]
 pub enum Proof {
     /// The member is present at `index`, with this audit path.
+    ///
+    /// Positions and sizes are `u64` on every target: a proof comes from
+    /// someone else, whose set may be larger than this machine's `usize`.
     Present {
         /// Position in sorted order.
-        index: usize,
+        index: u64,
         /// Total members.
-        size: usize,
+        size: u64,
         /// Audit path from the leaf upward.
         path: Vec<Hash>,
     },
@@ -37,11 +40,11 @@ pub enum Proof {
     /// `None` when the queried value sorts outside the range entirely.
     Absent {
         /// The greatest present member less than the queried one.
-        before: Option<(usize, String, Vec<Hash>)>,
+        before: Option<(u64, String, Vec<Hash>)>,
         /// The least present member greater than the queried one.
-        after: Option<(usize, String, Vec<Hash>)>,
+        after: Option<(u64, String, Vec<Hash>)>,
         /// Total members.
-        size: usize,
+        size: u64,
     },
 }
 
@@ -157,19 +160,19 @@ impl Membership {
         let leaves = self.leaves();
         match self.members.binary_search(&member.to_owned()) {
             Ok(index) => Proof::Present {
-                index,
-                size: self.members.len(),
+                index: index as u64,
+                size: self.members.len() as u64,
                 path: crate::log::inclusion_proof(&leaves, index),
             },
             Err(insertion) => {
                 let before = insertion.checked_sub(1).and_then(|i| {
                     self.members
                         .get(i)
-                        .map(|m| (i, m.clone(), crate::log::inclusion_proof(&leaves, i)))
+                        .map(|m| (i as u64, m.clone(), crate::log::inclusion_proof(&leaves, i)))
                 });
                 let after = self.members.get(insertion).map(|m| {
                     (
-                        insertion,
+                        insertion as u64,
                         m.clone(),
                         crate::log::inclusion_proof(&leaves, insertion),
                     )
@@ -177,7 +180,7 @@ impl Membership {
                 Proof::Absent {
                     before,
                     after,
-                    size: self.members.len(),
+                    size: self.members.len() as u64,
                 }
             }
         }
@@ -223,7 +226,7 @@ pub fn verify(member: &str, proof: &Proof, expected_root: &Hash) -> bool {
                     && after.is_none()
                     && *expected_root == crate::log::empty_root();
             }
-            let check = |entry: &Option<(usize, String, Vec<Hash>)>| -> bool {
+            let check = |entry: &Option<(u64, String, Vec<Hash>)>| -> bool {
                 entry.as_ref().is_none_or(|(index, value, path)| {
                     crate::log::verify_inclusion(
                         &leaf_hash(value.as_bytes()),
