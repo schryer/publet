@@ -155,10 +155,12 @@ fn a_tampered_consistency_proof_is_rejected() {
 fn absurd_sizes_are_refused_without_hanging() {
     // Found by fuzzing: a proof claiming more than 2^63 entries made the
     // verifier loop forever. Proofs come from peers, so that was a way to
-    // stop anyone checking them.
+    // stop anyone checking them. The top bit is 2^63 on 64-bit targets and
+    // 2^31 on 32-bit ones, where the same loop would have hung.
     let leaf = publet_algorithms::log::leaf_hash(b"x");
     let root = publet_algorithms::log::empty_root();
-    for size in [usize::MAX, usize::MAX - 1, (1 << 63) + 1, 1 << 63] {
+    let top = 1_usize << (usize::BITS - 1);
+    for size in [usize::MAX, usize::MAX - 1, top + 1, top] {
         assert!(!verify_inclusion(&leaf, size - 1, size, &[], &root));
         assert!(!verify_consistency(1, size, &root, &root, &[]));
     }
@@ -166,6 +168,7 @@ fn absurd_sizes_are_refused_without_hanging() {
     // shifted a u64 by 64 bits, which panics where overflow is checked --
     // as it is in pub's release builds.
     let proof = [leaf; 3];
+    #[cfg(target_pointer_width = "64")]
     assert!(!verify_consistency(
         3_352_797_463_764_764_551,
         9_765_923_333_140_350_855,
@@ -174,4 +177,5 @@ fn absurd_sizes_are_refused_without_hanging() {
         &proof
     ));
     assert!(!verify_consistency(3, usize::MAX, &root, &root, &proof));
+    assert!(!verify_consistency(top - 3, usize::MAX, &root, &root, &proof));
 }
