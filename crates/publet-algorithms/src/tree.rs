@@ -20,6 +20,11 @@ use crate::log::{Hash, leaf_hash};
 
 /// One position in the tree: a leaf holding raw content, or a branch
 /// holding its own header bytes plus named children.
+///
+/// This enum is exhaustive on purpose, so a `match` on it needs no
+/// wildcard arm. A third kind of node would change how trees hash, which
+/// changes every root computed from one, so it could not arrive in a
+/// compatible release anyway.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Node {
     /// Content hashed directly -- a function's exact source text, say.
