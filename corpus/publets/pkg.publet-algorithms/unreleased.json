@@ -43,6 +43,10 @@
     {
       "category": "changed",
       "change": "log::verify_inclusion and log::verify_consistency take sizes and indexes as u64, and membership::Proof carries them as u64, on every target. They come with proofs from peers, whose logs and sets may be larger than a 32-bit or wasm32 machine's usize; a verifier there can now check them. The functions that build proofs keep usize, as they index leaves in memory."
+    },
+    {
+      "category": "internal",
+      "change": "The crates' include patterns are anchored with /, so a file of the same name deeper in a crate can never be packaged by accident; each package's contents are unchanged."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

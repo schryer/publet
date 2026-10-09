@@ -55,6 +55,10 @@
     {
       "category": "internal",
       "change": "publet-algorithms checks proofs with u64 sizes on every target."
+    },
+    {
+      "category": "internal",
+      "change": "The crates' include patterns are anchored with /, so a file of the same name deeper in a crate can never be packaged by accident; each package's contents are unchanged."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

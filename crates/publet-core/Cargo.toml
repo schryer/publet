@@ -13,7 +13,8 @@ repository.workspace = true
 documentation = "https://docs.rs/publet-core"
 keywords = ["content-addressing", "cbor", "ed25519", "signatures", "publet"]
 categories = ["cryptography", "encoding"]
-include = ["src/**/*.rs", "tests/**/*.rs", "testdata/*.json", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md", "SUPPLY-CHAIN.md", "TESTING.md"]
+# Anchored with /: like gitignore patterns, a bare name matches at any depth.
+include = ["/src/**/*.rs", "/tests/**/*.rs", "/testdata/*.json", "/README.md", "/CHANGELOG.md", "/LICENSE", "/SECURITY.md", "/SUPPLY-CHAIN.md", "/TESTING.md"]
 
 [package.metadata.docs.rs]
 # Link every item in the rendered source to its definition (docs.rs builds
