@@ -54,9 +54,12 @@ release-pr: ## Cut a release: publish the package publet and open a release PR
 # compiled exactly as crates.io would receive it.
 PUBLISHED := publet-core publet-algorithms
 
+# The verify builds get a target directory of their own. Sharing target/
+# leaves dep-info naming the packaged copies' sources, after which cargo
+# can report a crate Fresh however its src/ changes.
 publish-check: ## Package each crates.io crate and verify it builds as published
 	for crate in $(PUBLISHED); do \
-	  $(CARGO) publish --dry-run --locked -p $$crate; \
+	  CARGO_TARGET_DIR=$(CURDIR)/target/publish-check $(CARGO) publish --dry-run --locked -p $$crate; \
 	done
 
 # The published crates' minimum Rust version, as their manifests declare it.
