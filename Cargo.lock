@@ -1011,7 +1011,7 @@ dependencies = [
 
 [[package]]
 name = "pub-ann"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1019,14 +1019,14 @@ dependencies = [
 
 [[package]]
 name = "pub-canon"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
 ]
 
 [[package]]
 name = "pub-cat"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-store",
@@ -1034,14 +1034,14 @@ dependencies = [
 
 [[package]]
 name = "pub-cid"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
 ]
 
 [[package]]
 name = "pub-cite"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1049,7 +1049,7 @@ dependencies = [
 
 [[package]]
 name = "pub-closure"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1057,7 +1057,7 @@ dependencies = [
 
 [[package]]
 name = "pub-code-tree"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "publet-algorithms",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "pub-delta"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1077,7 +1077,7 @@ dependencies = [
 
 [[package]]
 name = "pub-divergence"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1085,7 +1085,7 @@ dependencies = [
 
 [[package]]
 name = "pub-edges"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "pub-eval"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-eval",
@@ -1102,7 +1102,7 @@ dependencies = [
 
 [[package]]
 name = "pub-index"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1112,7 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "pub-lineage"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "pub-lint"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1128,7 +1128,7 @@ dependencies = [
 
 [[package]]
 name = "pub-ls"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1136,7 +1136,7 @@ dependencies = [
 
 [[package]]
 name = "pub-merkle"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1144,14 +1144,14 @@ dependencies = [
 
 [[package]]
 name = "pub-migrate"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
 ]
 
 [[package]]
 name = "pub-person"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-graph",
@@ -1159,7 +1159,7 @@ dependencies = [
 
 [[package]]
 name = "pub-proof"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1167,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "pub-serve"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "axum",
  "publet-core",
@@ -1178,7 +1178,7 @@ dependencies = [
 
 [[package]]
 name = "pub-settle"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-settle",
@@ -1186,7 +1186,7 @@ dependencies = [
 
 [[package]]
 name = "pub-sign"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "getrandom 0.2.17",
  "publet-core",
@@ -1194,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "pub-store"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-domain",
@@ -1203,7 +1203,7 @@ dependencies = [
 
 [[package]]
 name = "pub-sync"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "publet-net",
@@ -1213,14 +1213,14 @@ dependencies = [
 
 [[package]]
 name = "pub-term"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-graph",
 ]
 
 [[package]]
 name = "pub-verify"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
 ]
@@ -1238,7 +1238,7 @@ dependencies = [
 
 [[package]]
 name = "publet-cli"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "getrandom 0.2.17",
  "publet-algorithms",
@@ -1268,7 +1268,7 @@ dependencies = [
 
 [[package]]
 name = "publet-domain"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1278,7 +1278,7 @@ dependencies = [
 
 [[package]]
 name = "publet-eval"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "publet-algorithms",
@@ -1289,7 +1289,7 @@ dependencies = [
 
 [[package]]
 name = "publet-graph"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",
@@ -1299,11 +1299,11 @@ dependencies = [
 
 [[package]]
 name = "publet-lint"
-version = "0.1.1"
+version = "0.2.0"
 
 [[package]]
 name = "publet-net"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "axum",
  "publet-algorithms",
@@ -1318,7 +1318,7 @@ dependencies = [
 
 [[package]]
 name = "publet-settle"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-core",
  "thiserror 2.0.20",
@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "publet-store"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "publet-algorithms",
  "publet-core",

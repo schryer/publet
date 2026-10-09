@@ -1,13 +1,8 @@
 {
-  "slug": "pkg.publet-cli",
-  "tag": "PKG-PUBCLI-10-2026",
-  "created": "2026-10-04T00:00:00Z",
-  "title": "publet-cli, the pub command",
   "claims": {
     "identity": {
       "class": "archival",
-      "scope": "the published release v0.1.1 of publet-cli",
-      "content": "publet-cli 0.1.1 is the pub command released as v0.1.1 from commit 8f3df3aa5810ee60105cf755ccd64d4a96532319.",
+      "content": "publet-cli 0.2.0 is released as v0.2.0 from commit 7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613.",
       "data": {
         "columns": [
           {
@@ -32,28 +27,25 @@
         "rows": [
           [
             "pub",
-            "0.1.1",
+            "0.2.0",
             "pub --version",
-            "pub 0.1.1",
-            "v0.1.1",
-            "8f3df3aa5810ee60105cf755ccd64d4a96532319"
+            "pub 0.2.0",
+            "v0.2.0",
+            "7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613"
           ]
         ]
       },
+      "scope": "the published release v0.2.0 of publet-cli",
       "sources": [
         {
-          "ref": "https://github.com/schryer/publet",
-          "revision": "8f3df3aa5810ee60105cf755ccd64d4a96532319"
+          "ref": "publet-cli",
+          "revision": "7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "scope": "the published release v0.1.1 of publet-cli",
-      "content": "publet-cli 0.1.1 was released on 2026-10-04 from commit 8f3df3aa5810ee60105cf755ccd64d4a96532319 with these changes.",
-      "depends": [
-        "#identity"
-      ],
+      "content": "publet-cli 0.2.0 was released on 2026-10-09 from commit 7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613 with these changes.",
       "data": {
         "columns": [
           {
@@ -65,19 +57,150 @@
         ],
         "rows": [
           [
-            "fixed",
-            "pub --version reports the release when installed with cargo install --git --tag, whose checkout carries no tags; it called itself an unreleased build."
+            "internal",
+            "graphset's code moved into the workspace as the publet-algorithms crate, and publet-merkle's re-exports were replaced by it; nothing pub does changed (every scenario passes, and the evaluation digest is unchanged)."
+          ],
+          [
+            "internal",
+            "The graph traversals (publet-graph's cycle check, depends closure, equivalence classes and lineage walks, and pub build's topological sort) and the delta checkpoint schedule now share one implementation in publet-algorithms; their results are unchanged."
+          ],
+          [
+            "internal",
+            "Version requirement matching (^X.Y, X.Y+, prefixes) moved from pub render into publet-algorithms' version module, with Version parsing and bump arithmetic; pub render and pub env behave as before."
+          ],
+          [
+            "internal",
+            "publet-core and publet-algorithms are released on version tracks of their own; publet-core's manifest states its version instead of inheriting the workspace's."
+          ],
+          [
+            "changed",
+            "A render pipeline's tool requirement ^X.Y means what it means to Cargo: below 1.0 it admits only the same minor version (^0.1 admits 0.1.9, not 0.2.0)."
+          ],
+          [
+            "internal",
+            "cargo-deny is stricter (0.20.2; unmaintained and unsound crates fail; crates.io only) and cargo-vet records supply-chain audits; nothing pub does changed."
+          ],
+          [
+            "internal",
+            "The published crates' documentation is reworked; a guard checks every public function has an example. Nothing pub does changed."
+          ],
+          [
+            "internal",
+            "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
+          ],
+          [
+            "security",
+            "pub compiles in three fixes found by fuzzing: the CBOR decoder no longer accepts null in a two-byte form (a second encoding and identifier for the same object), identifier parsing refuses non-zero base32 padding bits (many spellings of one identifier), and Merkle proof checking no longer loops forever, or panics (pub's release builds check overflow), on a log size above 2^63."
+          ],
+          [
+            "internal",
+            "CI builds publet-core and publet-algorithms on their minimum Rust version, 1.85; nothing pub does changed."
+          ],
+          [
+            "internal",
+            "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
+          ],
+          [
+            "internal",
+            "tree::Node's docs say why it is exhaustive."
+          ],
+          [
+            "internal",
+            "The log's absurd-size regression tests also build and run on 32-bit targets."
+          ],
+          [
+            "internal",
+            "publet-algorithms checks proofs with u64 sizes on every target."
+          ],
+          [
+            "internal",
+            "The crates' include patterns are anchored with /, so a file of the same name deeper in a crate can never be packaged by accident; each package's contents are unchanged."
           ]
         ]
       },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release v0.2.0 of publet-cli",
       "sources": [
         {
-          "ref": "https://github.com/schryer/publet",
-          "revision": "8f3df3aa5810ee60105cf755ccd64d4a96532319"
+          "ref": "publet-cli",
+          "revision": "7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613"
+        }
+      ]
+    },
+    "security": {
+      "class": "archival",
+      "content": "publet-cli 0.2.0 passed these security checks before release on 2026-10-09.",
+      "data": {
+        "columns": [
+          {
+            "name": "kind"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "command"
+          },
+          {
+            "name": "tool"
+          },
+          {
+            "name": "result"
+          }
+        ],
+        "rows": [
+          [
+            "check",
+            "advisories, licences, bans and sources",
+            "cargo deny --locked check --hide-inclusion-graph",
+            "cargo-deny 0.20.2",
+            "advisories ok, bans ok, licenses ok, sources ok"
+          ],
+          [
+            "check",
+            "supply-chain audits",
+            "cargo vet --locked",
+            "cargo-vet 0.10.2",
+            "Vetting Succeeded (54 fully audited, 183 exempted)"
+          ],
+          [
+            "check",
+            "supply-chain reports current",
+            "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'",
+            "",
+            "SUPPLY-CHAIN.md current for every published crate"
+          ],
+          [
+            "fact",
+            "RustSec advisory database revision",
+            "git -C \"$(ls -d ~/.cargo/advisory-dbs/advisory-db-*/ | head -1)\" log -1 --format='%H (%cs)'",
+            "",
+            "7eebec69c352c7191b1f13eb95dd510eeca5d1de (2026-10-09)"
+          ],
+          [
+            "fact",
+            "audits imported from",
+            "grep -o '^\\[imports\\.[a-z-]*' supply-chain/config.toml | cut -d. -f2 | paste -sd, - | sed 's/,/, /g'",
+            "",
+            "bytecode-alliance, embark-studios, google, isrg, mozilla, zcash"
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release v0.2.0 of publet-cli",
+      "sources": [
+        {
+          "ref": "publet-cli",
+          "revision": "7d6d6ef4d9e0a77387d0f444d16e3d9dba07b613"
         }
       ]
     }
   },
+  "created": "2026-10-09T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
@@ -96,13 +219,15 @@
       ]
     },
     {
-      "heading": "Help",
+      "heading": "Security",
       "items": [
         {
-          "ref": "base:xdoc.publet-readme",
-          "role": "background"
+          "ref": "#security"
         }
       ]
     }
-  ]
+  ],
+  "slug": "pkg.publet-cli",
+  "tag": "PKG-PUBCLI-10-2026",
+  "title": "publet-cli"
 }
