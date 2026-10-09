@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "publet-algorithms 0.1.0 is released as publet-algorithms-v0.1.0 from commit e883eee4181cadc480b99142a2a67bfa1dfabad2.",
+      "content": "publet-algorithms 0.2.0 is released as publet-algorithms-v0.2.0 from commit e97457ef710d8f93651fc8df5ecfaa1538a454e6.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "publet-algorithms",
-            "0.1.0",
+            "0.2.0",
             "",
             "",
-            "publet-algorithms-v0.1.0",
-            "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+            "publet-algorithms-v0.2.0",
+            "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
           ]
         ]
       },
-      "scope": "the published release publet-algorithms-v0.1.0 of publet-algorithms",
+      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
       "sources": [
         {
           "ref": "publet-algorithms",
-          "revision": "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "publet-algorithms 0.1.0 was released on 2026-10-04 from commit e883eee4181cadc480b99142a2a67bfa1dfabad2 with these changes.",
+      "content": "publet-algorithms 0.2.0 was released on 2026-10-09 from commit e97457ef710d8f93651fc8df5ecfaa1538a454e6 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,24 +57,138 @@
         ],
         "rows": [
           [
-            "added",
-            "The generic algorithms publet is built on, depending on nothing publet-specific: an RFC 6962 Merkle log with inclusion and consistency proofs and a checkpoint schedule; sorted-set membership with absence proofs; recursive content trees; Fixed6 exact fixed-point arithmetic; deterministic personalized PageRank; graph traversals (reachability, closure, root, topological order); and version arithmetic and requirement matching."
+            "changed",
+            "version::satisfies reads ^X.Y as Cargo does: below 1.0 the minor part is fixed, so ^0.1 no longer admits 0.3.2. Version and Bump are removed; release arithmetic belongs to the semver crate."
+          ],
+          [
+            "fixed",
+            "The crate ships what distribution needs: the Apache-2.0 licence text, crates.io metadata, an include list, and documentation with examples run as doctests, including the crates considered instead and why."
+          ],
+          [
+            "fixed",
+            "The package ships SUPPLY-CHAIN.md: every dependency, whether it runs code at build time, and how its code is vouched for (an imported audit, a trusted publisher, or an exemption with the evidence beside it)."
+          ],
+          [
+            "fixed",
+            "Every public function's documentation has an example run as a test, the crate root has an overview, a cookbook and why this crate exists, and docs.rs renders how every item is tested, how each dependency is vouched for, the security policy and the changelog."
+          ],
+          [
+            "internal",
+            "Test vectors from independent sources, property tests, and two independent implementations as test oracles (ciborium for CBOR, ct-merkle for RFC 6962). Tests only; nothing users run changed."
+          ],
+          [
+            "security",
+            "Merkle log proof checking looped forever on a proof claiming more than 2^63 entries, and a consistency proof between sizes above 2^63 shifted a u64 by 64 bits, panicking where overflow is checked; either let a peer stop anyone checking its proofs. Both are fixed. Found by fuzzing."
+          ],
+          [
+            "fixed",
+            "The crate declared Rust 1.98, the toolchain publet is developed with, though it builds on 1.85, the first release with the 2024 edition. It now declares 1.85, and CI builds it there. docs.rs links the rendered source to definitions."
+          ],
+          [
+            "internal",
+            "Each change to the public API of publet-core and publet-algorithms is checked against the crate's last release by cargo-semver-checks, and the crate docs gain a Versioning section saying so."
+          ],
+          [
+            "internal",
+            "tree::Node's docs say why it is exhaustive."
+          ],
+          [
+            "internal",
+            "The log's absurd-size regression tests also build and run on 32-bit targets."
+          ],
+          [
+            "changed",
+            "log::verify_inclusion and log::verify_consistency take sizes and indexes as u64, and membership::Proof carries them as u64, on every target. They come with proofs from peers, whose logs and sets may be larger than a 32-bit or wasm32 machine's usize; a verifier there can now check them. The functions that build proofs keep usize, as they index leaves in memory."
+          ],
+          [
+            "internal",
+            "The crates' include patterns are anchored with /, so a file of the same name deeper in a crate can never be packaged by accident; each package's contents are unchanged."
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release publet-algorithms-v0.1.0 of publet-algorithms",
+      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
       "sources": [
         {
           "ref": "publet-algorithms",
-          "revision": "e883eee4181cadc480b99142a2a67bfa1dfabad2"
+          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
+        }
+      ]
+    },
+    "security": {
+      "class": "archival",
+      "content": "publet-algorithms 0.2.0 passed these security checks before release on 2026-10-09.",
+      "data": {
+        "columns": [
+          {
+            "name": "kind"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "command"
+          },
+          {
+            "name": "tool"
+          },
+          {
+            "name": "result"
+          }
+        ],
+        "rows": [
+          [
+            "check",
+            "advisories, licences, bans and sources",
+            "cargo deny --locked check --hide-inclusion-graph",
+            "cargo-deny 0.20.2",
+            "advisories ok, bans ok, licenses ok, sources ok"
+          ],
+          [
+            "check",
+            "supply-chain audits",
+            "cargo vet --locked",
+            "cargo-vet 0.10.2",
+            "Vetting Succeeded (54 fully audited, 183 exempted)"
+          ],
+          [
+            "check",
+            "supply-chain reports current",
+            "./tools/supply-chain-report.py --check && echo 'SUPPLY-CHAIN.md current for every published crate'",
+            "",
+            "SUPPLY-CHAIN.md current for every published crate"
+          ],
+          [
+            "fact",
+            "RustSec advisory database revision",
+            "git -C \"$(ls -d ~/.cargo/advisory-dbs/advisory-db-*/ | head -1)\" log -1 --format='%H (%cs)'",
+            "",
+            "7eebec69c352c7191b1f13eb95dd510eeca5d1de (2026-10-09)"
+          ],
+          [
+            "fact",
+            "audits imported from",
+            "grep -o '^\\[imports\\.[a-z-]*' supply-chain/config.toml | cut -d. -f2 | paste -sd, - | sed 's/,/, /g'",
+            "",
+            "bytecode-alliance, embark-studios, google, isrg, mozilla, zcash"
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release publet-algorithms-v0.2.0 of publet-algorithms",
+      "sources": [
+        {
+          "ref": "publet-algorithms",
+          "revision": "e97457ef710d8f93651fc8df5ecfaa1538a454e6"
         }
       ]
     }
   },
-  "created": "2026-10-04T00:00:00Z",
+  "created": "2026-10-09T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
@@ -89,6 +203,14 @@
       "items": [
         {
           "ref": "#release"
+        }
+      ]
+    },
+    {
+      "heading": "Security",
+      "items": [
+        {
+          "ref": "#security"
         }
       ]
     }

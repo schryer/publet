@@ -2,7 +2,7 @@
 name = "publet-algorithms"
 description = "Generic algorithms publet is built on: an RFC 6962 Merkle log, sorted-set membership with absence proofs, recursive content trees, exact fixed-point arithmetic, and deterministic trust propagation. Depends on nothing publet-specific."
 # Released on a version track of its own, not the workspace's.
-version = "0.1.0"
+version = "0.2.0"
 edition.workspace = true
 # The oldest Rust this crate builds on, tested in CI (`make msrv`): the first
 # release with the 2024 edition. Not the workspace's, which is the toolchain
