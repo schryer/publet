@@ -39,6 +39,6 @@ procedural macro (P): code that runs while compiling.
 | `tinyvec_macros` | 0.1.1 | - | audited by mozilla |  |
 | `typenum` | 1.20.1 | - | not audited (exempt) | Mozilla and Zcash published safe-to-deploy deltas 1.15.0 to 1.17.0; nothing covers 1.17.0 to this version, and no set has a full audit. Most of the crate is generated code. As of 2026-10-05. |
 | `unicode-ident` | 1.0.27 | - | trusted publisher (dtolnay) | Trusted by Mozilla, ISRG and the Bytecode Alliance, whose audits this project imports; publet adopts their decision rather than re-reviewing. |
-| `unicode-normalization` | 0.1.25 | - | audited (a chain of imported audits) |  |
+| `unicode-normalization` | 0.1.26 | - | audited (a chain of imported audits) |  |
 | `version_check` | 0.9.5 | - | not audited (exempt) | Google audited 0.9.4 as safe-to-deploy; the 0.9.4 to 0.9.5 diff (documentation only) awaits review by the maintainer. |
 | `zeroize` | 1.9.0 | - | not audited (exempt) | Mozilla audited 1.8.1 as safe-to-deploy and Zcash the delta to 1.8.2; the 1.8.2 to 1.9.0 diff is unreviewed. As of 2026-10-05. |
