@@ -34,6 +34,7 @@ def load(relative: str):
 audit = load("spec/audit.py")
 must_coverage = load("tools/must-coverage.py")
 wiki_seed = load("tools/wiki-seed.py")
+vectors = load("tools/vectors/generate.py")
 
 
 @pytest.fixture(autouse=True)
@@ -192,3 +193,19 @@ def test_wiki_seed_refuses_a_path_outside(flag, monkeypatch, tmp_path):
     with pytest.raises(SystemExit) as stop:
         run(wiki_seed, monkeypatch, *(item for pair in paths.items() for item in pair))
     assert flag in str(stop.value)
+
+
+# vectors: the H3 cells come from the H3 library, the same on every run.
+
+
+def test_drawn_is_below_its_bound_and_the_same_each_time():
+    assert vectors.drawn("lat 0", 10) == vectors.drawn("lat 0", 10)
+    assert all(0 <= vectors.drawn(f"x {i}", 7) < 7 for i in range(100))
+
+
+def test_h3_vectors_are_the_committed_ones(monkeypatch):
+    written = {}
+    monkeypatch.setattr(vectors, "write", lambda path, data: written.update({path: data}))
+    vectors.h3_cells()
+    path = "crates/publet-algorithms/testdata/h3.json"
+    assert written[path] == json.loads((ROOT / path).read_text())

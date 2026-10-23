@@ -204,10 +204,17 @@ impl ProseClaim {
         let computes = reserved(body.get("computes"), "computes", class, Class::Procedural)?
             .map(Computes::from_value)
             .transpose()?;
+        // Section 5.9.6: a row says which singular it is about, and so
+        // presupposes it.
+        let about: Vec<Cid> = data
+            .as_ref()
+            .map(|d| d.about().into_iter().map(|(_, c)| c).collect())
+            .unwrap_or_default();
         let mut cited: Vec<(&'static str, &Cid)> = Vec::new();
         if let Some(Data::Table { columns, .. }) = &data {
             cited.extend(columns.iter().flat_map(Column::cited));
         }
+        cited.extend(about.iter().map(|c| ("data.rows.about", c)));
         if let Some(c) = &computes {
             cited.extend(c.kinds().map(|k| ("computes", k)));
         }
@@ -309,7 +316,7 @@ impl ProseClaim {
     /// A parenthesized qualifier is dropped, so `quantum (adj., physics)`
     /// and `quantum (n.)` yield the same term and are therefore comparable
     /// -- which is the point of the computation. Returns `None` for classes
-    /// other than `definitional`.
+    /// other than `definitional`, and for a singular (Section 5.9.6).
     #[must_use]
     pub fn term(&self, object: &Object) -> Option<String> {
         if self.class != Class::Definitional {
@@ -318,6 +325,11 @@ impl ProseClaim {
         // Section 5.9.1: a definition carrying `defines` goes by its own
         // symbol or name.
         if let Some(d) = &self.defines {
+            // Section 5.9.6: a singular defines a thing, not a term, so two
+            // basements of one name are two things rather than a divergence.
+            if matches!(d, Definition::Singular { .. }) {
+                return None;
+            }
             return Some(d.term().trim().to_lowercase());
         }
         if let Some(ext) = object.ext()

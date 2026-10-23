@@ -18,10 +18,11 @@ mod graph;
 mod lint;
 pub mod personhood;
 mod quantity;
+mod singular;
 mod view;
 
 pub use assumption::{Assumption, Basis, Triage};
-pub use data::{Cell, Column, Data, Source, View, sources};
+pub use data::{ABOUT, Cell, Column, Data, Source, View, sources};
 pub use divergence::{Divergence, TermConflict, TermPartition, compare, partition};
 pub use document::{Anchor, Bind, Document, Item, Role};
 pub use error::GraphError;
@@ -31,6 +32,7 @@ pub use quantity::{
     Binding, Boundary, Computes, ConceptForm, ConceptRelation, Definition, Describes, Parameter,
     ParameterType, RelationForm, Slot, Solves,
 };
+pub use singular::{Fact, PathError, segment};
 pub use view::{Annotation, Class, Key, Principal, ProseClaim, Relation, RelationKind};
 
 pub mod load;

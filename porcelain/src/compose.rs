@@ -65,6 +65,8 @@ pub(crate) struct ClaimFlags {
     pub(crate) computes: Option<PathBuf>,
     pub(crate) cites: Vec<String>,
     pub(crate) cite_notes: Vec<String>,
+    pub(crate) statements: Vec<String>,
+    pub(crate) quotes: Vec<String>,
     pub(crate) sources: Vec<SourceArg>,
     pub(crate) data: Option<PathBuf>,
     pub(crate) no_data: bool,
@@ -103,6 +105,10 @@ impl ClaimFlags {
             self.cites.push(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--cite-note=") {
             self.cite_notes.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--statement=") {
+            self.statements.push(v.to_owned());
+        } else if let Some(v) = arg.strip_prefix("--quote=") {
+            self.quotes.push(v.to_owned());
         } else if let Some(v) = arg.strip_prefix("--data=") {
             self.data = Some(PathBuf::from(v));
         } else if arg == "--no-data" {
@@ -202,6 +208,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
     if let Some(derivation) = &flags.derivation {
         evidence.insert(0, claim_evidence("derivation", derivation));
     }
+    evidence.extend(stated_entries(&flags));
     evidence.extend(source_entries);
     let data = flags
         .data
@@ -308,8 +315,12 @@ pub(crate) fn quantity_citations(
     fields: &BTreeMap<String, Value>,
 ) -> Vec<String> {
     let mut out = Vec::new();
+    // Only identifiers: anything else is the field's error to report, in
+    // the field's terms, rather than `depends`'.
     let mut push = |v: Option<&Value>| {
-        if let Some(t) = v.and_then(Value::as_text) {
+        if let Some(t) = v.and_then(Value::as_text)
+            && t.parse::<Cid>().is_ok()
+        {
             out.push(t.to_owned());
         }
     };
@@ -323,6 +334,22 @@ pub(crate) fn quantity_citations(
             push(column.get("kind"));
             push(column.get("measure"));
         }
+        // Section 5.9.6: a row presupposes the singular it is about.
+        let about = columns
+            .iter()
+            .position(|c| c.get("name").and_then(Value::as_text) == Some(publet_graph::ABOUT));
+        if let (Some(index), Some(Value::Array(rows))) = (about, data.and_then(|d| d.get("rows"))) {
+            for row in rows {
+                if let Value::Array(cells) = row {
+                    push(cells.get(index));
+                }
+            }
+        }
+    }
+    if let Some(defines) = fields.get("defines")
+        && defines.get("sort").and_then(Value::as_text) == Some("singular")
+    {
+        push(defines.get("part_of"));
     }
     if let Some(defines) = fields.get("defines")
         && defines.get("sort").and_then(Value::as_text) == Some("concept")
@@ -524,6 +551,33 @@ pub(crate) fn evidence_for(method: Option<&str>, cites: &[String], cite_notes: &
     }
 
     Value::Array(entries)
+}
+
+/// A `statement` entry for each `--statement` and a `quote` entry for each
+/// `--quote` (Section 5.5): what someone in a position to know stated, such
+/// as the owner of a basement its floor area, and what a supplier offered.
+/// Like a citation, each is someone else's word, not the author's own
+/// observation. A reference that is an identifier names a claim; anything
+/// else is external and shown as unverified.
+pub(crate) fn stated_entries(flags: &ClaimFlags) -> Vec<Value> {
+    let entry = |role: &str, reference: &String| {
+        let kind = if reference.parse::<Cid>().is_ok() {
+            "claim"
+        } else {
+            "external"
+        };
+        let mut entry = std::collections::BTreeMap::new();
+        entry.insert("kind".to_owned(), Value::Text(kind.into()));
+        entry.insert("role".to_owned(), Value::Text(role.into()));
+        entry.insert("ref".to_owned(), Value::Text(reference.clone()));
+        Value::Map(entry)
+    };
+    flags
+        .statements
+        .iter()
+        .map(|r| entry("statement", r))
+        .chain(flags.quotes.iter().map(|r| entry("quote", r)))
+        .collect()
 }
 
 /// Offer a new object to the loader against everything already held, and

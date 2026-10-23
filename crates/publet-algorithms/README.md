@@ -3,7 +3,8 @@
 The generic algorithms the [publet](https://github.com/schryer/publet) tools
 are built on: an append-only Merkle log (RFC 6962), sorted-set membership with
 absence proofs, recursive content trees, exact fixed-point arithmetic,
-deterministic trust propagation, graph traversals, and version requirements.
+deterministic trust propagation, graph traversals, version requirements, and
+the H3 cell hierarchy.
 None of them depends on anything publet-specific.
 
 Licensed under Apache-2.0.

@@ -22,6 +22,7 @@ mod corpus;
 mod document;
 mod domain;
 mod env;
+mod get;
 mod payload;
 mod policy;
 mod propose;
@@ -45,6 +46,7 @@ fn usage() -> ExitCode {
     eprintln!("  sync                 fetch a domain from a peer by delta");
     eprintln!("  read CID             show an assertion and the scope it was made under");
     eprintln!("  why CID              show its standing and every component of it");
+    eprintln!("  get PATH             the current value of a fact, by its path key");
     eprintln!("  compose              build a claim and add it to the workspace");
     eprintln!("  document             build a document ordering references to claims");
     eprintln!("  doc MANIFEST         build a document from a JSON manifest");
@@ -82,6 +84,7 @@ async fn main() -> ExitCode {
         "sync" => sync(&rest).await,
         "read" => read::run(&rest),
         "why" => why::run(&rest),
+        "get" => get::run(&rest),
         "compose" => compose::run(&rest),
         "document" => document::run(&rest),
         "doc" => document::run_manifest(&rest),

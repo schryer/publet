@@ -12,6 +12,7 @@
 )]
 
 use publet_algorithms::Fixed6;
+use publet_algorithms::h3::Cell;
 use publet_algorithms::log::{
     Hash, consistency_proof, empty_root, inclusion_proof, leaf_hash, root, to_hex,
     verify_consistency, verify_inclusion,
@@ -154,5 +155,34 @@ fn version_requirements_match_the_rules() {
             case["expect"].as_bool().unwrap(),
             "{version} against {requires}"
         );
+    }
+}
+
+// covers: Cell::from_bits, Cell::resolution, Cell::parent, Cell::contains, Cell::is_pentagon
+#[test]
+fn h3_cells_and_parents_match_the_h3_library() {
+    let file = load("h3.json");
+    for case in file["valid"].as_array().unwrap() {
+        let text = case["cell"].as_str().unwrap();
+        let cell: Cell = text.parse().unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert_eq!(cell.to_string(), text);
+        assert_eq!(
+            u64::from(cell.resolution()),
+            case["resolution"].as_u64().unwrap()
+        );
+        assert_eq!(
+            cell.is_pentagon(),
+            case["pentagon"].as_bool().unwrap(),
+            "{text}"
+        );
+        for (res, parent) in case["parents"].as_array().unwrap().iter().enumerate() {
+            let got = cell.parent(u8::try_from(res).unwrap()).unwrap();
+            assert_eq!(got.to_string(), parent.as_str().unwrap(), "{text} at {res}");
+            assert!(got.contains(&cell));
+        }
+    }
+    for case in file["invalid"].as_array().unwrap() {
+        let text = case.as_str().unwrap();
+        assert!(text.parse::<Cell>().is_err(), "{text} parsed as a cell");
     }
 }

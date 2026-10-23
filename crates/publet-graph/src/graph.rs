@@ -322,6 +322,21 @@ impl Graph {
         self.anchors.get(&cid.to_string())
     }
 
+    /// Every anchor held, in identifier order.
+    pub fn anchors(&self) -> impl Iterator<Item = &Anchor> {
+        self.anchors.values()
+    }
+
+    /// Every annotation targeting `target`, of any kind, in identifier
+    /// order.
+    #[must_use]
+    pub fn annotations_of(&self, target: &Cid) -> Vec<&Annotation> {
+        self.annotations
+            .values()
+            .filter(|a| a.target() == target)
+            .collect()
+    }
+
     /// Whether a `retracts` relation felicitously applies to `cid` (Section
     /// 6: retraction is authoritative only from a key that signed the
     /// target). Retraction never deletes (R12); this only says whether one

@@ -1,6 +1,6 @@
 [package]
 name = "publet-algorithms"
-description = "Generic algorithms publet is built on: an RFC 6962 Merkle log, sorted-set membership with absence proofs, recursive content trees, exact fixed-point arithmetic, and deterministic trust propagation. Depends on nothing publet-specific."
+description = "Generic algorithms publet is built on: an RFC 6962 Merkle log, sorted-set membership with absence proofs, recursive content trees, exact fixed-point arithmetic, deterministic trust propagation, and the H3 cell hierarchy. Depends on nothing publet-specific."
 # Released on a version track of its own, not the workspace's.
 version = "0.2.1"
 edition.workspace = true

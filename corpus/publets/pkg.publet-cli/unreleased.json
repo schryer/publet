@@ -51,6 +51,34 @@
     {
       "category": "security",
       "change": "pub's HTTPS connections (pub sync, pub serve) no longer trust the distrusted emSign ECC Root CA - G3 or certificate paths through its distrusted intermediates: rustls-webpki 0.103.16, webpki-roots 1.0.10 and webpki-root-certs 1.0.10 (RUSTSEC-2026-0381, RUSTSEC-2026-0382, RUSTSEC-2026-0383)"
+    },
+    {
+      "category": "added",
+      "change": "Singulars (spec Section 5.9.1 and 5.9.6): a definitional claim may define one particular thing with defines.sort singular, a name, the PDC code of its class, and optionally part_of, the singular it is part of, and location.h3, the H3 cell it is in; its class must have a subject concept in depends, part_of must name a singular and be in depends, and a singular has no term, so two of one name are never a divergence"
+    },
+    {
+      "category": "added",
+      "change": "Facts (spec Section 5.9.6): a table's about column holds the CIDs of the singulars its rows are about, each in depends (pub compose adds them, and a singular's part_of), and a column may name its quantity concept by PDC code in concept, which must have a quantity concept in depends"
+    },
+    {
+      "category": "added",
+      "change": "pub get PATH finds a fact by its path key, such as place.site.tallinn.basement.floor_area, computed from the names in the claims held: the head of each matching fact lineage (or the member every anchor over it recommends) with its value, unit, measure, evidence roles, and the status they imply by the convention of spec Section 5.9.7 (confirmed, estimate or to-verify); a path whose segment is an H3 cell, such as place.87089b1a2ffffff, finds the facts about every singular located in the cell by H3's identifier hierarchy"
+    },
+    {
+      "category": "added",
+      "change": "Evidence roles statement and quote (spec Section 5.5), for what someone in a position to know stated and what a supplier offered; pub compose and pub revise take --statement=REF and --quote=REF"
+    },
+    {
+      "category": "added",
+      "change": "publet-graph: Graph::singulars, class_path, singular_path, singular_location, facts_about, singular_versions, lineage_heads, anchors and annotations_of, and segment, the path segment of a name"
+    },
+    {
+      "category": "internal",
+      "change": "The functional suite's lock adds h3 4.5.0 for the H3 test vectors, and moves parse to 1.22.4 and pycparser to 3.12"
+    },
+    {
+      "category": "added",
+      "change": "Spec Section 5.9.1 fixes the PDC separator: a narrower class is the code it extends, `~`, and a number, such as (1/9)~1; Section 5.9.6 documents the Sustenaut usage pattern, with places under the concept Place at UDC (1/9), so place paths begin place."
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

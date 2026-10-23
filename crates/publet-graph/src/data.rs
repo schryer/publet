@@ -31,7 +31,14 @@ pub struct Column {
     pub kind: Option<Cid>,
     /// The statistical measure its quantity cells follow (Section 5.9.4).
     pub measure: Option<Cid>,
+    /// The PDC code of the quantity concept its values are of (Section
+    /// 5.9.6), such as floor area.
+    pub concept: Option<String>,
 }
+
+/// The name of the column whose cells say which singular each row is about
+/// (Section 5.9.6).
+pub const ABOUT: &str = "about";
 
 impl Column {
     /// Every claim the column cites: its unit definitions, kind, and
@@ -120,6 +127,25 @@ impl Data {
             Self::Table { .. } => None,
         }
     }
+
+    /// Which singular each row is about, by row, for a table with an
+    /// [`ABOUT`] column (Section 5.9.6). A null cell is about nothing named.
+    #[must_use]
+    pub fn about(&self) -> Vec<(usize, Cid)> {
+        let Self::Table { columns, rows } = self else {
+            return Vec::new();
+        };
+        let Some(index) = columns.iter().position(|c| c.name == ABOUT) else {
+            return Vec::new();
+        };
+        rows.iter()
+            .enumerate()
+            .filter_map(|(r, row)| match row.get(index) {
+                Some(Cell::Text(t)) => t.parse().ok().map(|cid| (r, cid)),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 fn table(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {
@@ -165,13 +191,33 @@ fn table(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {
                 ));
             }
         };
-        columns.push(Column {
+        let column = Column {
             name: name.to_owned(),
             unit,
             unit_defs,
             kind: optional_cid(raw.get("kind"), "data.columns.kind")?,
             measure: optional_cid(raw.get("measure"), "data.columns.measure")?,
-        });
+            concept: match raw.get("concept") {
+                None => None,
+                Some(Value::Text(code)) if !code.is_empty() => Some(code.clone()),
+                Some(_) => return Err(bad("data.columns.concept", "a PDC code")),
+            },
+        };
+        // Section 5.9.6: the about column names things, so it counts
+        // nothing and is of no concept.
+        if column.name == ABOUT
+            && column
+                != (Column {
+                    name: ABOUT.to_owned(),
+                    ..Column::default()
+                })
+        {
+            return Err(bad(
+                "data.columns",
+                "an `about` column with no unit, kind, measure or concept (Section 5.9.6)",
+            ));
+        }
+        columns.push(column);
     }
     if columns.is_empty() {
         return Err(bad("data.columns", "at least one column"));
@@ -197,7 +243,13 @@ fn table(map: &BTreeMap<String, Value>) -> Result<Data, GraphError> {
             cells
                 .iter()
                 .zip(&columns)
-                .map(|(c, column)| cell(c, column.measure.is_some()))
+                .map(|(c, column)| {
+                    if column.name == ABOUT {
+                        about_cell(c)
+                    } else {
+                        cell(c, column.measure.is_some())
+                    }
+                })
                 .collect::<Result<_, _>>()?,
         );
     }
@@ -244,6 +296,18 @@ fn cell(value: &Value, measured: bool) -> Result<Cell, GraphError> {
             ));
         }
     })
+}
+
+/// A cell of the about column: the CID of a singular, or null.
+fn about_cell(value: &Value) -> Result<Cell, GraphError> {
+    match value {
+        Value::Null => Ok(Cell::Null),
+        Value::Text(t) if t.parse::<Cid>().is_ok() => Ok(Cell::Text(t.clone())),
+        _ => Err(bad(
+            "data.rows",
+            "the CID of a singular, or null, in the `about` column (Section 5.9.6)",
+        )),
+    }
 }
 
 fn optional_cid(value: Option<&Value>, field: &'static str) -> Result<Option<Cid>, GraphError> {

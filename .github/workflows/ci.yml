@@ -32,6 +32,10 @@ jobs:
       test-args: --workspace --all-features
       apt-packages: jq
       functional: guard-eval conformance coverage-check script-tests
+      # The Gherkin steps in tests/ are the suite, not code under test: they
+      # run every scenario, but nothing measures them, so SonarQube Cloud
+      # would count each line of them as uncovered.
+      sonar-args: -Dsonar.coverage.exclusions=tests/**
       cross-test-args: --workspace --all-features
     secrets: inherit
 

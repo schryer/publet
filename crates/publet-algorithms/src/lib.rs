@@ -1,8 +1,8 @@
 /*!
 The generic algorithms the [publet] tools are built on: an append-only Merkle
 log, sorted-set membership with absence proofs, recursive content trees, exact
-fixed-point arithmetic, deterministic trust propagation, graph traversals, and
-version requirements.
+fixed-point arithmetic, deterministic trust propagation, graph traversals,
+version requirements, and the H3 cell hierarchy.
 
 None of them knows anything about publet. Nodes are strings, hashes are
 32-byte arrays and weights are [`Fixed6`]; a caller with richer identifiers
@@ -36,6 +36,7 @@ assert!(!verify_inclusion(&leaf_hash(b"forged"), 1, leaves.len() as u64, &path, 
 | [`propagate`] | Personalized `PageRank` over a weighted graph, run for an exact number of iterations, with edges that can be limited to subjects and lose weight with age |
 | [`graph`] | Traversals over a neighbour function: reachability, a closure that refuses a cycle, a chain's root, and a topological order that names the cycle when there is one |
 | [`version`] | Whether a tool's version meets a requirement: `^X.Y` as Cargo reads it, `X.Y+`, or a prefix |
+| [`h3`] | H3 cell identifiers: which are valid, a cell's parent at a coarser resolution, and whether one cell is inside another by identifier |
 
 Every traversal and accumulation runs in a fixed order, so the same input
 always gives the same output, down to the bit. That is the property publet
@@ -126,6 +127,8 @@ was checked at the version shown.
 | [`petgraph`](https://crates.io/crates/petgraph) 0.8.3 | Graph types and algorithms | Its `PageRank` uses floating point, which bit-identical results rule out, and its traversals need the graph built as a structure first. |
 | [`pathfinding`](https://crates.io/crates/pathfinding) 4.16.0 | Graph algorithms over successor functions | Close to [`graph`]'s design, but its topological sort reports a cycle as a single node rather than the path, and its visit order is not a documented guarantee. Results here depend on that order. |
 | [`rust_decimal`](https://crates.io/crates/rust_decimal) 1.43.0 | Decimal arithmetic | Deterministic, but with different precision and rounding from [`Fixed6`]. Switching would change every propagation result. |
+| [`h3o`](https://crates.io/crates/h3o) 0.11.0 | A Rust port of H3, geometry included | Converting coordinates to cells needs floating point, which this crate has none of, and [`h3`] needs only the identifier hierarchy, a few dozen lines with no dependency. Use `h3o` to find the cell of a coordinate. |
+| [`h3ron`](https://crates.io/crates/h3ron) 0.18.0 | Bindings to H3's C library | Unsafe code and a C build, for the same few dozen lines. |
 | [`semver`](https://crates.io/crates/semver) 1.0.28 | Cargo's flavour of semantic versioning | Use it for release arithmetic on strict `MAJOR.MINOR.PATCH` versions, as pubrel does; this crate keeps no version type of its own. [`version::satisfies`] exists because tool versions such as `0.15` aren't semver. |
 
 # Crate features
@@ -153,6 +156,7 @@ so a release cannot break the API without the
 
 pub mod fixed;
 pub mod graph;
+pub mod h3;
 pub mod log;
 pub mod membership;
 pub mod propagate;

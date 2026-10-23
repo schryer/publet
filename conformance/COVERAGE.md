@@ -6,8 +6,8 @@ that showed only what passes would say nothing about what is
 untested.
 
 - specification: `spec/index.md`
-- sections with normative language: 58
-- sections with at least one scenario: 55 (94%)
+- sections with normative language: 59
+- sections with at least one scenario: 56 (94%)
 
 ## Covered
 
@@ -53,11 +53,12 @@ untested.
 | 5.5 | 5 | conformance/evidence_required.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/sources.feature |
 | 5.7 | 2 | conformance/atomicity.feature |
 | 5.8 | 4 | conformance/data.feature |
-| 5.9.1 | 7 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.1 | 7 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/singulars.feature, conformance/singulars.feature |
 | 5.9.2 | 5 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.3 | 2 | conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.4 | 3 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
 | 5.9.5 | 6 | conformance/quantities.feature, conformance/quantities.feature, conformance/quantities.feature |
+| 5.9.6 | 4 | conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature, conformance/singulars.feature |
 | 6 | 7 | conformance/acyclicity.feature |
 | 6.1 | 1 | plumbing/lineage.feature |
 | 7.1 | 2 | conformance/counts.feature |

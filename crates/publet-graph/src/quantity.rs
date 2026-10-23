@@ -12,6 +12,7 @@
 
 use std::collections::BTreeMap;
 
+use publet_algorithms::h3::Cell;
 use publet_core::{Cid, cbor::Value};
 
 use crate::GraphError;
@@ -71,6 +72,18 @@ pub enum Definition {
         boundary: Option<Boundary>,
         /// Which form of concept it is.
         form: ConceptForm,
+    },
+    /// One particular thing, rather than a class of them: a basement, a
+    /// growing box, a soil sample, a company (Section 5.9.6).
+    Singular {
+        /// The thing's name, unique among the parts of what it is part of.
+        name: String,
+        /// The PDC code of the class it belongs to.
+        class: String,
+        /// The singular it is a part of.
+        part_of: Option<Cid>,
+        /// The H3 cell it is in.
+        location: Option<Cell>,
     },
 }
 
@@ -227,13 +240,16 @@ pub struct Boundary {
 
 impl Definition {
     /// The name the definition goes by: its `symbol` or `name`, or a
-    /// concept's PDC code. This is `term(D)` for Section 9.2.
+    /// concept's PDC code. This is `term(D)` for Section 9.2, except for a
+    /// singular, which defines a thing rather than a term and has none
+    /// (Section 5.9.6): its name is returned for a reader.
     #[must_use]
     pub fn term(&self) -> &str {
         match self {
-            Self::System { name, .. } | Self::Kind { name, .. } | Self::Measure { name, .. } => {
-                name
-            }
+            Self::System { name, .. }
+            | Self::Kind { name, .. }
+            | Self::Measure { name, .. }
+            | Self::Singular { name, .. } => name,
             Self::Dimension { symbol } | Self::Unit { symbol, .. } => symbol,
             Self::Concept { pdc, .. } => pdc,
         }
@@ -260,6 +276,10 @@ impl Definition {
                     Binding::Concept(_) => None,
                 })
                 .collect(),
+            Self::Singular {
+                part_of: Some(whole),
+                ..
+            } => vec![("defines.part_of", whole)],
             _ => Vec::new(),
         }
     }
@@ -274,6 +294,7 @@ impl Definition {
             Self::Kind { .. } => "kind",
             Self::Measure { .. } => "measure",
             Self::Concept { .. } => "concept",
+            Self::Singular { .. } => "singular",
         }
     }
 
@@ -281,11 +302,13 @@ impl Definition {
     ///
     /// # Errors
     ///
-    /// Returns [`GraphError::BadField`] if `sort` is not one of the six,
+    /// Returns [`GraphError::BadField`] if `sort` is not one of the seven,
     /// a field is missing or ill-typed, a symbol is not `{...}` or
     /// `[...]`, a value is not a decimal string, an exponent is not an
     /// integer, a measure has no parameters or repeats one, or a concept
-    /// has no PDC code or a boundary line that is not a non-empty string.
+    /// has no PDC code or a boundary line that is not a non-empty string,
+    /// or a singular has no name or class, a `part_of` that is not a CID,
+    /// or a `location` whose `h3` is not an H3 cell identifier.
     pub fn from_value(value: &Value) -> Result<Self, GraphError> {
         let Value::Map(_) = value else {
             return Err(bad("defines", "a map with a `sort`"));
@@ -375,9 +398,10 @@ impl Definition {
                     form,
                 })
             }
+            "singular" => singular(value),
             _ => Err(bad(
                 "defines.sort",
-                "`system`, `dimension`, `unit`, `kind`, `measure`, or `concept`",
+                "`system`, `dimension`, `unit`, `kind`, `measure`, `concept`, or `singular`",
             )),
         }
     }
@@ -495,6 +519,37 @@ pub(crate) fn is_decimal(text: &str) -> bool {
     !whole.is_empty()
         && whole.bytes().all(|b| b.is_ascii_digit())
         && fraction.is_none_or(|f| !f.is_empty() && f.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// A singular's fields (Section 5.9.1).
+fn singular(value: &Value) -> Result<Definition, GraphError> {
+    Ok(Definition::Singular {
+        name: required_text(value, "name", "defines.name")?,
+        class: required_text(value, "class", "defines.class")?,
+        part_of: value
+            .get("part_of")
+            .map(|v| cid(v, "defines.part_of", "the CID of a singular"))
+            .transpose()?,
+        location: value.get("location").map(location).transpose()?,
+    })
+}
+
+/// A singular's `location`: `{ h3: <cell> }`, the cell in canonical form.
+fn location(value: &Value) -> Result<Cell, GraphError> {
+    let Value::Map(map) = value else {
+        return Err(bad("defines.location", "a map with an `h3` cell"));
+    };
+    if map.keys().any(|k| k != "h3") {
+        return Err(bad("defines.location", "a map with only an `h3` cell"));
+    }
+    value
+        .get("h3")
+        .and_then(Value::as_text)
+        .and_then(|t| t.parse().ok())
+        .ok_or(bad(
+            "defines.location.h3",
+            "an H3 cell identifier in lowercase hexadecimal, such as `8a089b1a2177fff`",
+        ))
 }
 
 fn required_text(value: &Value, key: &str, field: &'static str) -> Result<String, GraphError> {

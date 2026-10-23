@@ -216,6 +216,8 @@ fn revise_claim(
         Some("method") => flags.method.is_some(),
         Some("citation") => !flags.cites.is_empty(),
         Some("source") => !flags.sources.is_empty(),
+        Some("statement") => !flags.statements.is_empty(),
+        Some("quote") => !flags.quotes.is_empty(),
         _ => false,
     };
     let old_source_claims: Vec<String> = old_entries
@@ -234,6 +236,7 @@ fn revise_claim(
     {
         evidence.extend(added);
     }
+    evidence.extend(compose::stated_entries(flags));
     let (source_entries, source_claims) = compose::source_entries(store, &flags.sources)?;
     evidence.extend(source_entries);
     body.insert("evidence".to_owned(), Value::Array(evidence));

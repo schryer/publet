@@ -7,3 +7,6 @@
 cryptography==50.0.2
 # Coverage of the maintainer scripts (make script-tests), for SonarQube Cloud.
 coverage==7.16.2
+# The H3 project's own binding, for tools/vectors/generate.py's H3 cell
+# vectors: publet-algorithms' h3 module is checked against it.
+h3==4.5.0

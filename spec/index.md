@@ -562,7 +562,8 @@ its dependency closure is unavailable.
   { kind: "blob" | "claim" | "external",
     ref:  <CID or URI>,
     role: "measurement" | "derivation" | "citation"
-        | "replication" | "method" | "source",
+        | "replication" | "method" | "source"
+        | "statement" | "quote",
     note:     <string>,
     revision: <string>,   // role "source": the version read
     locator:  <string>,   // role "source": where within `ref`
@@ -579,6 +580,18 @@ same inputs is how such a claim is repeated. It MUST NOT carry both.
 
 `external` references lie outside the protocol's integrity guarantees and
 MUST be displayed as unverified.
+
+**Statements and quotes.** An entry with `role: "statement"` names what
+someone in a position to know stated about the claim's subject -- the
+owner of a basement its floor area, a supplier the mass of a part -- and
+one with `role: "quote"` an offer naming a price, a delivery time, or a
+specification. Each is someone else's word rather than the author's own
+observation: like a citation it is not a measurement, counts toward no
+replication floor, and is not weighed as evidence under R9. Its `ref` is
+ordinarily an `attributive` claim recording the statement or quote, or the
+blob of the document it was made in. What these roles do is let a reader,
+and the convention of Section 5.9.7, tell a stated value from an estimated
+one.
 
 **Source evidence.** An entry with `role: "source"` states where values
 carried in `data` (Section 5.8) were read from. It records provenance, not
@@ -699,11 +712,13 @@ shapes:
             unit:      <string>,                       // Section 5.9.2
             unit_defs: { <symbol>: <CID>, ... },       // Section 5.9.2
             kind:      <CID>,                          // Section 5.9.3
-            measure:   <CID> }                         // Section 5.9.4
+            measure:   <CID>,                          // Section 5.9.4
+            concept:   <PDC code> }                    // Section 5.9.6
 ```
 
 A table's cells are text, integers, null, or, in a column that names a
-`measure`, quantities (Section 5.9.4). Non-integer quantities are decimal
+`measure`, quantities (Section 5.9.4). A column named `about` holds the
+CIDs of the singulars its rows are about (Section 5.9.6). Non-integer quantities are decimal
 strings (Section 4.1), and the unit belongs to the column, so that a value
 is never separated from what it counts. `unit` MAY be omitted for a column
 whose values have none, such as names. Column names MUST be non-empty and
@@ -755,7 +770,8 @@ diverge on its own lineage:
 | a system of units, a base dimension, a unit | `definitional` claim with `defines` | a column's `unit_defs`, and `depends` |
 | a quantity kind | `definitional` claim with `defines` | a column's `kind`, and `depends` |
 | a statistical measure | `definitional` claim with `defines` | a column's `measure`, and `depends` |
-| a concept, of a quantity or a relation | `definitional` claim with `defines` | `classifies` annotations, a calculation's `solves`, and `depends` |
+| a concept, of a quantity or a relation | `definitional` claim with `defines` | `classifies` annotations, a calculation's `solves`, a column's `concept`, and `depends` |
+| one particular thing: a singular | `definitional` claim with `defines` | a row's `about` cell, another singular's `part_of`, and `depends` |
 | a calculation | `procedural` claim, optionally with `computes` | evidence with `role: "derivation"` |
 | a measurement method | `procedural` claim | evidence with `role: "method"` (Section 5.5) |
 
@@ -800,6 +816,10 @@ says what is defined:
              boundary: { ... } }             // OPTIONAL here
          | { sort: "concept", pdc: <PDC code string>, name: <string>,
              boundary: { ... } }             // OPTIONAL here
+         | { sort: "singular", name: <string>,
+             class: <PDC code string>,
+             part_of: <CID of a singular>,   // OPTIONAL
+             location: { h3: <H3 cell> } }   // OPTIONAL
   // any sort, OPTIONAL:
            matches: [ { relation: "exact" | "close", ref: <URI> }, ... ]
 ```
@@ -829,9 +849,11 @@ says what is defined:
 - **`concept`** comes in three forms. All REQUIRE `pdc`: the concept's
   code in the Extended Publet Decimal Classification (PDC), an extension of
   the UDC Summary [UDC] in which every UDC Summary class keeps its code and
-  a narrower PDC class is written as the UDC code it extends, a separator
-  UDC notation never uses, and a number. A concept's broader concept is the
-  one at the code its own code extends. A concept carries `kind`,
+  a narrower PDC class is written as the code it extends, a tilde (`~`),
+  which UDC notation never uses, and a number: `(1/9)~1` narrows the UDC
+  place class (1/9), and `(1/9)~1~2` narrows `(1/9)~1`. A concept's
+  broader concept is the one at the code its own code extends, so a code
+  is broader than every code that begins with it. A concept carries `kind`,
   `relation`, or neither, never both.
 
   A **subject concept** carries neither: a class of things or topics, such
@@ -865,6 +887,13 @@ says what is defined:
   a value is converted into the unit the relation is stated in by the
   units system (Section 5.9.2), never by the relation: `coefficient` MUST
   NOT absorb a unit conversion factor.
+- **`singular`** defines one particular thing rather than a class of
+  them: a basement, a growing box, a soil sample, a company. `name` is
+  what it is called among the parts of what it is part of; `class` is the
+  PDC code of the subject concept it is a member of; `part_of`, when
+  present, names the singular it is a part of; and `location`, when
+  present, the H3 cell [H3] it is in. Section 5.9.6 says how facts are
+  stated about a singular and how a path key finds them.
 - **`matches`** links the definition to the same or a close concept
   elsewhere, such as a UCUM code, a QUDT quantity kind, or an ISO 4217
   currency code, so that this vocabulary extends theirs rather than
@@ -879,16 +908,20 @@ syntax it is written in. A quantity concept MUST list its `kind` in
 `depends`. A relation concept MUST list in `depends` each kind a slot
 binds, and for each PDC code a slot binds, a quantity concept at that
 code. An implementation MUST reject a claim carrying `defines` whose
-class is not `definitional`, whose `sort` is not one of the six, or whose
+class is not `definitional`, whose `sort` is not one of the seven, or whose
 fields do not have the shapes above, including a role that is not an
 identifier (a letter or underscore, then letters, digits and underscores),
-a role used twice, or a `product` without one non-zero exponent for each
-slot and none for anything else.
+a role used twice, a `product` without one non-zero exponent for each
+slot and none for anything else, or a `location` whose `h3` is not a
+valid H3 cell identifier in its canonical form, lowercase hexadecimal
+with no leading zeros.
 
 The name a definition goes by is in the definition itself: `symbol` or
 `name` is `term(D)` for Section 9.2, except for a `concept`, whose
 `term(D)` is its `pdc` code, so that two concepts at one code are compared
-as two definitions of one term. A node that serves definitions under
+as two definitions of one term, and a `singular`, which defines a thing
+rather than a term and has no `term(D)`: two basements of one name are two
+things, not two senses of a word. A node that serves definitions under
 human-readable names (for example `https://pub.<host>/def/<name>`) derives
 that mapping from the definitions it holds; the definition's CID remains
 its identity, so one definition reached through two hosts is one
@@ -1063,6 +1096,158 @@ Recomputing a value is settling it: anyone runs an implementation on the
 inputs and files a `settled` annotation, `consistent` or `inconsistent`
 (Section 7.2). A reader can then dispute the inputs, the calculation, or
 the code's fidelity to the calculation, each separately.
+
+#### 5.9.6 Singulars and Facts
+
+A concept is a class: floor area, a growing site, Estonia's soils. Much of
+what a plan rests on is about one particular thing instead -- this
+basement, that Smart-Box, the soil sample taken on 3 May, the company that
+signs the lease -- and a **singular** (Section 5.9.1) defines one. It is
+general: a place, an object, a sample and an organization are all
+singulars, told apart only by their `class`.
+
+A singular MUST list in `depends` a subject concept at its `class` code,
+and the singular its `part_of` names. Because `part_of` names a singular by
+its CID, the singular it names existed first, so a `part_of` chain is
+acyclic by construction, as `depends` is (Section 5.4); an implementation
+MUST reject a singular whose `part_of` names a claim that is not a
+singular. A revised singular -- a corrected name, a finer location -- is a
+new version on the same lineage (`supersedes`), and it is still the same
+thing: facts about any version of it are about it.
+
+A singular carries no privacy flag. Whether a fact about a private
+basement is private is decided by which corpus holds the publets stating
+it, as for any claim (Section 17). Moving such facts into a public corpus
+is a publishing decision made later, when the author MAY publish a new
+version of the singular with a coarser `location`, at a parent cell of the
+one it had.
+
+**Facts.** A table states facts about singulars with an **about column**,
+the column named `about`, whose cells are the CIDs of the singulars the
+rows are about, or null. Each other column of a fact table SHOULD name the
+quantity concept its values are of in `concept`, such as floor area; the
+column keeps its `unit`, `kind` and `measure` as Section 5.9.2 to 5.9.4
+have them. A **fact** is one cell: the value, in a column naming a
+concept, of the row about one singular.
+
+```
+  columns: [ { name: "about" },
+             { name: "floor area", unit: "m2", kind: <CID>,
+               measure: <CID of "exact value">,
+               concept: <PDC code of floor area> } ]
+  rows:    [ [ <CID of the basement>, { value: "50" } ] ]
+```
+
+An implementation MUST reject an about column with a `unit`, `unit_defs`,
+`kind`, `measure` or `concept`, a cell in it that is neither null nor a
+CID, and a claim whose `depends` does not list every singular an about
+cell names or whose about cell names a claim that is not a singular. A
+column's `concept` is cited as a slot's is: `depends` MUST list a quantity
+concept at the code.
+
+**Path keys.** A fact is found by a **path key**: segments joined by dots,
+computed from the names in the claims a reader holds, never registered.
+For a singular, the segments are
+
+1. the names of the concepts at its outermost whole's `class` code and at
+   each broader code, broadest first, taken from the concepts in that
+   whole's dependency closure, where a code is broader than another that
+   begins with it;
+2. the names of the singulars from that outermost whole down to it,
+   following `part_of`; and
+3. for a fact, the name of its column's concept.
+
+Each name becomes a segment by lowercasing it and making each run of
+characters that are not letters or digits one underscore, with none at
+either end: "Floor area" is `floor_area`. The Tallinn site, a singular of
+the class "site" narrowing the class "Place", has the path `place.site.tallinn`; the
+basement that is part of it, `place.site.tallinn.basement`; and its floor
+area, `place.site.tallinn.basement.floor_area`.
+
+A path names what the claims held say, so two readers holding the same
+claims compute the same paths, and a renamed singular has a new path from
+its new version on. Two singulars may share a path -- two sites with
+basements both named "basement" under one parent -- and a lookup then
+returns both, each with its CID, rather than choosing. A class's path
+needs every concept on it in the closure: a class whose code has no
+concept there, or concepts of different names, has no path, and is shown
+by CID.
+
+**Places.** Under a class of places -- the UDC Summary's place class (1/9)
+and the classes narrowing it -- a segment MAY instead be an H3 cell in its
+canonical form, `place.<cell>`, naming every singular of the class whose
+location is in the cell. A singular with no `location` is where the
+nearest singular it is part of is. "In" is by H3's identifier hierarchy:
+a cell is in another when its parent at the other's resolution is the
+other. H3's cells do not nest exactly -- a hexagon's seven children cover
+it only approximately, and part of a child lies outside its parent -- so
+the hierarchy is of identifiers, not of shapes, and a singular near a
+cell's edge may be in a neighbour's children by geometry while in this
+cell by identifier. A reader needing geometric containment computes it
+from the cells' boundaries, and that is not a lookup by path.
+
+**Usage pattern.** *Non-normative.* The Sustenaut corpus places every
+place under one subject concept at the UDC place class (1/9), named
+"Place" as UDC names it, so that every place path begins `place.`;
+classes of places narrow it with `~`, such as "site" at `(1/9)~1`, and
+the parts of a place that are places themselves, such as a basement, are
+of the class "Place". A singular's `class` is the
+narrowest class that fits it; the path takes its class segments from the
+outermost whole only, so the basement's own class does not appear in
+`place.site.tallinn.basement`. A location is given on the outermost whole
+that has one, at the coarsest cell the purpose needs, and parts inherit
+it. A quantity concept a fact table cites, such as floor area, goes at a
+code narrowing the UDC class of its subject. Keeping UDC's own name means
+another corpus defining (1/9) from the UDC Summary agrees with this one;
+a concept of another name at (1/9) in the same closure makes the class
+contested (no path) until one is chosen, as for any code (Section 5.9.1).
+
+**Lookup.** *Non-normative.* Resolving a path key reads the singulars held,
+finds those whose path it is, or whose path is all but its last segment,
+which then names the concept, and collects the facts about them. Each fact
+comes from a claim on a lineage (Section 6.1); what a lookup reports is
+the head of that lineage, or the member every anchor held over it
+recommends (Section 9.3), with the value, its unit, its measure, and the
+roles of its evidence. A branched lineage reports every head. `pub get`
+in the reference implementation is this lookup, and `pub get place.<cell>`
+its spatial form.
+
+#### 5.9.7 Status as Data
+
+*Non-normative.* Whether a figure is confirmed, an estimate, or still to
+be checked is not a field of the claim stating it: it follows from what the
+claim already carries, and a reader can compute it, dispute what it rests
+on, and see it change as annotations arrive. The convention is, in order:
+
+1. **to-verify** when the value is null, or an annotation leaves the claim
+   open: an `assessment` finding it `unsupported`, `refuted` or
+   `undetermined`, a `verdict` denying it, or a `disputes` relation
+   targeting it that no `resolution` settles;
+2. **estimate** when its column's measure describes uncertainty or
+   variation, such as a three-point estimate, or the column names no
+   measure, so that no certainty is stated;
+3. **confirmed** when its measure describes an exact value and its
+   evidence includes a `measurement`, `statement`, `quote` or
+   `derivation`;
+4. **to-verify** otherwise: an exact value that nothing measured, stated,
+   quoted or derived.
+
+A viewpoint MAY weigh these differently: which keys' assessments count is
+its business (Section 11), and the convention reads annotations before
+any viewpoint does.
+
+*Worked example.* The Tallinn basement is a singular of the class "Place",
+part of the singular for the Tallinn site, whose class "site" narrows
+"Place". An `empirical` claim states its floor area in a fact table: one row
+about the basement, the value `{ value: "50" }` in square metres under the
+measure "exact value" (`describes: "exact"`), and the concept floor area.
+Its evidence is the `method` by which the floor was measured and a
+`statement` naming an `attributive` claim that the owner confirmed 50 m².
+Nothing annotates it, so `place.site.tallinn.basement.floor_area` is
+**confirmed**. Had the owner given a range, the measure would be a
+three-point estimate and the fact an **estimate**; and if a visitor filed
+a dispute measuring 46 m², the fact would be **to-verify** until a
+resolution settled it, with no field of any object changed.
 
 ---
 
@@ -2683,6 +2868,14 @@ cannot hold a domain. The privacy properties above are real and are
 unavailable to the majority of readers most of the time; implementations
 MUST make the mode in use visible rather than allowing it to be assumed.
 
+**Facts about places and things.** A singular with a `location` says
+where something is, to the precision of its H3 cell, and the facts about
+it can describe a home. A singular has no privacy flag of its own (Section
+5.9.6): such facts are kept private by keeping their publets in a private
+corpus, and publishing them is a later decision, at which the author can
+coarsen the cell to a parent of it. Because a published object cannot be
+withdrawn, that decision is the one that matters.
+
 **Erasure.** Objects are designed not to be deletable and mirrors are
 required to serve them (R12). Personal data published into the graph, by
 its subject or by anyone else, cannot be reliably retracted; `retracts`
@@ -2730,6 +2923,8 @@ annotation kinds.
 ### 19.2 Informative
 
 - [UDC] UDC Consortium, "UDC Summary", CC BY-SA 3.0, <http://udcdata.info/>.
+- [H3] Uber Technologies, "H3: A Hexagonal Hierarchical Geospatial Indexing
+  System", version 4, <https://h3geo.org/>.
 - [RFC8785] Rundgren, A. et al., "JSON Canonicalization Scheme", RFC 8785.
 - [RFC3161] Adams, C. et al., "Time-Stamp Protocol", RFC 3161, 2001.
 - [EIGENTRUST] Kamvar, S. et al., WWW 2003.
@@ -2971,9 +3166,19 @@ any slot or as `explicit`, solved by the calculations whose `solves`
 names it; those ways of solving it are its **interface** (Sections 5.9.1
 and 5.9.5).
 
+**Singular** — a `definitional` claim defining one particular thing rather
+than a class: a basement, a growing box, a soil sample, a company. It names
+the class it is a member of by PDC code, and optionally the singular it is
+part of and the H3 cell it is in. A **fact** is a value in a table whose
+`about` column names the singular, in a column naming a quantity concept.
+A **path key**, such as `place.site.tallinn.basement.floor_area`, finds a
+fact by the names of the singular's class, the chain of singulars it is
+part of, and the concept; it is computed from the claims held, never
+registered (Section 5.9.6).
+
 **PDC** — the Extended Publet Decimal Classification: the UDC Summary's
 classes under their own codes, extended by narrower classes whose codes
-extend a UDC code. A **PDC edition** is a document listing one concept
+extend a UDC code with `~` and a number, such as `(1/9)~1`. A **PDC edition** is a document listing one concept
 lineage per code; a code with two candidates is shown as contested
 (Section 5.9.1).
 

@@ -11,6 +11,10 @@
     {
       "category": "internal",
       "change": "SUPPLY-CHAIN.md names pubunit among the organisations whose audits are imported, since the workspace now imports pubunit's"
+    },
+    {
+      "category": "added",
+      "change": "The h3 module: H3 cell identifiers, validated as H3 does (mode, reserved bits, base cell, digits, and pentagons' deleted direction), with each cell's parent at a coarser resolution and whether one cell is inside another by identifier, without geometry or floating point; tested against vectors from h3-py 4.5.0"
     }
   ],
   "comment": "Changes not yet released. One row per change: category changed or removed (a published interface changed: major), added (a feature: minor), or fixed or security (patch). `pubrel add` appends one; `pubrel summary` sets the release's summary; `pubrel prepare` moves them into the package publet."

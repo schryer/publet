@@ -128,6 +128,14 @@ pub enum Problem {
         /// The form it must have: `quantity` or `relation`.
         expected: &'static str,
     },
+    /// A claim cited as a singular, by a singular's `part_of` or a row's
+    /// `about` cell, does not define one (Section 5.9.6).
+    NotSingular {
+        /// Where it was cited: `defines.part_of` or `about`.
+        cited_as: &'static str,
+        /// The claim.
+        cid: String,
+    },
     /// A calculation names a role its relation concept has no slot for.
     UnknownRole {
         /// The relation concept's code.
@@ -226,6 +234,10 @@ impl fmt::Display for Problem {
                 f,
                 "PDC code {code} must name a {expected} concept, and the concept `depends` lists there is not one"
             ),
+            Self::NotSingular { cited_as, cid } => write!(
+                f,
+                "{cid}, cited as {cited_as}, does not define a singular (Section 5.9.6)"
+            ),
             Self::UnknownRole { code, role } => write!(
                 f,
                 "role `{role}` is not a slot of the relation concept at {code} (Section 5.9.5)"
@@ -248,6 +260,7 @@ pub fn system() -> (&'static str, &'static str) {
 pub fn check(graph: &Graph, claim: &ProseClaim) -> Vec<Problem> {
     let mut problems = Vec::new();
     check_concepts(graph, claim, &mut problems);
+    check_singulars(graph, claim, &mut problems);
     let Some(Data::Table { columns, rows }) = claim.data() else {
         return problems;
     };
@@ -325,6 +338,16 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
             Binding::Kind(_) => None,
         }));
     }
+    if let Some(Definition::Singular { class, .. }) = claim.defines() {
+        named.push((class.as_str(), "subject"));
+    }
+    if let Some(Data::Table { columns, .. }) = claim.data() {
+        named.extend(
+            columns
+                .iter()
+                .filter_map(|c| c.concept.as_deref().map(|code| (code, "quantity"))),
+        );
+    }
     let solves = claim.computes().and_then(|c| c.solves.as_ref());
     if let Some(s) = solves {
         named.push((s.concept.as_str(), "relation"));
@@ -362,6 +385,7 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
         }
         let fits = |f: &&ConceptForm| match expected {
             "quantity" => matches!(f, ConceptForm::Quantity { .. }),
+            "subject" => matches!(f, ConceptForm::Subject),
             _ => matches!(f, ConceptForm::Relation(_)),
         };
         if !at.iter().any(fits) {
@@ -390,6 +414,37 @@ fn check_concepts(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>
                     role,
                 });
             }
+        }
+    }
+}
+
+/// Check that what a singular is part of, and what each row is about, is a
+/// singular (Section 5.9.6). Whether either is in `depends` is the
+/// loader's to check; one not held is unchecked, never passed.
+fn check_singulars(graph: &Graph, claim: &ProseClaim, problems: &mut Vec<Problem>) {
+    let mut cited: Vec<(&'static str, Cid)> = Vec::new();
+    if let Some(Definition::Singular {
+        part_of: Some(whole),
+        ..
+    }) = claim.defines()
+    {
+        cited.push(("defines.part_of", whole.clone()));
+    }
+    if let Some(data) = claim.data() {
+        cited.extend(data.about().into_iter().map(|(_, c)| ("about", c)));
+    }
+    for (cited_as, cid) in cited {
+        match graph.prose_claim(&cid) {
+            None => problems.push(Problem::Unavailable {
+                cid: cid.to_string(),
+            }),
+            Some(c) if !matches!(c.defines(), Some(Definition::Singular { .. })) => {
+                problems.push(Problem::NotSingular {
+                    cited_as,
+                    cid: cid.to_string(),
+                });
+            }
+            Some(_) => {}
         }
     }
 }
